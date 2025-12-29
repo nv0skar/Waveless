@@ -1,11 +1,11 @@
 [package]
-name = "waveless_schema"
+name = "waveless_binary"
 edition = "2024"
 
 [dependencies]
-waveless_config.workspace = true
+waveless_schema = { workspace = true, features = ["postcard_codec"] }
+waveless_config = { workspace = true, features = ["postcard_codec"] }
 rustyrosetta = { workspace = true, features = ["all"] }
-sea-schema.workspace = true
 serde.workspace = true
 serde_with.workspace = true
 arrayvec.workspace = true
@@ -19,8 +19,3 @@ getset.workspace = true
 either.workspace = true
 derive_more.workspace = true
 anyhow.workspace = true
-
-[features]
-default = []
-toml_codec = []
-postcard_codec = [] # actually doing anything, added for clarity

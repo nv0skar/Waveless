@@ -5,9 +5,9 @@ pub mod databases;
 pub mod endpoint;
 pub mod entry;
 
-pub use databases::*;
-pub use endpoint::*;
 pub use entry::*;
+
+use waveless_config::*;
 
 use rustyrosetta::{codec::*, *};
 

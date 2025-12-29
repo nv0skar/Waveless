@@ -1,3 +1,6 @@
+[alias]
+test-all = "test --all-features -- --nocapture"
+
 [target.aarch64-apple-darwin]
 rustflags = [
     "-C",

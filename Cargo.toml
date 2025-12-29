@@ -5,10 +5,13 @@ version = "0.0.1"
 edition = "2024"
 
 [workspace]
-members = ["schema", "config"]
+members = ["compiler", "executor", "schema", "binary", "config"]
 
 [workspace.dependencies]
+waveless_compiler = { path = "./compiler" }
+waveless_executor = { path = "./executor" }
 waveless_schema = { path = "./schema" }
+waveless_binary = { path = "./binary" }
 waveless_config = { path = "./config" }
 
 rustyrosetta = { git = "https://github.com/nv0skar/RustyRosetta.git", tag = "rustyrosetta_0.0.1", features = [
@@ -18,7 +21,7 @@ rustyrosetta = { git = "https://github.com/nv0skar/RustyRosetta.git", tag = "rus
 tokio = "1.48"
 
 serde = { version = "1.0.228", features = ["derive"] }
-toml = "0.9"
+toml = "0.9.8"
 serde_json = "1.0.148"
 serde_with = { version = "3.16", features = ["chrono"] }
 
