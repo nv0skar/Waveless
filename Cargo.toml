@@ -1,0 +1,117 @@
+[package]
+name = "Waveless"
+description = "Generate APIs from the application data model."
+version = "0.0.1"
+edition = "2024"
+
+[workspace]
+members = ["schema", "config"]
+
+[workspace.dependencies]
+waveless_schema = { path = "./schema" }
+waveless_config = { path = "./config" }
+
+rustyrosetta = { git = "https://github.com/nv0skar/RustyRosetta.git", tag = "rustyrosetta_0.0.1", features = [
+    "all",
+] }
+
+tokio = "1.48"
+
+serde = { version = "1.0.228", features = ["derive"] }
+toml = "0.9"
+serde_json = "1.0.148"
+serde_with = { version = "3.16", features = ["chrono"] }
+
+axum = "0.8.8"
+
+sea-schema = "0.16.2"
+
+chrono = { version = "0.4.42", default-features = false, features = [
+    "clock",
+    "serde",
+] }
+
+### Dependencies to implement the admin panel
+
+# leptos = { version = "0.8.15", default-features = false }
+# leptos_meta = { version = "0.8.15", default-features = false }
+# leptos_router = { version = "0.8.15", default-features = false }
+# leptos_dom = { version = "0.8.15", default-features = false }
+# leptos_actix = { version = "0.8.15", default-features = false }
+
+# gloo-net = { version = "0.6.0", features = ["http"] }
+
+async-trait = "0.1.89"
+
+### Dependency to implement the query cache
+
+# redb = "3.1.0"
+
+### Dependency to implement the mailing
+
+# lettre = { version = "0.11.19", features = ["tokio1", "tokio1-native-tls"] }
+
+struct-patch = "0.10"
+garde = { version = "0.22", features = ["full"] }
+half = { version = "2.6", features = ["serde"] }
+rust_decimal = "1.37"
+email_address = "0.2"
+
+smallvec = { version = "1.15", features = ["serde", "write", "const_new"] }
+arrayvec = { version = "0.7", features = ["serde"] }
+stackalloc = "1"
+smallbox = "0.8"
+rclite = "0.4"
+atomic_refcell = "0.1"
+flume = "0.12"
+dashmap = { version = "6.1", features = ["serde"] }
+compact_str = { version = "0.9", features = ["serde"] }
+rand = "0.9"
+
+blake3 = "1.8"
+argon2 = { version = "0.5", default-features = true }
+
+# wasm-bindgen = "0.2.100"
+
+dotenvy = "0.15"
+dotenvy_macro = "0.15"
+
+tracing = "0.1"
+tracing-subscriber = "0.3"
+tracing-appender = "0.2"
+metrics = "0.24"
+metrics-tracing-context = "0.18"
+
+hex = "0.4"
+itertools = "0.14"
+
+getset = "0.1"
+nestify = "0.3"
+either = { version = "1.15", features = ["serde"] }
+anyhow = "1.0"
+derive_more = { version = "2.0", features = ["constructor", "display"] }
+
+### Leptos' setup
+
+# [dependencies.getrandom]
+# version = "*"
+# features = ["wasm_js"]
+
+# [package.metadata.wasm-pack.profile.profiling]
+# wasm-opt = false
+
+# [[workspace.metadata.leptos]]
+# name = "Waveless"
+# bin-package = "waveless_server"
+# lib-package = "waveless_client"
+# bin-features = ["ssr", "cargo_leptos"]
+# lib-features = ["hydrate"]
+# site-addr = "0.0.0.0:3000"
+# assets-dir = "target/bundled"
+# style-file = "style/main.scss"
+# tailwind-input-file = "style/tailwind.css"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 'z'

@@ -1,0 +1,8 @@
+**/.DS_Store
+**/Cargo.lock
+**/package-lock.json
+**/pnpm-lock.yaml
+**/*.rs.bk
+**/.env
+**/node_modules
+**/target

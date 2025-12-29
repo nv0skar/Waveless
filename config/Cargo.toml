@@ -1,0 +1,22 @@
+[package]
+name = "waveless_config"
+edition = "2024"
+
+[dependencies]
+rustyrosetta = { workspace = true, features = ["all"] }
+serde.workspace = true
+serde_with.workspace = true
+arrayvec.workspace = true
+compact_str.workspace = true
+chrono.workspace = true
+garde.workspace = true
+half.workspace = true
+rust_decimal.workspace = true
+struct-patch.workspace = true
+getset.workspace = true
+either.workspace = true
+derive_more.workspace = true
+anyhow.workspace = true
+
+[dev-dependencies]
+toml.workspace = true
