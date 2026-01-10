@@ -1,4 +1,5 @@
 [alias]
+run-compiler = "run --package waveless_compiler --bin waveless_compiler --all-features"
 test-all = "test --all-features -- --nocapture"
 
 [target.aarch64-apple-darwin]

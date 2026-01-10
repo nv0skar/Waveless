@@ -12,15 +12,16 @@ use crate::*;
 
 /// The project's build file
 #[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
+#[getset(get = "pub")]
 pub struct ProjectBuild {
     /// contains general settings shared with the frontend/compiler
     // general: General,
 
     /// specific compiler settings
-    compiler_settings: Compiler,
+    compiler_settings: project::Compiler,
 
     /// defines all the API endpoints
-    endpoints: CheapVec<Endpoint>,
+    endpoints: endpoint::Endpoints,
 
     /// contains all the databases' checksum
     databases_checksums: CheapVec<DatabaseChecksum>,
@@ -32,7 +33,7 @@ impl Default for ProjectBuild {
         Self {
             // general: Default::default(),
             compiler_settings: Default::default(),
-            endpoints: CheapVec::from_vec(vec![Default::default()]),
+            endpoints: endpoint::Endpoints::default(),
             databases_checksums: CheapVec::from_vec(vec![Default::default()]),
         }
     }
@@ -40,6 +41,7 @@ impl Default for ProjectBuild {
 
 /// Matches a database with it's checksum
 #[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
+#[getset(get = "pub")]
 pub struct DatabaseChecksum {
     /// identifier of the database, if it is `None` the primary database will be used
     database_id: Option<DatabaseId>,

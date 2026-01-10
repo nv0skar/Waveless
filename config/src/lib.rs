@@ -7,7 +7,6 @@ use rustyrosetta::*;
 
 use std::{collections::HashMap, net::SocketAddr};
 
-use anyhow::*;
 use compact_str::*;
 use derive_more::{Constructor, Display};
 use getset::*;

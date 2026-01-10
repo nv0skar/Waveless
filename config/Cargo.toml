@@ -16,12 +16,12 @@ struct-patch.workspace = true
 getset.workspace = true
 either.workspace = true
 derive_more.workspace = true
-anyhow.workspace = true
 
 [dev-dependencies]
+anyhow.workspace = true
 toml.workspace = true
 
 [features]
 default = []
 toml_codec = []
-postcard_codec = [] # actually doing anything, added for clarity
+postcard_codec = [] # actually doing nothing, added for clarity

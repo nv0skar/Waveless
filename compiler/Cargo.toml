@@ -7,11 +7,17 @@ waveless_binary.workspace = true
 waveless_schema = { workspace = true, features = ["toml_codec"] }
 waveless_config = { workspace = true, features = ["toml_codec"] }
 rustyrosetta = { workspace = true, features = ["all"] }
+tokio = { workspace = true, features = ["full"] }
 serde.workspace = true
 serde_with.workspace = true
 toml.workspace = true
 arrayvec.workspace = true
 compact_str.workspace = true
+clap.workspace = true
+owo-colors.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+nestify.workspace = true
 chrono.workspace = true
 garde.workspace = true
 half.workspace = true

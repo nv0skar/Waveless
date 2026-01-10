@@ -11,9 +11,7 @@ use waveless_config::*;
 
 use rustyrosetta::{codec::*, *};
 
-use std::collections::HashMap;
-
-use anyhow::{Context, Result, bail};
+use anyhow::{Result, bail};
 use arrayvec::ArrayString;
 use chrono::{NaiveDateTime, TimeDelta, Utc};
 use compact_str::*;

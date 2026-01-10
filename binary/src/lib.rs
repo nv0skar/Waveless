@@ -3,8 +3,8 @@
 
 pub mod binary;
 
-use waveless_config::{project::*, *};
-use waveless_schema::{endpoint::*, *};
+use waveless_config::*;
+use waveless_schema::*;
 
 use rustyrosetta::*;
 
