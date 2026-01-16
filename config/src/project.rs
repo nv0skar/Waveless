@@ -1,5 +1,5 @@
 // Waveless
-// Copyright (C) 2025 Oscar Alvarez Gonzalez
+// Copyright (C) 2026 Oscar Alvarez Gonzalez
 
 ///
 /// The Waveless's project's 'config.toml' file will be divided into: compiler settings, runtime settings, authentication and database authentication credentials
@@ -11,7 +11,6 @@ use crate::*;
 
 /// Includes all the project's config
 #[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
-#[serde(default)]
 #[getset(get = "pub")]
 pub struct Project {
     general: General,
@@ -30,10 +29,12 @@ impl Default for Project {
 }
 
 #[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
-#[serde(default)]
 #[getset(get = "pub")]
 /// General settings that will be shared across Waveless's components
 pub struct General {
+    /// Project's name.
+    name: CompactString,
+
     /// contains all project's databases
     databases: CheapVec<DatabaseConfig>,
 
@@ -47,6 +48,7 @@ pub struct General {
 impl Default for General {
     fn default() -> Self {
         Self {
+            name: "Example".to_compact_string(),
             databases: CheapVec::from_vec(vec![
                 Default::default(),
                 DatabaseConfig {
@@ -68,12 +70,14 @@ impl Default for General {
 
 /// Compiler settings: these parameters will be used by the API compiler exclusively
 #[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
-#[serde(default)]
 #[getset(get = "pub")]
 pub struct Compiler {
     /// this option defines the compiler's strategy to analyze the data schema.
     /// if set to `None`, the compiler will only include the user defined endpoints
-    #[cfg_attr(feature = "toml_codec", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        feature = "toml_codec",
+        serde(default, skip_serializing_if = "Option::is_none")
+    )]
     endpoint_discovery: Option<DataSchemaDiscoveryConfig>,
 
     /// this is the directory where all the user defined endpoints will be located
@@ -83,7 +87,10 @@ pub struct Compiler {
     hooks_dir: Option<CompactString>,
 
     /// this is the directory where scripts that may be used to create the db, make migrations... are located
-    #[cfg_attr(feature = "toml_codec", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        feature = "toml_codec",
+        serde(default, skip_serializing_if = "Option::is_none")
+    )]
     bootstrap_scripts_dir: Option<CompactString>,
 }
 
@@ -100,15 +107,20 @@ impl Default for Compiler {
 
 /// Runtime settings: these parameters will be used by the server exclusively
 #[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
-#[serde(default)]
 #[getset(get = "pub")]
 pub struct Server {
     /// can be set through cli parameters or env variables
-    #[cfg_attr(feature = "toml_codec", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        feature = "toml_codec",
+        serde(default, skip_serializing_if = "Option::is_none")
+    )]
     listening_addr: Option<SocketAddr>,
 
     /// the files on the specified path will be served
-    #[cfg_attr(feature = "toml_codec", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        feature = "toml_codec",
+        serde(default, skip_serializing_if = "Option::is_none")
+    )]
     static_files: Option<CompactString>,
 
     /// prefix for all api endpoints
@@ -135,7 +147,6 @@ impl Default for Server {
 
 /// Defines parameters to be used by the data schema discovery
 #[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
-#[serde(default)]
 #[getset(get = "pub")]
 pub struct DataSchemaDiscoveryConfig {
     /// Strategy to discover endpoints.
@@ -143,7 +154,10 @@ pub struct DataSchemaDiscoveryConfig {
 
     /// Identifier of the database to analyze.
     /// If it is set to `None` the primary database will be used.
-    #[cfg_attr(feature = "toml_codec", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        feature = "toml_codec",
+        serde(default, skip_serializing_if = "Option::is_none")
+    )]
     database_id: Option<DatabaseId>,
 }
 
@@ -165,7 +179,7 @@ pub enum DataSchemaDiscoveryMethod {
     MySQL {
         #[cfg_attr(
             feature = "toml_codec",
-            serde(skip_serializing_if = "CheapVec::is_empty")
+            serde(default, skip_serializing_if = "CheapVec::is_empty")
         )]
         skip_tables: CheapVec<CompactString>, // Do not forget that auth, session and role tables are also skipped
     },
@@ -188,7 +202,6 @@ impl Default for DataSchemaDiscoveryMethod {
 
 /// Defines a database to be used by Waveless
 #[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
-#[serde(default)]
 #[getset(get = "pub")]
 pub struct DatabaseConfig {
     /// Unique identifier of the database.
@@ -204,7 +217,10 @@ pub struct DatabaseConfig {
     checksum_schema: bool,
 
     /// Defines the maximum number of simultaneous connections, by default this will be twice the number of available cores.
-    #[cfg_attr(feature = "toml_codec", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        feature = "toml_codec",
+        serde(default, skip_serializing_if = "Option::is_none")
+    )]
     pool_size: Option<usize>,
 }
 
@@ -254,7 +270,6 @@ impl Default for DatabaseConnection {
 
 /// Defines how the server executor can handle authentication
 #[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
-#[serde(default)]
 #[getset(get = "pub")]
 pub struct Authentication {
     /// Whether authentication is enabled.
@@ -293,7 +308,6 @@ impl Default for Authentication {
 
 /// Defines admin settings and privileges on the server.
 #[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
-#[serde(default)]
 #[getset(get = "pub")]
 pub struct Admin {
     /// Whether to enable the admin panel.
@@ -324,7 +338,10 @@ pub enum AuthenticationMethod {
     #[display("Name & password authentication on SQL using table {}", table_name)]
     SqlNamePassword {
         /// Will use the primary database by default.
-        #[cfg_attr(feature = "toml_codec", serde(skip_serializing_if = "Option::is_none"))]
+        #[cfg_attr(
+            feature = "toml_codec",
+            serde(default, skip_serializing_if = "Option::is_none")
+        )]
         database_id: Option<DatabaseId>,
         table_name: CompactString,
         /// This field references to the user table in order to model a relationship and implement login with name, emails, IDs... Must not be primary key.
@@ -354,7 +371,6 @@ impl Default for AuthenticationMethod {
 
 /// Session token configuration
 #[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
-#[serde(default)]
 #[getset(get = "pub")]
 pub struct Session {
     /// Defines how the sessions' token will be stored.
@@ -375,14 +391,16 @@ impl Default for Session {
 
 /// Role configuration
 #[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
-#[serde(default)]
 #[getset(get = "pub")]
 pub struct Roles {
     /// Defines how the roles will be stored.
     storage: RoleStorage,
 
     /// Default role when users sign up.
-    #[cfg_attr(feature = "toml_codec", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        feature = "toml_codec",
+        serde(default, skip_serializing_if = "Option::is_none")
+    )]
     default_role: Option<CompactString>,
 }
 
@@ -403,7 +421,10 @@ pub enum SessionStorage {
     #[display("SQL backed token on table {}", table_name)]
     SqlToken {
         /// Will use the primary database by default.
-        #[cfg_attr(feature = "toml_codec", serde(skip_serializing_if = "Option::is_none"))]
+        #[cfg_attr(
+            feature = "toml_codec",
+            serde(default, skip_serializing_if = "Option::is_none")
+        )]
         database_id: Option<DatabaseId>,
         table_name: CompactString,
         /// Must not be primary key.
@@ -438,7 +459,10 @@ pub enum RoleStorage {
     #[display("SQL backed users' roles check on {}", table_name)]
     SqlUser {
         /// Will use the primary database by default.
-        #[cfg_attr(feature = "toml_codec", serde(skip_serializing_if = "Option::is_none"))]
+        #[cfg_attr(
+            feature = "toml_codec",
+            serde(default, skip_serializing_if = "Option::is_none")
+        )]
         database_id: Option<DatabaseId>,
         table_name: CompactString,
         /// Must not be primary key.

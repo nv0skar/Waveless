@@ -1,5 +1,5 @@
 // Waveless
-// Copyright (C) 2025 Oscar Alvarez Gonzalez
+// Copyright (C) 2026 Oscar Alvarez Gonzalez
 
 ///
 /// -- The Waveless's binary format --
@@ -7,6 +7,7 @@
 /// - There is the frontend/compiler, which generates the binary that represents the whole api: all endpoints all server configuration, database checksums...
 ///   This is built upon user-defined endpoints and automatically generated endpoints from various discovery strategies.
 /// - The server executor/runtime, which loads the Waveless's project's binary and serves all endpoints, static files, interfaces with every database, generates statistics, manages authentication and session logic, admin panel...
+/// Note that when the binary is built, the magic bytes are appended to the beginning of the file
 ///
 use crate::*;
 
@@ -15,7 +16,7 @@ use crate::*;
 #[getset(get = "pub")]
 pub struct ProjectBuild {
     /// contains general settings shared with the frontend/compiler
-    // general: General,
+    general: project::General,
 
     /// specific compiler settings
     compiler_settings: project::Compiler,
@@ -27,11 +28,25 @@ pub struct ProjectBuild {
     databases_checksums: CheapVec<DatabaseChecksum>,
 }
 
+impl ProjectBuild {
+    /// Serializes the binary and appends the magic bytes to the beginning of the buffer
+    pub fn encode_binary(&self) -> Result<Bytes> {
+        let mut buffer = self.encode()?;
+        buffer.insert_from_slice(0, BINARY_MAGIC);
+        Ok(buffer)
+    }
+
+    /// Removes the magic bytes from the beginning of the file and deserializes the binary
+    pub fn decode_binary(buffer: &Bytes) -> Result<Self> {
+        Ok(ProjectBuild::decode(&buffer[(BINARY_MAGIC.len() - 1)..])?)
+    }
+}
+
 /// Default implementation for testing and validation
 impl Default for ProjectBuild {
     fn default() -> Self {
         Self {
-            // general: Default::default(),
+            general: Default::default(),
             compiler_settings: Default::default(),
             endpoints: endpoint::Endpoints::default(),
             databases_checksums: CheapVec::from_vec(vec![Default::default()]),

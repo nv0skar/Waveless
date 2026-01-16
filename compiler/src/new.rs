@@ -1,5 +1,5 @@
 // Waveless
-// Copyright (C) 2025 Oscar Alvarez Gonzalez
+// Copyright (C) 2026 Oscar Alvarez Gonzalez
 
 ///
 ///  Handles the new project creation.
@@ -8,28 +8,26 @@ use crate::*;
 
 /// Create a new project in the current dir with the specified name
 #[instrument(skip_all)]
-pub fn new_project(name: CompactString) -> Result<()> {
-    // Create the default `config.toml` file
+pub fn new_project(name: CompactString) -> Result<ResultContext> {
+    // Create the default `config.toml` file.
     let default_project = project::Project::default();
 
-    // Create the project's folder
+    // Create the project's folder.
     let project_path = current_dir()?.join(&name);
 
     {
         if let Err(err) = create_dir(project_path.to_owned()) {
-            println!(
-                "{} {}",
-                "ERROR:".bright_red().bold(),
-                format!("Cannot create project's folder {}. ({:?})", name, err).bright_white()
-            );
-            println!("{}", "❓ Are you sure that there is no project with the same name and that you have write permissions?".bright_white());
-            exit(1);
+            Err(anyhow!(
+                "Cannot create project's folder {}. Are you sure that there is no project with the same name and that you have write permissions?%{}",
+                name,
+                err.to_string().blue()
+            ))?;
         }
 
         debug!("Created project's folder at {}.", project_path.display());
     }
 
-    // Serialize default `config.toml` file
+    // Serialize default `config.toml` file.
     {
         let mut config_file = File::create_new(project_path.join("config.toml"))
             .context("Unexpected error, cannot create `config.toml` file.")?;
@@ -39,7 +37,7 @@ pub fn new_project(name: CompactString) -> Result<()> {
         debug!("Loaded default `config.toml` file.");
     }
 
-    // Generate all subfolders
+    // Generate all subfolders.
     {
         create_dir(
             project_path.join(
@@ -70,11 +68,12 @@ pub fn new_project(name: CompactString) -> Result<()> {
         debug!("Created project directories.");
     }
 
-    // Serialize the a sample endpoint
+    // Serialize the a sample endpoint.
     {
         let endpoints = endpoint::Endpoints::new(CheapVec::from_vec(vec![
             endpoint::Endpoint::default(),
             endpoint::Endpoint::new(
+                "ListPosts".to_compact_string(),
                 "posts".to_compact_string(),
                 Some("v1".to_compact_string()),
                 endpoint::HttpMethod::Get,
@@ -104,18 +103,14 @@ pub fn new_project(name: CompactString) -> Result<()> {
         let _ = sample_endpoint_file.write(toml::to_string_pretty(&endpoints)?.as_bytes())?;
     }
 
-    println!(
-        "{}",
-        format!(
-            "✅ New project `{}` was created at `{}` with a default `{}` and a sample endpoint at `{}`.",
-            name,
-            project_path.display(),
-            "config.toml",
-            Path::new(default_project.compiler().endpoints_dir()).join("sample_endpoint.toml").display()
-        )
-        .bold()
-        .bright_white()
-    );
-
-    Ok(())
+    Ok(format!(
+        "New project `{}` was created at `{}` with a default `{}` and a sample endpoint at `{}`.",
+        name,
+        project_path.display(),
+        "config.toml",
+        Path::new(default_project.compiler().endpoints_dir())
+            .join("sample_endpoint.toml")
+            .display()
+    )
+    .to_compact_string())
 }

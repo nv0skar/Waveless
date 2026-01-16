@@ -1,9 +1,12 @@
 [package]
-name = "waveless_compiler"
+name = "waveless_frontend"
 edition = "2024"
 
 [dependencies]
+waveless_commons.workspace = true
 waveless_binary.workspace = true
+waveless_compiler.workspace = true
+waveless_executor.workspace = true
 waveless_schema = { workspace = true, features = ["toml_codec"] }
 waveless_config = { workspace = true, features = ["toml_codec"] }
 rustyrosetta = { workspace = true, features = ["all"] }
@@ -14,16 +17,12 @@ toml.workspace = true
 arrayvec.workspace = true
 compact_str.workspace = true
 clap.workspace = true
-crc32fast.workspace = true
+iocraft.workspace = true
 owo-colors.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 nestify.workspace = true
 chrono.workspace = true
-garde.workspace = true
-half.workspace = true
-rust_decimal.workspace = true
-struct-patch.workspace = true
 getset.workspace = true
 either.workspace = true
 derive_more.workspace = true

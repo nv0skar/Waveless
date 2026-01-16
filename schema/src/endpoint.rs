@@ -1,35 +1,72 @@
 // Waveless
-// Copyright (C) 2025 Oscar Alvarez Gonzalez
+// Copyright (C) 2026 Oscar Alvarez Gonzalez
 
 use crate::*;
 
 /// Holds all the endpoints, is a wrapper of the CheapVec<Endpoint> type.
-#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Display, Debug)]
-#[display("{:?}", endpoints)]
+#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
 #[serde(default)]
 pub struct Endpoints {
-    endpoints: CheapVec<Endpoint>,
+    #[serde(rename = "endpoints")]
+    inner: CheapVec<Endpoint>,
+}
+
+impl Endpoints {
+    /// Add a new endpoint. This will check that there is no endpoint with the same method, route and version.
+    pub fn add(&mut self, new_endpoint: Endpoint) -> Result<()> {
+        let search = self.inner.iter().find(|endpoint| {
+            endpoint.method == new_endpoint.method
+                && endpoint.route == new_endpoint.route
+                && endpoint.version == new_endpoint.version
+        });
+
+        match search {
+            Some(endpoint) => Err(anyhow!(
+                "An equivalent endpoint already exists: you were trying to add {}, but {} is equivalent.",
+                new_endpoint,
+                endpoint
+            )),
+            None => {
+                self.inner.push(new_endpoint);
+                Ok(())
+            }
+        }
+    }
+
+    /// Merges two endpoints buffers
+    pub fn merge(&mut self, new_endpoints: Endpoints) -> Result<()> {
+        for endpoint in new_endpoints.inner {
+            self.add(endpoint)?;
+        }
+        Ok(())
+    }
 }
 
 impl Default for Endpoints {
     fn default() -> Self {
         Self {
-            endpoints: Default::default(),
+            inner: Default::default(),
         }
     }
 }
 
 /// The main endpoint definition that will be either created by the user or discovered by the compiler.
 /// This will be then included in the Waveless project's binary.
-#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Display, Debug)]
-#[display("Endpoint({}, {}, {:?})", route, method, description)]
-#[serde(default)]
+#[derive(Clone, Constructor, Serialize, Deserialize, Getters, Display, Debug)]
+#[display("{} -> ({}, {:?}, {:?})", route, method, version, description)]
+#[getset(get = "pub")]
 pub struct Endpoint {
+    /// Endpoint's unique identifier
+    id: CompactString,
+
     /// Route of the endpoint. Note that this will be prefixed with `{api_prefix}/{version}` (if version is set).
     route: CompactString,
 
     /// The version of the endpoint, if no version is set the endpoint will be accessible from `{api_prefix}/{route}`.
-    #[cfg_attr(feature = "toml_codec", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        feature = "toml_codec",
+        serde(default, skip_serializing_if = "Option::is_none")
+    )]
     version: Option<CompactString>,
 
     /// Method of the endpoint
@@ -39,38 +76,44 @@ pub struct Endpoint {
     target_database: Option<DatabaseId>,
 
     /// Establishes the endpoint handler. Note that if no executor is set, the server will try to handle the request internally.
-    #[cfg_attr(feature = "toml_codec", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        feature = "toml_codec",
+        serde(default, skip_serializing_if = "Option::is_none")
+    )]
     executor: Option<Executor>,
 
     /// Sets the endpoint description.
-    #[cfg_attr(feature = "toml_codec", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        feature = "toml_codec",
+        serde(default, skip_serializing_if = "Option::is_none")
+    )]
     description: Option<CompactString>,
 
     /// Sets the tags of this endpoint. By default the target table name will be adde as a tag.
     #[cfg_attr(
         feature = "toml_codec",
-        serde(skip_serializing_if = "CheapVec::is_empty")
+        serde(default, skip_serializing_if = "CheapVec::is_empty")
     )]
     tags: CheapVec<CompactString>,
 
     /// Sets the accepted path parameters.
     #[cfg_attr(
         feature = "toml_codec",
-        serde(skip_serializing_if = "CheapVec::is_empty")
+        serde(default, skip_serializing_if = "CheapVec::is_empty")
     )]
     path_params: CheapVec<CompactString>,
 
     /// Sets the accepted query parameters.
     #[cfg_attr(
         feature = "toml_codec",
-        serde(skip_serializing_if = "CheapVec::is_empty")
+        serde(default, skip_serializing_if = "CheapVec::is_empty")
     )]
     query_params: CheapVec<CompactString>,
 
     /// Sets the accepted body parameters.
     #[cfg_attr(
         feature = "toml_codec",
-        serde(skip_serializing_if = "CheapVec::is_empty")
+        serde(default, skip_serializing_if = "CheapVec::is_empty")
     )]
     body_params: CheapVec<CompactString>,
 
@@ -80,7 +123,7 @@ pub struct Endpoint {
     /// All allowed roles to query the endpoint.
     #[cfg_attr(
         feature = "toml_codec",
-        serde(skip_serializing_if = "CheapVec::is_empty")
+        serde(default, skip_serializing_if = "CheapVec::is_empty")
     )]
     allowed_roles: CheapVec<CompactString>,
 
@@ -91,9 +134,18 @@ pub struct Endpoint {
     /// Whether this endpoint has been automatically generated.
     #[cfg_attr(
         feature = "toml_codec",
-        serde(skip_serializing_if = "std::ops::Not::not")
+        serde(default, skip_serializing_if = "std::ops::Not::not")
     )]
     auto_generated: bool,
+}
+
+impl PartialEq for Endpoint {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+            || (self.method == other.method
+                && self.route == other.route
+                && self.version == other.version)
+    }
 }
 
 /// Available HTTP methods
@@ -113,6 +165,7 @@ fn deprecated_skip(value: &bool) -> bool {
 impl Default for Endpoint {
     fn default() -> Self {
         Self {
+            id: "ListProducts".to_compact_string(),
             route: "/products/".to_compact_string(),
             version: Some("v1".to_compact_string()),
             method: HttpMethod::Get,

@@ -1,5 +1,5 @@
 // Waveless
-// Copyright (C) 2025 Oscar Alvarez Gonzalez
+// Copyright (C) 2026 Oscar Alvarez Gonzalez
 
 pub mod databases;
 pub mod endpoint;
@@ -11,7 +11,7 @@ use waveless_config::*;
 
 use rustyrosetta::{codec::*, *};
 
-use anyhow::{Result, bail};
+use anyhow::{Result, anyhow, bail};
 use arrayvec::ArrayString;
 use chrono::{NaiveDateTime, TimeDelta, Utc};
 use compact_str::*;

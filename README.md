@@ -2,4 +2,5 @@
 <h2 align="center">Bring your data model → generate fast, portable and battle-ready APIs 🚀</h2>
 
 ## TODO
-- [ ] Clean unused dependencies
+- [ ] Clean unused dependencies.
+- [ ] Do proper error handling.

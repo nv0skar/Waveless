@@ -5,11 +5,21 @@ version = "0.0.1"
 edition = "2024"
 
 [workspace]
-members = ["compiler", "executor", "schema", "binary", "config"]
+members = [
+    "commons",
+    "compiler",
+    "executor",
+    "frontend",
+    "schema",
+    "binary",
+    "config",
+]
 
 [workspace.dependencies]
+waveless_commons = { path = "./commons" }
 waveless_compiler = { path = "./compiler" }
 waveless_executor = { path = "./executor" }
+waveless_frontend = { path = "./frontend" }
 waveless_schema = { path = "./schema" }
 waveless_binary = { path = "./binary" }
 waveless_config = { path = "./config" }
@@ -73,9 +83,11 @@ rand = "0.9"
 
 blake3 = "1.8"
 argon2 = { version = "0.5", default-features = true }
+crc32fast = "1.4"
 
 clap = { version = "4.5", features = ["derive"] }
 
+iocraft = "0.7"
 owo-colors = "4.2"
 
 # wasm-bindgen = "0.2.100"
