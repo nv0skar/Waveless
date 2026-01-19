@@ -4,6 +4,8 @@ edition = "2024"
 
 [dependencies]
 rustyrosetta = { workspace = true, features = ["all"] }
+compact_str.workspace = true
+iocraft.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 anyhow.workspace = true

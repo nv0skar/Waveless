@@ -15,7 +15,7 @@ use crate::*;
 /// Build the project in the current path (if no `config.toml` file is present in the current directory it will be searched in parent directories)
 #[instrument(skip_all)]
 pub fn build() -> Result<ResultContext> {
-    let config = config::project_config()?;
+    let config = config_loader::project_config()?;
 
     debug!(
         "Started building at {} with the following settings {:#?}.",
@@ -63,9 +63,9 @@ pub fn build() -> Result<ResultContext> {
     }
 
     // Serialize the project's build
-    let build = binary::ProjectBuild::new(
+    let build = binary::Build::new(
         config.general().to_owned(),
-        config.compiler().to_owned(),
+        config.server().to_owned(),
         endpoints,
         CheapVec::new(),
     );

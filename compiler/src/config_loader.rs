@@ -4,13 +4,13 @@
 use crate::*;
 
 /// Retrieves the project's config from the `PROJECT_CONFIG`'s `OnceLock` or load it if not present.
-pub fn project_config() -> Result<project::Project> {
+pub fn project_config() -> Result<&'static project::Project> {
     match PROJECT_CONFIG.get() {
-        Some(config) => Ok(config.to_owned()),
+        Some(config) => Ok(config),
         None => {
             let config = load_config()?;
-            PROJECT_CONFIG.set(config.to_owned()).unwrap();
-            Ok(config)
+            PROJECT_CONFIG.set(config).unwrap();
+            Ok(PROJECT_CONFIG.get().unwrap())
         }
     }
 }

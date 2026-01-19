@@ -9,6 +9,7 @@ waveless_schema = { workspace = true, features = ["postcard_codec"] }
 waveless_config = { workspace = true, features = ["postcard_codec"] }
 rustyrosetta = { workspace = true, features = ["all"] }
 tokio = { workspace = true, features = ["full"] }
+axum.workspace = true
 serde.workspace = true
 serde_with.workspace = true
 arrayvec.workspace = true

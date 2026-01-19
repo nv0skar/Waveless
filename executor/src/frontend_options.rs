@@ -11,5 +11,8 @@ pub enum ExecutorFrontendOptions {
     Run {
         #[arg(help = "Binary path.")]
         path: PathBuf,
+
+        #[arg(help = "Listening address.")]
+        addr: Option<SocketAddr>,
     },
 }

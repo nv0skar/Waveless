@@ -3,6 +3,7 @@
 
 pub mod binary;
 
+use waveless_commons::*;
 use waveless_config::*;
 use waveless_schema::*;
 
@@ -15,5 +16,6 @@ use clap::Subcommand;
 use derive_more::Constructor;
 use getset::*;
 use serde::{Deserialize, Serialize};
+use tracing::*;
 
 pub const BINARY_MAGIC: &'static [u8] = b"waveless_binary";

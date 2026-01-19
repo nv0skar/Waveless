@@ -3,6 +3,8 @@
 
 pub mod project;
 
+use waveless_commons::serialize::*;
+
 use rustyrosetta::*;
 
 use std::{collections::HashMap, net::SocketAddr};

@@ -36,6 +36,7 @@ pub struct General {
     name: CompactString,
 
     /// contains all project's databases
+    #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
     databases: CheapVec<DatabaseConfig>,
 
     /// contains authentication settings
@@ -68,16 +69,13 @@ impl Default for General {
     }
 }
 
-/// Compiler settings: these parameters will be used by the API compiler exclusively
+/// Compiler settings: these parameters will be used by the API's compiler exclusively
 #[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
 #[getset(get = "pub")]
 pub struct Compiler {
     /// this option defines the compiler's strategy to analyze the data schema.
     /// if set to `None`, the compiler will only include the user defined endpoints
-    #[cfg_attr(
-        feature = "toml_codec",
-        serde(default, skip_serializing_if = "Option::is_none")
-    )]
+    #[serde(default, skip_serializing_if = "should_skip_option")]
     endpoint_discovery: Option<DataSchemaDiscoveryConfig>,
 
     /// this is the directory where all the user defined endpoints will be located
@@ -87,10 +85,7 @@ pub struct Compiler {
     hooks_dir: Option<CompactString>,
 
     /// this is the directory where scripts that may be used to create the db, make migrations... are located
-    #[cfg_attr(
-        feature = "toml_codec",
-        serde(default, skip_serializing_if = "Option::is_none")
-    )]
+    #[serde(default, skip_serializing_if = "should_skip_option")]
     bootstrap_scripts_dir: Option<CompactString>,
 }
 
@@ -110,17 +105,11 @@ impl Default for Compiler {
 #[getset(get = "pub")]
 pub struct Server {
     /// can be set through cli parameters or env variables
-    #[cfg_attr(
-        feature = "toml_codec",
-        serde(default, skip_serializing_if = "Option::is_none")
-    )]
+    #[serde(default, skip_serializing_if = "should_skip_option")]
     listening_addr: Option<SocketAddr>,
 
     /// the files on the specified path will be served
-    #[cfg_attr(
-        feature = "toml_codec",
-        serde(default, skip_serializing_if = "Option::is_none")
-    )]
+    #[serde(default, skip_serializing_if = "should_skip_option")]
     static_files: Option<CompactString>,
 
     /// prefix for all api endpoints
@@ -154,10 +143,7 @@ pub struct DataSchemaDiscoveryConfig {
 
     /// Identifier of the database to analyze.
     /// If it is set to `None` the primary database will be used.
-    #[cfg_attr(
-        feature = "toml_codec",
-        serde(default, skip_serializing_if = "Option::is_none")
-    )]
+    #[serde(default, skip_serializing_if = "should_skip_option")]
     database_id: Option<DatabaseId>,
 }
 
@@ -177,10 +163,7 @@ pub enum DataSchemaDiscoveryMethod {
     /// The MySQL discovey strategy will analyze a MySQL database in order to generate a representation of the data model that will be analyzed by the endpoint generator backend.
     #[display("MySQL schema discovery (skipping: {:?})", skip_tables)]
     MySQL {
-        #[cfg_attr(
-            feature = "toml_codec",
-            serde(default, skip_serializing_if = "CheapVec::is_empty")
-        )]
+        #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
         skip_tables: CheapVec<CompactString>, // Do not forget that auth, session and role tables are also skipped
     },
 
@@ -217,10 +200,7 @@ pub struct DatabaseConfig {
     checksum_schema: bool,
 
     /// Defines the maximum number of simultaneous connections, by default this will be twice the number of available cores.
-    #[cfg_attr(
-        feature = "toml_codec",
-        serde(default, skip_serializing_if = "Option::is_none")
-    )]
+    #[serde(default, skip_serializing_if = "should_skip_option")]
     pool_size: Option<usize>,
 }
 
@@ -276,6 +256,7 @@ pub struct Authentication {
     enabled: bool,
 
     /// All the available methods to authenticate.
+    #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
     methods: CheapVec<AuthenticationMethod>,
 
     /// Session token config.
@@ -314,6 +295,7 @@ pub struct Admin {
     enable_panel: bool, // TODO
 
     /// All roles that are considered admins.
+    #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
     allowed_roles: CheapVec<CompactString>,
 
     /// Whether to gather statistics or not.
@@ -338,10 +320,7 @@ pub enum AuthenticationMethod {
     #[display("Name & password authentication on SQL using table {}", table_name)]
     SqlNamePassword {
         /// Will use the primary database by default.
-        #[cfg_attr(
-            feature = "toml_codec",
-            serde(default, skip_serializing_if = "Option::is_none")
-        )]
+        #[serde(default, skip_serializing_if = "should_skip_option")]
         database_id: Option<DatabaseId>,
         table_name: CompactString,
         /// This field references to the user table in order to model a relationship and implement login with name, emails, IDs... Must not be primary key.
@@ -397,10 +376,7 @@ pub struct Roles {
     storage: RoleStorage,
 
     /// Default role when users sign up.
-    #[cfg_attr(
-        feature = "toml_codec",
-        serde(default, skip_serializing_if = "Option::is_none")
-    )]
+    #[serde(default, skip_serializing_if = "should_skip_option")]
     default_role: Option<CompactString>,
 }
 
@@ -421,10 +397,7 @@ pub enum SessionStorage {
     #[display("SQL backed token on table {}", table_name)]
     SqlToken {
         /// Will use the primary database by default.
-        #[cfg_attr(
-            feature = "toml_codec",
-            serde(default, skip_serializing_if = "Option::is_none")
-        )]
+        #[serde(default, skip_serializing_if = "should_skip_option")]
         database_id: Option<DatabaseId>,
         table_name: CompactString,
         /// Must not be primary key.
@@ -459,10 +432,7 @@ pub enum RoleStorage {
     #[display("SQL backed users' roles check on {}", table_name)]
     SqlUser {
         /// Will use the primary database by default.
-        #[cfg_attr(
-            feature = "toml_codec",
-            serde(default, skip_serializing_if = "Option::is_none")
-        )]
+        #[serde(default, skip_serializing_if = "should_skip_option")]
         database_id: Option<DatabaseId>,
         table_name: CompactString,
         /// Must not be primary key.

@@ -1,8 +1,8 @@
 // Waveless
 // Copyright (C) 2026 Oscar Alvarez Gonzalez
 
-use waveless_commons::logger::*;
-use waveless_compiler::{build::*, new::*, *};
+use waveless_commons::{logger::*, output::handle_main, *};
+use waveless_compiler::{build::*, new::*};
 use waveless_executor::frontend_options::*;
 
 use rustyrosetta::*;
@@ -75,48 +75,10 @@ nest! {
 
 #[tokio::main]
 async fn main() {
-    match try_main() {
-        Ok(res) => {
-            element! {
-                View(
-                    padding_left: 1,
-                    padding_right: 1,
-                    border_style: BorderStyle::Round,
-                    border_color: iocraft::Color::Green,
-                ) {
-                    MixedText(align: TextAlign::Left, contents: vec![
-                        MixedTextContent::new("✅ "),
-                        MixedTextContent::new("SUCCESS: ").color(iocraft::Color::Green).weight(Weight::Bold),
-                        MixedTextContent::new(res).color(iocraft::Color::White),
-                    ])
-                }
-            }
-            .print();
-        }
-        Err(err) => {
-            let err = err.to_string();
-            let (res, cx) = err.split_once("%").unwrap_or((err.as_str(), ""));
-            element! {
-                View(
-                    padding_left: 1,
-                    padding_right: 1,
-                    border_style: BorderStyle::Round,
-                    border_color: iocraft::Color::Red,
-                ) {
-                    MixedText(align: TextAlign::Left, contents: vec![
-                        MixedTextContent::new("🔴 "),
-                        MixedTextContent::new("ERROR: ").color(iocraft::Color::Red).weight(Weight::Bold),
-                        MixedTextContent::new(res).color(iocraft::Color::White),
-                        MixedTextContent::new(format!("\n{}", cx)).color(iocraft::Color::Blue),
-                    ])
-                }
-            }
-            .print();
-        }
-    }
+    handle_main(try_main).await;
 }
 
-fn try_main() -> Result<ResultContext> {
+async fn try_main() -> Result<ResultContext> {
     let cli = Frontend::parse();
 
     // Setup logging

@@ -7,7 +7,11 @@ use crate::*;
 #[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
 #[serde(default)]
 pub struct Endpoints {
-    #[serde(rename = "endpoints")]
+    #[serde(
+        rename = "endpoints",
+        default,
+        skip_serializing_if = "should_skip_cheapvec"
+    )]
     inner: CheapVec<Endpoint>,
 }
 
@@ -63,10 +67,7 @@ pub struct Endpoint {
     route: CompactString,
 
     /// The version of the endpoint, if no version is set the endpoint will be accessible from `{api_prefix}/{route}`.
-    #[cfg_attr(
-        feature = "toml_codec",
-        serde(default, skip_serializing_if = "Option::is_none")
-    )]
+    #[serde(default, skip_serializing_if = "should_skip_option")]
     version: Option<CompactString>,
 
     /// Method of the endpoint
@@ -76,66 +77,42 @@ pub struct Endpoint {
     target_database: Option<DatabaseId>,
 
     /// Establishes the endpoint handler. Note that if no executor is set, the server will try to handle the request internally.
-    #[cfg_attr(
-        feature = "toml_codec",
-        serde(default, skip_serializing_if = "Option::is_none")
-    )]
+    #[serde(default, skip_serializing_if = "should_skip_option")]
     executor: Option<Executor>,
 
     /// Sets the endpoint description.
-    #[cfg_attr(
-        feature = "toml_codec",
-        serde(default, skip_serializing_if = "Option::is_none")
-    )]
+    #[serde(default, skip_serializing_if = "should_skip_option")]
     description: Option<CompactString>,
 
     /// Sets the tags of this endpoint. By default the target table name will be adde as a tag.
-    #[cfg_attr(
-        feature = "toml_codec",
-        serde(default, skip_serializing_if = "CheapVec::is_empty")
-    )]
+    #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
     tags: CheapVec<CompactString>,
 
     /// Sets the accepted path parameters.
-    #[cfg_attr(
-        feature = "toml_codec",
-        serde(default, skip_serializing_if = "CheapVec::is_empty")
-    )]
+    #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
     path_params: CheapVec<CompactString>,
 
     /// Sets the accepted query parameters.
-    #[cfg_attr(
-        feature = "toml_codec",
-        serde(default, skip_serializing_if = "CheapVec::is_empty")
-    )]
+    #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
     query_params: CheapVec<CompactString>,
 
     /// Sets the accepted body parameters.
-    #[cfg_attr(
-        feature = "toml_codec",
-        serde(default, skip_serializing_if = "CheapVec::is_empty")
-    )]
+    #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
     body_params: CheapVec<CompactString>,
 
     /// Whether to require auth.
     require_auth: bool,
 
     /// All allowed roles to query the endpoint.
-    #[cfg_attr(
-        feature = "toml_codec",
-        serde(default, skip_serializing_if = "CheapVec::is_empty")
-    )]
+    #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
     allowed_roles: CheapVec<CompactString>,
 
     /// Whether this endpoint es deprecated.
-    #[cfg_attr(feature = "toml_codec", serde(skip_serializing_if = "deprecated_skip"))]
+    #[serde(skip_serializing_if = "should_skip")]
     deprecated: bool,
 
     /// Whether this endpoint has been automatically generated.
-    #[cfg_attr(
-        feature = "toml_codec",
-        serde(default, skip_serializing_if = "std::ops::Not::not")
-    )]
+    #[serde(default, skip_serializing_if = "auto_generated_skip")]
     auto_generated: bool,
 }
 
@@ -158,8 +135,8 @@ pub enum HttpMethod {
     Delete,
 }
 
-fn deprecated_skip(value: &bool) -> bool {
-    *value
+fn auto_generated_skip(value: &bool) -> bool {
+    should_skip(&(!*value))
 }
 
 impl Default for Endpoint {

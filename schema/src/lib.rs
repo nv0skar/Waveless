@@ -7,6 +7,7 @@ pub mod entry;
 
 pub use entry::*;
 
+use waveless_commons::serialize::*;
 use waveless_config::*;
 
 use rustyrosetta::{codec::*, *};

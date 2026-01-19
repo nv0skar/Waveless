@@ -3,6 +3,7 @@ name = "waveless_schema"
 edition = "2024"
 
 [dependencies]
+waveless_commons.workspace = true
 waveless_config.workspace = true
 rustyrosetta = { workspace = true, features = ["all"] }
 sea-schema.workspace = true

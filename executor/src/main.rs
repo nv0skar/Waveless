@@ -1,8 +1,8 @@
 // Waveless
 // Copyright (C) 2026 Oscar Alvarez Gonzalez
 
-use waveless_commons::logger::*;
-use waveless_executor::frontend_options::*;
+use waveless_commons::{logger::*, output::handle_main, *};
+use waveless_executor::{build_loader::*, frontend_options::*, server::*};
 
 use anyhow::Result;
 use clap::Parser;
@@ -31,11 +31,22 @@ struct ExecutorFrontend {
 }
 
 #[tokio::main]
-pub async fn main() -> Result<()> {
+async fn main() {
+    handle_main(try_main).await
+}
+
+async fn try_main() -> Result<ResultContext> {
     let cli = ExecutorFrontend::parse();
 
     // Setup logging
     subscribe_logger(cli.debug)?;
 
-    Ok(())
+    // Handle frontend subcommands
+    match cli.subcommand {
+        Some(ExecutorFrontendOptions::Run { path, addr }) => {
+            load_build(path)?;
+            serve(addr).await
+        }
+        _ => todo!(),
+    }
 }

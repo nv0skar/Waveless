@@ -3,6 +3,7 @@ name = "waveless_config"
 edition = "2024"
 
 [dependencies]
+waveless_commons.workspace = true
 rustyrosetta = { workspace = true, features = ["all"] }
 serde.workspace = true
 serde_with.workspace = true

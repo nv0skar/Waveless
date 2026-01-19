@@ -14,12 +14,12 @@ use crate::*;
 /// The project's build file
 #[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
 #[getset(get = "pub")]
-pub struct ProjectBuild {
+pub struct Build {
     /// contains general settings shared with the frontend/compiler
     general: project::General,
 
-    /// specific compiler settings
-    compiler_settings: project::Compiler,
+    /// specific server settings
+    server_settings: project::Server,
 
     /// defines all the API endpoints
     endpoints: endpoint::Endpoints,
@@ -28,28 +28,38 @@ pub struct ProjectBuild {
     databases_checksums: CheapVec<DatabaseChecksum>,
 }
 
-impl ProjectBuild {
-    /// Serializes the binary and appends the magic bytes to the beginning of the buffer
+impl Build {
+    /// Serializes the binary and appends the magic bytes to the beginning of the buffer.
+    /// NOTE: the `BINARY_MODE` flag is set as a workaround of the issue https://github.com/serde-rs/serde/issues/1732,
+    /// so now we can safely serialize all repository's structures and enums regardless whether the serializer being
+    /// self-descriptive or not.
     pub fn encode_binary(&self) -> Result<Bytes> {
+        BINARY_MODE.set(true);
+        debug!(
+            "Binary mode is set, as the serializer requires `#[serde(skip_serializing_if = '...')]` to be disabled."
+        );
         let mut buffer = self.encode()?;
         buffer.insert_from_slice(0, BINARY_MAGIC);
+        BINARY_MODE.set(false);
         Ok(buffer)
     }
 
-    /// Removes the magic bytes from the beginning of the file and deserializes the binary
+    /// Removes the magic bytes from the beginning of the file and deserializes the binary.
     pub fn decode_binary(buffer: &Bytes) -> Result<Self> {
-        Ok(ProjectBuild::decode(&buffer[(BINARY_MAGIC.len() - 1)..])?)
+        Ok(Build::decode(&buffer[BINARY_MAGIC.len()..])?)
     }
 }
 
-/// Default implementation for testing and validation
-impl Default for ProjectBuild {
+/// Default implementation for testing and validation.
+impl Default for Build {
     fn default() -> Self {
         Self {
             general: Default::default(),
-            compiler_settings: Default::default(),
-            endpoints: endpoint::Endpoints::default(),
-            databases_checksums: CheapVec::from_vec(vec![Default::default()]),
+            server_settings: Default::default(),
+            endpoints: endpoint::Endpoints::new(CheapVec::from_vec(vec![
+                endpoint::Endpoint::default(),
+            ])),
+            databases_checksums: CheapVec::from_vec(vec![]),
         }
     }
 }
@@ -78,21 +88,21 @@ impl Default for DatabaseChecksum {
 mod tests {
     use super::*;
 
-    use rustyrosetta::codec::*;
-
     #[test]
     fn default_into_bin_and_back() -> Result<()> {
-        let build = ProjectBuild::default();
+        let build = Build::default();
 
-        let serialized = build.encode().context("Cannot serialize project build.")?;
+        let serialized = build
+            .encode_binary()
+            .context("Cannot serialize project build.")?;
 
         let deserialized =
-            ProjectBuild::decode(&serialized).context("Cannot deserialize project build. Did you disable the `toml_codec` flag on `waveless_config` and `waveless_schema`?")?;
+            Build::decode_binary(&serialized).context("Cannot deserialize project build. Did you disable the `toml_codec` flag on `waveless_config` and `waveless_schema`?")?;
 
         assert_eq!(build, deserialized);
 
-        println!("{:#?}\n", build);
-        println!("{:?}", serialized);
+        println!("Build file structure: {:#?}\n", build);
+        println!("Binary representation: {:?}", serialized);
 
         Ok(())
     }

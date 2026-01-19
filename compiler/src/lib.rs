@@ -3,10 +3,11 @@
 
 pub mod bootstrap;
 pub mod build;
-pub mod config;
+pub mod config_loader;
 pub mod new;
 
 use waveless_binary::*;
+use waveless_commons::*;
 use waveless_config::*;
 use waveless_schema::*;
 
@@ -26,8 +27,6 @@ use derive_more::Constructor;
 use owo_colors::*;
 use serde::{Deserialize, Serialize};
 use tracing::*;
-
-pub type ResultContext = CompactString; // TODO: Replace this with custom error types.
 
 pub static PROJECT_ROOT: OnceLock<PathBuf> = OnceLock::new();
 
