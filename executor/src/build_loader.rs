@@ -14,26 +14,18 @@ pub fn build() -> Result<&'static binary::Build> {
 }
 
 /// Deserializes the project's build into the `BUILD`'s `OnceLock`.
-pub fn load_build(path: PathBuf) -> Result<()> {
+pub fn load_build(path: PathBuf) -> Result<binary::Build> {
     match read(path.to_owned()) {
         Ok(file_buffer) => match binary::Build::decode_binary(&CheapVec::from_vec(file_buffer)) {
-            Ok(build) => {
-                if let Err(_) = BUILD.set(build) {
-                    Err(anyhow!(
-                        "Unexpected error, the build global was already set."
-                    ))
-                } else {
-                    Ok(())
-                }
-            }
+            Ok(build) => Ok(build),
             Err(err) => Err(anyhow!(
-                "Cannot deserialize the binary `{}`.%{}",
+                "Cannot deserialize the binary '{}'.%{}",
                 path.display(),
                 err.to_string()
             )),
         },
         Err(err) => Err(anyhow!(
-            "Cannot open `{}`. Are you sure that you have the file's permissions?%{}",
+            "Cannot open '{}'. Are you sure that you have the file's permissions?%{}",
             path.display(),
             err.to_string()
         )),

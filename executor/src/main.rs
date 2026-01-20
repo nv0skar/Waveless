@@ -2,9 +2,9 @@
 // Copyright (C) 2026 Oscar Alvarez Gonzalez
 
 use waveless_commons::{logger::*, output::handle_main, *};
-use waveless_executor::{build_loader::*, frontend_options::*, server::*};
+use waveless_executor::{build_loader::*, frontend_options::*, router_loader::*, server::*, *};
 
-use anyhow::Result;
+use anyhow::{Context, Result, anyhow};
 use clap::Parser;
 
 ///
@@ -44,7 +44,16 @@ async fn try_main() -> Result<ResultContext> {
     // Handle frontend subcommands
     match cli.subcommand {
         Some(ExecutorFrontendOptions::Run { path, addr }) => {
-            load_build(path)?;
+            BUILD
+                .set(load_build(path)?)
+                .map_err(|_| anyhow!("Cannot load build into global."))?;
+
+            ROUTER
+                .set(load_router()?)
+                .map_err(|_| anyhow!("Cannot load router into global."))?;
+
+            databases::DatabasesConnections::load().await?;
+
             serve(addr).await
         }
         _ => todo!(),

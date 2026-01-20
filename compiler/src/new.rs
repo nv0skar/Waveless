@@ -78,12 +78,11 @@ pub fn new_project(name: CompactString) -> Result<ResultContext> {
                 Some("v1".to_compact_string()),
                 endpoint::HttpMethod::Get,
                 None,
-                Some(endpoint::Executor::SQL {
+                Some(endpoint::Execute::MySQL {
                     query: "SELECT * FROM posts".to_compact_string(),
                 }),
                 Some("Get all posts.".to_compact_string()),
                 CheapVec::from_vec(vec!["posts".to_compact_string()]),
-                Default::default(),
                 Default::default(),
                 Default::default(),
                 false,
@@ -104,7 +103,7 @@ pub fn new_project(name: CompactString) -> Result<ResultContext> {
     }
 
     Ok(format!(
-        "New project `{}` was created at `{}` with a default `{}` and a sample endpoint at `{}`.",
+        "New project '{}' was created at '{}' with a default '{}' and a sample endpoint at '{}'.",
         name,
         project_path.display(),
         "config.toml",

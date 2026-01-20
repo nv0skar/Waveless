@@ -42,7 +42,7 @@ pub fn build() -> Result<ResultContext> {
                         }
                         Err(err) => {
                             Err(anyhow!(
-                                "Cannot deserialize the endpoints definition file `{}`.%{}",
+                                "Cannot deserialize the endpoints definition file '{}'.%{}",
                                 endpoint_path.file_name().display(),
                                 err.to_string()
                             ))?;
@@ -51,7 +51,7 @@ pub fn build() -> Result<ResultContext> {
                 }
                 Err(err) => {
                     Err(anyhow!(
-                        "Cannot open the endpoints definition file `{}`.%{}",
+                        "Cannot open the endpoints definition file '{}'.%{}",
                         endpoint_path.file_name().display(),
                         err.to_string()
                     ))?;

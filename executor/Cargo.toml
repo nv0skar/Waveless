@@ -9,13 +9,23 @@ waveless_schema = { workspace = true, features = ["postcard_codec"] }
 waveless_config = { workspace = true, features = ["postcard_codec"] }
 rustyrosetta = { workspace = true, features = ["all"] }
 tokio = { workspace = true, features = ["full"] }
-axum.workspace = true
+hyper.workspace = true
+hyper-util.workspace = true
+http-body-util.workspace = true
+tower.workspace = true
+tower-http = { workspace = true, features = ["full"] }
+matchit.workspace = true
+sqlx.workspace = true
+sea-orm.workspace = true
 serde.workspace = true
 serde_with.workspace = true
+serde_json.workspace = true
 arrayvec.workspace = true
 compact_str.workspace = true
+dashmap.workspace = true
 clap.workspace = true
 chrono.workspace = true
+owo-colors.workspace = true
 tracing.workspace = true
 nestify.workspace = true
 getset.workspace = true

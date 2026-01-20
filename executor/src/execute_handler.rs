@@ -1,0 +1,75 @@
+// Waveless
+// Copyright (C) 2026 Oscar Alvarez Gonzalez
+
+use crate::*;
+
+#[derive(Clone, PartialEq, Constructor, Debug)]
+pub struct ExecuteWrapper(endpoint::Execute);
+
+impl ExecuteWrapper {
+    /// Executes a query using the given executor and database connection.
+    /// Beware that the output must be a `serde_json::Value` that will be
+    /// further serialized into JSON
+    pub async fn execute(
+        &self,
+        db_conn: &AnyDatabaseConnection,
+        params: HashMap<CompactString, CompactString>,
+    ) -> Result<serde_json::Value> {
+        match &self.0 {
+            endpoint::Execute::MySQL { query } => {
+                let databases::AnyDatabaseConnection::MySQL(mysql_pool) = db_conn;
+
+                // Replaces Waveless' query's parameters placeholders with MySQL's ones.
+                let params_order = query
+                    .trim_start_matches(|c| c != '{')
+                    .split('{')
+                    .map(|sub| sub.split_once('}').unwrap_or_default().0)
+                    .filter(|sub| !sub.is_empty())
+                    .collect::<CheapVec<&str>>();
+
+                let mut ordered_values = CheapVec::new();
+
+                for param_id in params_order {
+                    let Some(value) = params.get(&param_id.to_compact_string()) else {
+                        bail!(
+                            "The endpoint requires {}, but it wasn't provided in the request.",
+                            param_id
+                        )
+                    };
+
+                    ordered_values.push(sea_orm::Value::from(value.to_string()));
+                }
+
+                let mysql_query = query
+                    .split('{')
+                    .map(|sub| {
+                        if sub.contains('}') {
+                            sub.trim_start_matches(|c| c != '}').replace('}', "?")
+                        } else {
+                            sub.to_string()
+                        }
+                    })
+                    .collect::<CompactString>();
+
+                let res = mysql_pool
+                    .query_all(Statement::from_sql_and_values(
+                        DbBackend::MySql,
+                        mysql_query.to_string(),
+                        ordered_values,
+                    ))
+                    .await?;
+
+                let mut rows = CheapVec::new();
+
+                for row in res {
+                    rows.push(JsonValue::from_query_result(&row, "")?);
+                }
+
+                return Ok(json!(&rows));
+            }
+            endpoint::Execute::Hook { .. } => {
+                todo!("Custom endpoint hooks aren't implemented yet.")
+            }
+        }
+    }
+}

@@ -32,11 +32,27 @@ tokio = "1.48"
 
 serde = { version = "1.0.228", features = ["derive"] }
 toml = "0.9.8"
-serde_json = "1.0.148"
+serde_json = "1.0.149"
 serde_with = { version = "3.16", features = ["chrono"] }
 
-axum = "0.8.8"
+hyper = { version = "1", features = ["full"] }
+hyper-util = { version = "0.1", features = ["full"] }
+http-body-util = "0.1"
+tower = { version = "0.5.3", features = ["full"] }
+tower-http = "0.6.8"
+matchit = "0.9.1"
 
+sqlx = { version = "0.8.6", features = [
+    "runtime-tokio",
+    "runtime-tokio-rustls",
+    "json",
+    "mysql",
+] }
+sea-orm = { version = "1.1.19", features = [
+    "runtime-tokio",
+    "runtime-tokio-rustls",
+    "sqlx-mysql",
+] }
 sea-schema = "0.16.2"
 
 chrono = { version = "0.4.42", default-features = false, features = [

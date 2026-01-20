@@ -60,7 +60,8 @@ impl Default for General {
                         connection: "...".to_compact_string(),
                     },
                     checksum_schema: false,
-                    pool_size: None,
+                    pool_min_size: None,
+                    pool_max_size: None,
                 },
             ]),
             authentication: Default::default(),
@@ -199,9 +200,13 @@ pub struct DatabaseConfig {
     /// Whether or not to checksum the database schema on build.
     checksum_schema: bool,
 
+    /// Defines the minimum number of simultaneous connections, by default this will be half the `pool_max_size`.
+    #[serde(default, skip_serializing_if = "should_skip_option")]
+    pool_min_size: Option<usize>,
+
     /// Defines the maximum number of simultaneous connections, by default this will be twice the number of available cores.
     #[serde(default, skip_serializing_if = "should_skip_option")]
-    pool_size: Option<usize>,
+    pool_max_size: Option<usize>,
 }
 
 impl Default for DatabaseConfig {
@@ -211,7 +216,8 @@ impl Default for DatabaseConfig {
             is_primary: true,
             connection: Default::default(),
             checksum_schema: true,
-            pool_size: None,
+            pool_min_size: Some(std::thread::available_parallelism().unwrap().get() * 2),
+            pool_max_size: Some(std::thread::available_parallelism().unwrap().get() * 2),
         }
     }
 }

@@ -16,6 +16,9 @@ use tracing::*;
 
 pub type ResultContext = CompactString; // TODO: Replace this with custom error types.
 
+/// The maximum number of databases the user's application can connect to.
+pub const DATABASE_LIMIT: usize = 9;
+
 thread_local! {
     pub static BINARY_MODE: Cell<bool> = Cell::new(false); // This will likely be fixed in the future. https://github.com/serde-rs/serde/issues/1732
 }

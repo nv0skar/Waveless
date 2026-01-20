@@ -5,6 +5,7 @@ use crate::*;
 
 /// Holds all the endpoints, is a wrapper of the CheapVec<Endpoint> type.
 #[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
+#[getset(get = "pub")]
 #[serde(default)]
 pub struct Endpoints {
     #[serde(
@@ -16,7 +17,7 @@ pub struct Endpoints {
 }
 
 impl Endpoints {
-    /// Add a new endpoint. This will check that there is no endpoint with the same method, route and version.
+    /// Adds a new endpoint. This will check that there is no endpoint with the same method, route and version.
     pub fn add(&mut self, new_endpoint: Endpoint) -> Result<()> {
         let search = self.inner.iter().find(|endpoint| {
             endpoint.method == new_endpoint.method
@@ -73,12 +74,12 @@ pub struct Endpoint {
     /// Method of the endpoint
     method: HttpMethod,
 
-    /// Sets the database that this endpoint will operate on. If `None` the main database will be used.
+    /// Sets the database that this endpoint will operate on. If `None` the primary database will be used.
     target_database: Option<DatabaseId>,
 
     /// Establishes the endpoint handler. Note that if no executor is set, the server will try to handle the request internally.
     #[serde(default, skip_serializing_if = "should_skip_option")]
-    executor: Option<Executor>,
+    executor: Option<Execute>,
 
     /// Sets the endpoint description.
     #[serde(default, skip_serializing_if = "should_skip_option")]
@@ -88,9 +89,10 @@ pub struct Endpoint {
     #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
     tags: CheapVec<CompactString>,
 
+    /// DEPRECATED: Path parameters are indicated in the route.
     /// Sets the accepted path parameters.
-    #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
-    path_params: CheapVec<CompactString>,
+    // #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
+    // path_params: CheapVec<CompactString>,
 
     /// Sets the accepted query parameters.
     #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
@@ -126,13 +128,26 @@ impl PartialEq for Endpoint {
 }
 
 /// Available HTTP methods
-#[derive(Clone, PartialEq, Serialize, Deserialize, Display, Debug)]
+#[derive(Clone, Eq, PartialEq, Hash, Serialize, Deserialize, Display, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum HttpMethod {
     Get,
     Post,
     Put,
     Delete,
+    Unknown,
+}
+
+impl From<&str> for HttpMethod {
+    fn from(value: &str) -> Self {
+        match value.to_lowercase().as_str() {
+            "get" => HttpMethod::Get,
+            "post" => HttpMethod::Post,
+            "put" => HttpMethod::Put,
+            "delete" => HttpMethod::Delete,
+            _ => HttpMethod::Unknown,
+        }
+    }
 }
 
 fn auto_generated_skip(value: &bool) -> bool {
@@ -143,16 +158,15 @@ impl Default for Endpoint {
     fn default() -> Self {
         Self {
             id: "ListProducts".to_compact_string(),
-            route: "/products/".to_compact_string(),
+            route: "/products/{size}".to_compact_string(),
             version: Some("v1".to_compact_string()),
             method: HttpMethod::Get,
             target_database: Default::default(),
-            executor: Some(Executor::SQL {
+            executor: Some(Execute::MySQL {
                 query: "SELECT * FROM products WHERE size = {size}".to_compact_string(),
             }),
             description: Some("Get all the products by the given size.".to_compact_string()),
             tags: CheapVec::from_vec(vec!["products".to_compact_string()]),
-            path_params: CheapVec::from_vec(vec!["size".to_compact_string()]),
             query_params: Default::default(),
             body_params: Default::default(),
             require_auth: false,
@@ -166,9 +180,9 @@ impl Default for Endpoint {
 /// Defines all methods available to handle requests to the endpoints.
 #[derive(Clone, PartialEq, Serialize, Deserialize, Display, Debug)]
 // #[cfg_attr(feature = "toml_codec", serde(tag = "type"))]
-pub enum Executor {
+pub enum Execute {
     #[display("SQL query: {:?}", query)]
-    SQL { query: CompactString },
+    MySQL { query: CompactString },
 
     #[display("Hook name: {:?}", fn_name)]
     Hook { fn_name: CompactString },
