@@ -10,11 +10,12 @@ impl ExecuteWrapper {
     /// Executes a query using the given executor and database connection.
     /// Beware that the output must be a `serde_json::Value` that will be
     /// further serialized into JSON
+    #[instrument(skip_all)]
     pub async fn execute(
         &self,
         db_conn: &AnyDatabaseConnection,
         params: HashMap<CompactString, CompactString>,
-    ) -> Result<serde_json::Value> {
+    ) -> Result<serde_json::Value, ConnHandlerError> {
         match &self.0 {
             endpoint::Execute::MySQL { query } => {
                 let databases::AnyDatabaseConnection::MySQL(mysql_pool) = db_conn;
@@ -31,10 +32,14 @@ impl ExecuteWrapper {
 
                 for param_id in params_order {
                     let Some(value) = params.get(&param_id.to_compact_string()) else {
-                        bail!(
-                            "The endpoint requires {}, but it wasn't provided in the request.",
-                            param_id
-                        )
+                        return Err(ConnHandlerError::Expected(
+                            500,
+                            format!(
+                                "The endpoint requires '{}', but it wasn't provided in the request.",
+                                param_id
+                            )
+                            .to_compact_string(),
+                        ));
                     };
 
                     ordered_values.push(sea_orm::Value::from(value.to_string()));
@@ -57,12 +62,23 @@ impl ExecuteWrapper {
                         mysql_query.to_string(),
                         ordered_values,
                     ))
-                    .await?;
+                    .await
+                    .map_err(|err| {
+                        ConnHandlerError::Expected(
+                            500,
+                            format!("Query execution error: {}", err).to_compact_string(),
+                        )
+                    })?;
 
                 let mut rows = CheapVec::new();
 
                 for row in res {
-                    rows.push(JsonValue::from_query_result(&row, "")?);
+                    rows.push(JsonValue::from_query_result(&row, "").map_err(|err| {
+                        ConnHandlerError::Expected(
+                            500,
+                            "Internal error: cannot serialize row into JSON.".to_compact_string(),
+                        )
+                    })?);
                 }
 
                 return Ok(json!(&rows));

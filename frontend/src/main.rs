@@ -1,13 +1,18 @@
 // Waveless
 // Copyright (C) 2026 Oscar Alvarez Gonzalez
 
+use waveless_binary::*;
 use waveless_commons::{logger::*, output::handle_main, *};
 use waveless_compiler::{build::*, new::*};
-use waveless_executor::frontend_options::*;
+use waveless_executor::{
+    build_loader::load_build, frontend_options::*, router_loader::*, server::serve, *,
+};
 
 use rustyrosetta::*;
 
-use anyhow::{Context, Result};
+use std::net::SocketAddr;
+
+use anyhow::{Context, Result, anyhow};
 use clap::{Parser, Subcommand};
 use compact_str::*;
 use iocraft::prelude::*;
@@ -55,7 +60,10 @@ nest! {
 
                 /// Builds and launches the server executor using the outputted binary.
                 #[command(about = "Builds and launches the server executor using the outputted binary.")]
-                Run,
+                Run {
+                    #[arg(help = "Listening address.")]
+                    addr: Option<SocketAddr>,
+                },
 
                 /// Builds the current project.
                 #[command(about = "Builds the current project.")]
@@ -87,9 +95,43 @@ async fn try_main() -> Result<ResultContext> {
     // Handle frontend subcommands
     match cli.subcommand {
         Some(Subcommands::New { name }) => new_project(name),
-        Some(Subcommands::Run) => todo!(),
-        Some(Subcommands::Build) => build(),
+        Some(Subcommands::Run { addr }) => {
+            let build = build::<binary::Build>()?
+                .downcast::<binary::Build>()
+                .unwrap();
+
+            BUILD
+                .set(*build)
+                .map_err(|_| anyhow!("Cannot load build into global."))?;
+
+            ROUTER
+                .set(load_router()?)
+                .map_err(|_| anyhow!("Cannot load router into global."))?;
+
+            databases::DatabasesConnections::load().await?;
+
+            serve(addr).await
+        }
+        Some(Subcommands::Build) => {
+            let buff = build::<Bytes>()?.downcast::<Bytes>().unwrap();
+            binary_file_from_buff(*buff)
+        }
         Some(Subcommands::Bootstrap) => todo!(),
-        _ => todo!(),
+        Some(Subcommands::Executor(executor_options)) => match executor_options {
+            ExecutorFrontendOptions::Run { path, addr } => {
+                BUILD
+                    .set(load_build(path)?)
+                    .map_err(|_| anyhow!("Cannot load build into global."))?;
+
+                ROUTER
+                    .set(load_router()?)
+                    .map_err(|_| anyhow!("Cannot load router into global."))?;
+
+                databases::DatabasesConnections::load().await?;
+
+                serve(addr).await
+            }
+        },
+        None => Err(anyhow!("No subcommand provided!")),
     }
 }

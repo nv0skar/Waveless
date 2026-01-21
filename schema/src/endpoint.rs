@@ -79,7 +79,7 @@ pub struct Endpoint {
 
     /// Establishes the endpoint handler. Note that if no executor is set, the server will try to handle the request internally.
     #[serde(default, skip_serializing_if = "should_skip_option")]
-    executor: Option<Execute>,
+    execute: Option<Execute>,
 
     /// Sets the endpoint description.
     #[serde(default, skip_serializing_if = "should_skip_option")]
@@ -162,7 +162,7 @@ impl Default for Endpoint {
             version: Some("v1".to_compact_string()),
             method: HttpMethod::Get,
             target_database: Default::default(),
-            executor: Some(Execute::MySQL {
+            execute: Some(Execute::MySQL {
                 query: "SELECT * FROM products WHERE size = {size}".to_compact_string(),
             }),
             description: Some("Get all the products by the given size.".to_compact_string()),

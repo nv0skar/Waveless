@@ -14,7 +14,7 @@ use crate::*;
 
 /// Build the project in the current path (if no `config.toml` file is present in the current directory it will be searched in parent directories)
 #[instrument(skip_all)]
-pub fn build() -> Result<ResultContext> {
+pub fn build<T: 'static>() -> Result<Box<dyn Any>> {
     let config = config_loader::project_config()?;
 
     debug!(
@@ -70,37 +70,46 @@ pub fn build() -> Result<ResultContext> {
         CheapVec::new(),
     );
 
-    let target_file: PathBuf;
+    if TypeId::of::<T>() == TypeId::of::<Bytes>() {
+        let buff = build.encode_binary()?;
 
-    {
-        let build_buffer = build.encode_binary()?;
-
-        // Set the build file's name a combination of its CRC32 hash and the current timestamp
-        let build_name = format!(
-            "{}_{}.wv",
-            chrono::Local::now().format("%d_%m_%Y_%H_%M"),
-            crc32fast::hash(build_buffer.as_slice())
+        debug!(
+            "Finished building project successfully at {}.",
+            chrono::Local::now(),
         );
 
-        if let Ok(_) = create_dir(get_project_root()?.join("target")) {
-            debug!("`target` directory does't exist, a new one will be created.")
-        };
-
-        target_file = get_project_root()?.join("target").join(build_name);
-
-        write(target_file.to_owned(), build_buffer)?;
-
-        debug!("Emitted build file on {}", target_file.display());
+        Ok(Box::new(buff))
+    } else if TypeId::of::<T>() == TypeId::of::<binary::Build>() {
+        Ok(Box::new(build))
+    } else {
+        panic!("Unexpected type.")
     }
+}
 
-    debug!(
-        "Finished building project successfully at {}.",
-        chrono::Local::now(),
+/// Generates the binary's file from the provided buffer.
+pub fn binary_file_from_buff(buff: Bytes) -> Result<ResultContext> {
+    let target_file: PathBuf;
+
+    // Set the build file's name a combination of its CRC32 hash and the current timestamp
+    let build_name = format!(
+        "{}_{}.wv",
+        chrono::Local::now().format("%d_%m_%Y_%H_%M"),
+        crc32fast::hash(buff.as_slice())
     );
+
+    if let Ok(_) = create_dir(get_project_root()?.join("target")) {
+        debug!("`target` directory does't exist, a new one will be created.")
+    };
+
+    target_file = get_project_root()?.join("target").join(build_name);
+
+    write(target_file.to_owned(), buff)?;
+
+    debug!("Emitted build file on {}", target_file.display());
 
     Ok(format!(
         "'{}' has been built at {}",
-        config.general().name(),
+        config_loader::project_config()?.general().name(),
         target_file
             .file_name()
             .ok_or(anyhow!("No build file name."))?

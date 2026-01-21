@@ -56,6 +56,6 @@ async fn try_main() -> Result<ResultContext> {
 
             serve(addr).await
         }
-        _ => todo!(),
+        None => Err(anyhow!("No subcommand provided!")),
     }
 }

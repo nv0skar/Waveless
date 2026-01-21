@@ -10,6 +10,7 @@ pub mod router_loader;
 pub mod server;
 
 use databases::*;
+use request_handler::ConnHandlerError;
 
 use waveless_binary::*;
 use waveless_commons::*;
@@ -49,6 +50,7 @@ use sea_orm::{
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::{mysql::*, pool::*};
+use thiserror::Error;
 use tokio::{net::TcpListener, sync::OnceCell};
 use tracing::*;
 
@@ -56,6 +58,6 @@ pub type EndpointRouter = DashMap<endpoint::HttpMethod, Router<endpoint::Endpoin
 
 pub static BUILD: OnceLock<binary::Build> = OnceLock::new();
 
-pub static DATABASE_POOLS: OnceCell<DatabasesConnections> = OnceCell::const_new();
+pub static DATABASES_CONNS: OnceCell<DatabasesConnections> = OnceCell::const_new();
 
 pub static ROUTER: OnceCell<EndpointRouter> = OnceCell::const_new();

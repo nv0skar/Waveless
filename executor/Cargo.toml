@@ -32,3 +32,4 @@ getset.workspace = true
 either.workspace = true
 derive_more.workspace = true
 anyhow.workspace = true
+thiserror.workspace = true

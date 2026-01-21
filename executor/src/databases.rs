@@ -77,12 +77,12 @@ impl DatabasesConnections {
         let database_pools =
             DatabasesConnections::new(Arc::new(unsafe { primary.assume_init() }), Arc::new(inner));
 
-        DATABASE_POOLS.set(database_pools).unwrap();
+        DATABASES_CONNS.set(database_pools).unwrap();
 
         Ok(())
     }
 
-    /// Search for the given database id in the pool.
+    /// Search for the database given it's id.
     pub fn search(&self, id: Option<DatabaseId>) -> Result<&AnyDatabaseConnection> {
         if let Some(id) = id {
             if self.primary.0 == id {

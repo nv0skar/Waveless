@@ -3,6 +3,7 @@
 
 use crate::*;
 
+#[instrument(skip_all)]
 pub async fn serve(addr: Option<SocketAddr>) -> Result<ResultContext> {
     let build = build_loader::build()?;
 
@@ -31,7 +32,7 @@ pub async fn serve(addr: Option<SocketAddr>) -> Result<ResultContext> {
 
         tokio::task::spawn(async move {
             if let Err(err) = http1::Builder::new()
-                .serve_connection(io, service_fn(request_handler::try_handle_endpoint))
+                .serve_connection(io, service_fn(request_handler::handle_endpoint))
                 .await
             {
                 error!("Internal error occurred in request handler: {:?}", err);

@@ -122,6 +122,7 @@ getset = "0.1"
 nestify = "0.3"
 either = { version = "1.15", features = ["serde"] }
 anyhow = "1.0"
+thiserror = "2.0.18"
 derive_more = { version = "2.0", features = ["constructor", "display"] }
 
 ### Leptos' setup
