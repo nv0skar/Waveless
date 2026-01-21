@@ -25,16 +25,72 @@ pub async fn serve(addr: Option<SocketAddr>) -> Result<ResultContext> {
         chrono::Local::now()
     );
 
+    let governor_conf = std::sync::Arc::new(
+        GovernorConfigBuilder::default()
+            .per_second(1)
+            .burst_size(1000) // TODO: Make this a parameter in the 'config.toml'.
+            .key_extractor(GlobalKeyExtractor) // TODO: Change this setting to allow IP-based rate limiting.
+            .finish()
+            .unwrap(),
+    );
+
+    // TODO: A POST request to an endpoint invalidates the caches of the GET endpoints with the same route.
+    let cache = CacheLayer::builder(InMemoryBackend::new(4096))
+        .ttl(Duration::from_secs(5)) // TODO: Make this a parameter in the 'config.toml'.
+        .stale_while_revalidate(Duration::from_secs(1))
+        .build();
+
+    // Cleans up the governor key pool.
+    let governor_limiter = governor_conf.limiter().to_owned();
+    tokio::spawn(async move {
+        tokio::time::sleep(Duration::from_secs(30)).await;
+        debug!(
+            "Cleaning up rate's limiter storage (size: {})",
+            governor_limiter.len()
+        );
+        governor_limiter.retain_recent();
+    });
+
     loop {
         let (stream, _) = listener.accept().await?;
 
         let io = TokioIo::new(stream);
 
+        let cache = cache.to_owned();
+        let governor_conf = governor_conf.to_owned();
+
         tokio::task::spawn(async move {
-            if let Err(err) = http1::Builder::new()
-                .serve_connection(io, service_fn(request_handler::handle_endpoint))
-                .await
-            {
+            let compression =
+                CompressionLayer::new().compress_when(predicate::SizeAbove::new(2048));
+
+            // This would have worked ad-hoc without modifying the original crate if it has implemented `From<String>` for `GovernorError`...
+            let governor = tower_governor::GovernorLayer::new(governor_conf).error_handler(|err| {
+                Response::builder()
+                    .status(http::StatusCode::TOO_MANY_REQUESTS)
+                    .header("Content-Type", "application/json")
+                    .body(
+                        serde_json::to_string_pretty(&json!({
+                            "error": err.to_compact_string()
+                        }))
+                        .unwrap(),
+                    )
+                    .unwrap()
+            });
+
+            let svc = ServiceBuilder::new()
+                .layer(cache)
+                .layer(compression)
+                .layer(CorsLayer::permissive())
+                .layer(TimeoutLayer::with_status_code(
+                    http::StatusCode::REQUEST_TIMEOUT,
+                    Duration::from_secs(10),
+                ))
+                .layer(governor) // Rate limiting does not apply for cached requests.
+                .service_fn(request::handle_endpoint);
+
+            let svc = TowerToHyperService::new(svc);
+
+            if let Err(err) = http1::Builder::new().serve_connection(io, svc).await {
                 error!("Internal error occurred in request handler: {:?}", err);
             }
         });

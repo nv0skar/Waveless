@@ -7,6 +7,7 @@ waveless_commons.workspace = true
 waveless_binary.workspace = true
 waveless_compiler.workspace = true
 waveless_executor.workspace = true
+waveless_databases.workspace = true
 waveless_schema = { workspace = true, features = ["toml_codec"] }
 waveless_config = { workspace = true, features = ["toml_codec"] }
 rustyrosetta = { workspace = true, features = ["all"] }

@@ -5,15 +5,20 @@ edition = "2024"
 [dependencies]
 waveless_commons.workspace = true
 waveless_binary.workspace = true
+waveless_databases.workspace = true
 waveless_schema = { workspace = true, features = ["toml_codec"] }
 waveless_config = { workspace = true, features = ["toml_codec"] }
 rustyrosetta = { workspace = true, features = ["all"] }
 tokio = { workspace = true, features = ["full"] }
+sqlx.workspace = true
+sea-orm.workspace = true
+sea-schema.workspace = true
 serde.workspace = true
 serde_with.workspace = true
 toml.workspace = true
 arrayvec.workspace = true
 compact_str.workspace = true
+smallbox.workspace = true
 clap.workspace = true
 crc32fast.workspace = true
 owo-colors.workspace = true

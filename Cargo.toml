@@ -10,6 +10,7 @@ members = [
     "compiler",
     "executor",
     "frontend",
+    "databases",
     "schema",
     "binary",
     "config",
@@ -20,6 +21,7 @@ waveless_commons = { path = "./commons" }
 waveless_compiler = { path = "./compiler" }
 waveless_executor = { path = "./executor" }
 waveless_frontend = { path = "./frontend" }
+waveless_databases = { path = "./databases" }
 waveless_schema = { path = "./schema" }
 waveless_binary = { path = "./binary" }
 waveless_config = { path = "./config" }
@@ -40,6 +42,9 @@ hyper-util = { version = "0.1", features = ["full"] }
 http-body-util = "0.1"
 tower = { version = "0.5.3", features = ["full"] }
 tower-http = "0.6.8"
+tower-http-cache = "0.4.3"
+tower_governor = { git = "https://github.com/nv0skar/tower-governor-generic-result.git", default-features = false }
+http = "1.4.0"
 matchit = "0.9.1"
 
 sqlx = { version = "0.8.6", features = [
@@ -53,7 +58,11 @@ sea-orm = { version = "1.1.19", features = [
     "runtime-tokio-rustls",
     "sqlx-mysql",
 ] }
-sea-schema = "0.16.2"
+sea-schema = { version = "0.16.2", features = [
+    "runtime-tokio",
+    "runtime-tokio-rustls",
+    "sqlx-all",
+] }
 
 chrono = { version = "0.4.42", default-features = false, features = [
     "clock",
@@ -123,6 +132,7 @@ nestify = "0.3"
 either = { version = "1.15", features = ["serde"] }
 anyhow = "1.0"
 thiserror = "2.0.18"
+derive_builder = "0.20"
 derive_more = { version = "2.0", features = ["constructor", "display"] }
 
 ### Leptos' setup

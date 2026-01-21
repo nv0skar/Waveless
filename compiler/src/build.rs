@@ -12,9 +12,9 @@
 ///
 use crate::*;
 
-/// Build the project in the current path (if no `config.toml` file is present in the current directory it will be searched in parent directories)
+/// Builds the project in the current path (if no `config.toml` file is present in the current directory it will be searched in parent directories)
 #[instrument(skip_all)]
-pub fn build<T: 'static>() -> Result<Box<dyn Any>> {
+pub async fn build<T: 'static>() -> Result<SmallBox<dyn Any, S64>> {
     let config = config_loader::project_config()?;
 
     debug!(
@@ -23,7 +23,7 @@ pub fn build<T: 'static>() -> Result<Box<dyn Any>> {
         config
     );
 
-    // Deserialize user's endpoints
+    // Deserializes user's endpoints.
     let mut endpoints = endpoint::Endpoints::new(CheapVec::new());
     {
         let endpoints_dir = get_project_root()?.join(config.compiler().endpoints_dir());
@@ -36,10 +36,7 @@ pub fn build<T: 'static>() -> Result<Box<dyn Any>> {
             match read(endpoint_path.path()) {
                 Ok(file_buffer) => {
                     match toml::from_slice::<endpoint::Endpoints>(&file_buffer) {
-                        Ok(new_endpoints) => {
-                            println!("{:?}", endpoint_path.path());
-                            endpoints.merge(new_endpoints)?
-                        }
+                        Ok(new_endpoints) => endpoints.merge(new_endpoints)?,
                         Err(err) => {
                             Err(anyhow!(
                                 "Cannot deserialize the endpoints definition file '{}'.%{}",
@@ -62,12 +59,39 @@ pub fn build<T: 'static>() -> Result<Box<dyn Any>> {
         debug!("Deserialized user's endpoints: {:#?}", endpoints);
     }
 
-    // Serialize the project's build
+    // Discovers database's schema.
+    let mut databases_checksums = CheapVec::new();
+    if config.compiler().endpoint_discovery().is_some() {
+        if let Some((discovered_endpoints, cheksum)) = discovery::discover().await? {
+            if let Ok(_) = create_dir(get_project_root()?.join(".discovered_endpoints")) {
+                debug!("`.discovered_endpoints` directory does't exist, a new one will be created.")
+            };
+
+            let target_file = get_project_root()?
+                .join(".discovered_endpoints")
+                .join("schema_endpoints.toml");
+
+            write(
+                target_file.to_owned(),
+                toml::to_string_pretty(&discovered_endpoints)?.as_bytes(),
+            )?;
+
+            info!(
+                "Discovered endpoints were dumped into '{}'.",
+                target_file.display()
+            );
+
+            endpoints.merge(discovered_endpoints)?;
+            databases_checksums.push(cheksum);
+        }
+    }
+
+    // Serializes the project's build.
     let build = binary::Build::new(
         config.general().to_owned(),
         config.server().to_owned(),
         endpoints,
-        CheapVec::new(),
+        databases_checksums,
     );
 
     if TypeId::of::<T>() == TypeId::of::<Bytes>() {
@@ -78,9 +102,9 @@ pub fn build<T: 'static>() -> Result<Box<dyn Any>> {
             chrono::Local::now(),
         );
 
-        Ok(Box::new(buff))
+        Ok(smallbox!(buff))
     } else if TypeId::of::<T>() == TypeId::of::<binary::Build>() {
-        Ok(Box::new(build))
+        Ok(smallbox!(build))
     } else {
         panic!("Unexpected type.")
     }

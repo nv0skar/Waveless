@@ -21,13 +21,13 @@ impl Endpoints {
     pub fn add(&mut self, new_endpoint: Endpoint) -> Result<()> {
         let search = self.inner.iter().find(|endpoint| {
             endpoint.method == new_endpoint.method
-                && endpoint.route == new_endpoint.route
+                && endpoint.route.trim_matches('/') == new_endpoint.route.trim_matches('/')
                 && endpoint.version == new_endpoint.version
         });
 
         match search {
             Some(endpoint) => Err(anyhow!(
-                "An equivalent endpoint already exists: you were trying to add {}, but {} is equivalent.",
+                "An equivalent endpoint already exists: you were trying to add '{}', but '{}' is equivalent.",
                 new_endpoint,
                 endpoint
             )),
@@ -41,7 +41,13 @@ impl Endpoints {
     /// Merges two endpoints buffers
     pub fn merge(&mut self, new_endpoints: Endpoints) -> Result<()> {
         for endpoint in new_endpoints.inner {
-            self.add(endpoint)?;
+            if let Err(err) = self.add(endpoint.to_owned()) {
+                warn!(
+                    "Cannot add endpoint '{}' to the endpoints buffer. {}",
+                    endpoint.id,
+                    err.to_string()
+                )
+            }
         }
         Ok(())
     }
@@ -57,8 +63,9 @@ impl Default for Endpoints {
 
 /// The main endpoint definition that will be either created by the user or discovered by the compiler.
 /// This will be then included in the Waveless project's binary.
-#[derive(Clone, Constructor, Serialize, Deserialize, Getters, Display, Debug)]
+#[derive(Clone, Serialize, Deserialize, Constructor, Builder, Getters, Display, Debug)]
 #[display("{} -> ({}, {:?}, {:?})", route, method, version, description)]
+#[builder(pattern = "mutable")]
 #[getset(get = "pub")]
 pub struct Endpoint {
     /// Endpoint's unique identifier
@@ -128,7 +135,7 @@ impl PartialEq for Endpoint {
 }
 
 /// Available HTTP methods
-#[derive(Clone, Eq, PartialEq, Hash, Serialize, Deserialize, Display, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Serialize, Deserialize, Display, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum HttpMethod {
     Get,
@@ -157,16 +164,14 @@ fn auto_generated_skip(value: &bool) -> bool {
 impl Default for Endpoint {
     fn default() -> Self {
         Self {
-            id: "ListProducts".to_compact_string(),
-            route: "/products/{size}".to_compact_string(),
+            id: "".to_compact_string(),
+            route: "".to_compact_string(),
             version: Some("v1".to_compact_string()),
             method: HttpMethod::Get,
             target_database: Default::default(),
-            execute: Some(Execute::MySQL {
-                query: "SELECT * FROM products WHERE size = {size}".to_compact_string(),
-            }),
-            description: Some("Get all the products by the given size.".to_compact_string()),
-            tags: CheapVec::from_vec(vec!["products".to_compact_string()]),
+            execute: None,
+            description: None,
+            tags: CheapVec::new(),
             query_params: Default::default(),
             body_params: Default::default(),
             require_auth: false,

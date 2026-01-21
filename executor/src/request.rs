@@ -1,14 +1,13 @@
 // Waveless
 // Copyright (C) 2026 Oscar Alvarez Gonzalez
 
-use http_body_util::BodyExt;
-
 use crate::*;
 
-/// Endpoint handler wrapper that serializes response into JSON
-pub async fn handle_endpoint(request: Request<hyper::body::Incoming>) -> Result<Response<String>> {
+/// Endpoint handler wrapper that serializes response into JSON.
+/// TODO: Convert this into a service layer.
+pub async fn handle_endpoint(request: Request<Incoming>) -> Result<Response<String>> {
     let response = Response::builder()
-        .header("Content-Type", "application/json")
+        .header("Content-Type", "application/json; charset=utf-8")
         .header(
             "Cache-Control",
             format!(
@@ -24,8 +23,8 @@ pub async fn handle_endpoint(request: Request<hyper::body::Incoming>) -> Result<
         Err(err) => Ok(response
             .status({
                 match err {
-                    ConnHandlerError::Expected(status, _) => status as u16,
-                    ConnHandlerError::Other(_) => 500_u16,
+                    ConnHandlerError::Expected(status, _) => status,
+                    ConnHandlerError::Other(_) => StatusCode::INTERNAL_SERVER_ERROR,
                 }
             })
             .body(serde_json::to_string_pretty(&json!({
@@ -40,7 +39,7 @@ pub async fn handle_endpoint(request: Request<hyper::body::Incoming>) -> Result<
 /// Handles endpoints requests.
 #[instrument(skip_all)]
 pub async fn try_handle_endpoint(
-    request: Request<hyper::body::Incoming>,
+    request: Request<Incoming>,
 ) -> Result<serde_json::Value, ConnHandlerError> {
     info!(
         "{} request at {} from {}",
@@ -58,7 +57,7 @@ pub async fn try_handle_endpoint(
     // Extracts the route from the method-aware router.
     let Some(router) = router_loader::router()?.get(&method) else {
         return Err(ConnHandlerError::Expected(
-            500,
+            StatusCode::INTERNAL_SERVER_ERROR,
             format!("There is no route that accepts {}.", method).to_compact_string(),
         ));
     };
@@ -67,7 +66,7 @@ pub async fn try_handle_endpoint(
 
     let Ok(endpoint_def) = router.at(&route) else {
         return Err(ConnHandlerError::Expected(
-            404,
+            StatusCode::NOT_FOUND,
             format!("Route '{}' is not defined. HINT: Go to your project's endpoints folder and check the endpoint's routes.", route).to_compact_string(),
         ));
     };
@@ -103,7 +102,7 @@ pub async fn try_handle_endpoint(
             .await
             .map_err(|err| {
                 ConnHandlerError::Expected(
-                    500,
+                    StatusCode::INTERNAL_SERVER_ERROR,
                     format!("Cannot get request's body. {}", err).to_compact_string(),
                 )
             })?
@@ -111,7 +110,7 @@ pub async fn try_handle_endpoint(
 
         if req_body.is_empty() {
             return Err(ConnHandlerError::Expected(
-                400,
+                StatusCode::BAD_REQUEST,
                 "The request's body for this endpoint cannot be empty.".to_compact_string(),
             ));
         }
@@ -119,7 +118,7 @@ pub async fn try_handle_endpoint(
         let Ok(json_body) = serde_json::from_slice::<serde_json::Value>(req_body.iter().as_slice())
         else {
             return Err(ConnHandlerError::Expected(
-                400,
+                StatusCode::BAD_REQUEST,
                 "Invalid request's body. The provided JSON's format is unsupported."
                     .to_compact_string(),
             ));
@@ -128,25 +127,32 @@ pub async fn try_handle_endpoint(
         for key in endpoint_def.value.body_params() {
             let Some(value) = json_body.as_object().unwrap().get(key.as_str()) else {
                 return Err(ConnHandlerError::Expected(
-                    400,
-                    "Invalid request's body. Cannot find all required parameter."
+                    StatusCode::BAD_REQUEST,
+                    "Invalid request's body. Cannot find all the required parameters."
                         .to_compact_string(),
                 ));
             };
-            request_params.insert(key.to_owned(), format!("{}", value).to_compact_string());
+
+            request_params.insert(
+                key.to_owned(),
+                value
+                    .as_str()
+                    .map(|s| s.to_string())
+                    .unwrap_or(value.to_string())
+                    .to_compact_string(),
+            );
         }
     }
 
-    // Request handling.
-
+    // Executes request.
     let Some(execute_strategy) = endpoint_def.value.execute() else {
         return Err(ConnHandlerError::Expected(
-            500,
+            StatusCode::INTERNAL_SERVER_ERROR,
             "The route wasn't managed by any of the request handlers.".to_compact_string(),
         ));
     };
 
-    let executor = execute_handler::ExecuteWrapper::new(execute_strategy.to_owned());
+    let executor = execute::ExecuteExt::new(execute_strategy.to_owned());
 
     Ok(executor.execute(dbs_conns, request_params).await?)
 }
@@ -154,7 +160,7 @@ pub async fn try_handle_endpoint(
 #[derive(Error, Debug)]
 pub enum ConnHandlerError {
     #[error("Request error.")]
-    Expected(usize, CompactString),
+    Expected(StatusCode, CompactString),
     #[error(transparent)]
     Other(#[from] anyhow::Error),
 }

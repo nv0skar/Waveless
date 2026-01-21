@@ -4,12 +4,14 @@
 pub mod bootstrap;
 pub mod build;
 pub mod config_loader;
+pub mod discovery;
 pub mod new;
 
 use waveless_binary::*;
 use waveless_commons::*;
 use waveless_config::*;
-use waveless_schema::*;
+use waveless_databases::*;
+use waveless_schema::{endpoint::HttpMethod, *};
 
 use rustyrosetta::{codec::*, *};
 
@@ -22,11 +24,13 @@ use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::sync::OnceLock;
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Context, Result, anyhow, bail};
 use compact_str::*;
 use derive_more::Constructor;
 use owo_colors::*;
 use serde::{Deserialize, Serialize};
+use smallbox::{space::S64, *};
+use sqlx::{MySql, pool::Pool};
 use tracing::*;
 
 pub static PROJECT_ROOT: OnceLock<PathBuf> = OnceLock::new();

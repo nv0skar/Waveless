@@ -2,19 +2,18 @@
 // Copyright (C) 2026 Oscar Alvarez Gonzalez
 
 pub mod build_loader;
-pub mod databases;
-pub mod execute_handler;
+pub mod execute;
 pub mod frontend_options;
-pub mod request_handler;
+pub mod request;
 pub mod router_loader;
 pub mod server;
 
-use databases::*;
-use request_handler::ConnHandlerError;
+use request::ConnHandlerError;
 
 use waveless_binary::*;
 use waveless_commons::*;
 use waveless_config::*;
+use waveless_databases::*;
 use waveless_schema::*;
 
 use rustyrosetta::{codec::*, *};
@@ -25,7 +24,8 @@ use std::fs::{File, create_dir, read, read_dir, write};
 use std::mem::MaybeUninit;
 use std::net::SocketAddr;
 use std::path::PathBuf;
-use std::sync::{Arc, LazyLock, OnceLock};
+use std::sync::{LazyLock, OnceLock};
+use std::time::Duration;
 
 use anyhow::{Context, Result, anyhow, bail};
 use arrayvec::ArrayVec;
@@ -33,16 +33,17 @@ use clap::Subcommand;
 use compact_str::*;
 use dashmap::DashMap;
 use derive_more::{Constructor, Display};
-use http_body_util::Full;
+use http::StatusCode;
+use http_body_util::{BodyExt, Full};
 use hyper::{
-    body::{Body, Bytes},
+    body::Incoming,
     server::conn::{http1, http2},
     service::service_fn,
     *,
 };
-use hyper_util::rt::{TokioExecutor, TokioIo};
+use hyper_util::{rt::TokioIo, service::TowerToHyperService};
 use matchit::*;
-use owo_colors::*;
+use rclite::Arc;
 use sea_orm::{
     DbBackend, FromQueryResult, SqlxMySqlPoolConnection, Statement, entity::*, prelude::*,
     query::JsonValue,
@@ -52,12 +53,14 @@ use serde_json::json;
 use sqlx::{mysql::*, pool::*};
 use thiserror::Error;
 use tokio::{net::TcpListener, sync::OnceCell};
+use tower::{Service, ServiceBuilder, limit::RateLimitLayer};
+use tower_governor::{governor::*, key_extractor::*, *};
+use tower_http::{compression::*, cors::*, timeout::*};
+use tower_http_cache::prelude::*;
 use tracing::*;
 
 pub type EndpointRouter = DashMap<endpoint::HttpMethod, Router<endpoint::Endpoint>>;
 
 pub static BUILD: OnceLock<binary::Build> = OnceLock::new();
-
-pub static DATABASES_CONNS: OnceCell<DatabasesConnections> = OnceCell::const_new();
 
 pub static ROUTER: OnceCell<EndpointRouter> = OnceCell::const_new();

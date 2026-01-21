@@ -1,24 +1,14 @@
 [package]
-name = "waveless_executor"
+name = "waveless_databases"
 edition = "2024"
 
 [dependencies]
 waveless_commons.workspace = true
 waveless_binary.workspace = true
-waveless_databases.workspace = true
 waveless_schema = { workspace = true, features = ["postcard_codec"] }
 waveless_config = { workspace = true, features = ["postcard_codec"] }
 rustyrosetta = { workspace = true, features = ["all"] }
 tokio = { workspace = true, features = ["full"] }
-hyper.workspace = true
-hyper-util.workspace = true
-http-body-util.workspace = true
-tower.workspace = true
-tower-http = { workspace = true, features = ["full"] }
-tower-http-cache.workspace = true
-tower_governor.workspace = true
-http.workspace = true
-matchit.workspace = true
 sqlx.workspace = true
 sea-orm.workspace = true
 serde.workspace = true
@@ -26,6 +16,7 @@ serde_with.workspace = true
 serde_json.workspace = true
 arrayvec.workspace = true
 compact_str.workspace = true
+smallbox.workspace = true
 dashmap.workspace = true
 clap.workspace = true
 chrono.workspace = true

@@ -4,9 +4,9 @@
 use crate::*;
 
 #[derive(Clone, PartialEq, Constructor, Debug)]
-pub struct ExecuteWrapper(endpoint::Execute);
+pub struct ExecuteExt(endpoint::Execute);
 
-impl ExecuteWrapper {
+impl ExecuteExt {
     /// Executes a query using the given executor and database connection.
     /// Beware that the output must be a `serde_json::Value` that will be
     /// further serialized into JSON
@@ -18,13 +18,13 @@ impl ExecuteWrapper {
     ) -> Result<serde_json::Value, ConnHandlerError> {
         match &self.0 {
             endpoint::Execute::MySQL { query } => {
-                let databases::AnyDatabaseConnection::MySQL(mysql_pool) = db_conn;
+                let AnyDatabaseConnection::MySQL(mysql_pool) = db_conn;
 
                 // Replaces Waveless' query's parameters placeholders with MySQL's ones.
                 let params_order = query
                     .trim_start_matches(|c| c != '{')
                     .split('{')
-                    .map(|sub| sub.split_once('}').unwrap_or_default().0)
+                    .map(|sub| sub.split_once('}').unwrap_or_default().0.trim())
                     .filter(|sub| !sub.is_empty())
                     .collect::<CheapVec<&str>>();
 
@@ -33,7 +33,7 @@ impl ExecuteWrapper {
                 for param_id in params_order {
                     let Some(value) = params.get(&param_id.to_compact_string()) else {
                         return Err(ConnHandlerError::Expected(
-                            500,
+                           StatusCode::INTERNAL_SERVER_ERROR,
                             format!(
                                 "The endpoint requires '{}', but it wasn't provided in the request.",
                                 param_id
@@ -65,7 +65,7 @@ impl ExecuteWrapper {
                     .await
                     .map_err(|err| {
                         ConnHandlerError::Expected(
-                            500,
+                            StatusCode::INTERNAL_SERVER_ERROR,
                             format!("Query execution error: {}", err).to_compact_string(),
                         )
                     })?;
@@ -75,8 +75,9 @@ impl ExecuteWrapper {
                 for row in res {
                     rows.push(JsonValue::from_query_result(&row, "").map_err(|err| {
                         ConnHandlerError::Expected(
-                            500,
-                            "Internal error: cannot serialize row into JSON.".to_compact_string(),
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            format!("Internal error: cannot serialize row into JSON. {}", err)
+                                .to_compact_string(),
                         )
                     })?);
                 }

@@ -1,6 +1,8 @@
 // Waveless
 // Copyright (C) 2026 Oscar Alvarez Gonzalez
 
+use compact_str::ToCompactString;
+
 ///
 /// -- The Waveless's binary format --
 /// Waveless follows a compiler-like design:
@@ -15,16 +17,18 @@ use crate::*;
 #[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
 #[getset(get = "pub")]
 pub struct Build {
-    /// contains general settings shared with the frontend/compiler
+    /// Contains general settings shared with the frontend/compiler.
     general: project::General,
 
-    /// specific server settings
+    /// Specific server settings.
     server_settings: project::Server,
 
-    /// defines all the API endpoints
+    /// Defines all the API endpoints.
     endpoints: endpoint::Endpoints,
 
-    /// contains all the databases' checksum
+    /// Contains all the databases' checksum.
+    /// TODO: in the future there will be a method to checksum all the database's
+    /// schema regardless of whether they have been 'discovered'.
     databases_checksums: CheapVec<DatabaseChecksum>,
 }
 
@@ -59,7 +63,7 @@ impl Default for Build {
             endpoints: endpoint::Endpoints::new(CheapVec::from_vec(vec![
                 endpoint::Endpoint::default(),
             ])),
-            databases_checksums: CheapVec::from_vec(vec![]),
+            databases_checksums: CheapVec::new(),
         }
     }
 }
@@ -68,8 +72,8 @@ impl Default for Build {
 #[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
 #[getset(get = "pub")]
 pub struct DatabaseChecksum {
-    /// identifier of the database, if it is `None` the primary database will be used
-    database_id: Option<DatabaseId>,
+    /// identifier of the database
+    database_id: DatabaseId,
     checksum: Bytes,
 }
 
@@ -77,7 +81,7 @@ pub struct DatabaseChecksum {
 impl Default for DatabaseChecksum {
     fn default() -> Self {
         Self {
-            database_id: None,
+            database_id: "None".to_compact_string(),
             checksum: CheapVec::from_elem(0, 8),
         }
     }

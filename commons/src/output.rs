@@ -11,7 +11,8 @@ where
 {
     match main_fn().await {
         Ok(res) => {
-            element! {
+            if !res.is_empty() {
+                element! {
                 View(
                     padding_left: 1,
                     padding_right: 1,
@@ -26,6 +27,7 @@ where
                 }
             }
             .print();
+            }
         }
         Err(err) => {
             let err = err.to_string();

@@ -4,6 +4,7 @@
 use waveless_binary::*;
 use waveless_commons::{logger::*, output::handle_main, *};
 use waveless_compiler::{build::*, new::*};
+use waveless_databases::*;
 use waveless_executor::{
     build_loader::load_build, frontend_options::*, router_loader::*, server::serve, *,
 };
@@ -96,25 +97,26 @@ async fn try_main() -> Result<ResultContext> {
     match cli.subcommand {
         Some(Subcommands::New { name }) => new_project(name),
         Some(Subcommands::Run { addr }) => {
-            let build = build::<binary::Build>()?
+            let build = build::<binary::Build>()
+                .await?
                 .downcast::<binary::Build>()
                 .unwrap();
 
             BUILD
-                .set(*build)
+                .set((*build).to_owned())
                 .map_err(|_| anyhow!("Cannot load build into global."))?;
 
             ROUTER
                 .set(load_router()?)
                 .map_err(|_| anyhow!("Cannot load router into global."))?;
 
-            databases::DatabasesConnections::load().await?;
+            DatabasesConnections::load((*build).general().databases().to_owned()).await?;
 
             serve(addr).await
         }
         Some(Subcommands::Build) => {
-            let buff = build::<Bytes>()?.downcast::<Bytes>().unwrap();
-            binary_file_from_buff(*buff)
+            let buff = build::<Bytes>().await?.downcast::<Bytes>().unwrap();
+            binary_file_from_buff((*buff).to_owned())
         }
         Some(Subcommands::Bootstrap) => todo!(),
         Some(Subcommands::Executor(executor_options)) => match executor_options {
@@ -127,7 +129,8 @@ async fn try_main() -> Result<ResultContext> {
                     .set(load_router()?)
                     .map_err(|_| anyhow!("Cannot load router into global."))?;
 
-                databases::DatabasesConnections::load().await?;
+                DatabasesConnections::load(build_loader::build()?.general().databases().to_owned())
+                    .await?;
 
                 serve(addr).await
             }

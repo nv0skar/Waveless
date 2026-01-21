@@ -71,7 +71,24 @@ pub fn new_project(name: CompactString) -> Result<ResultContext> {
     // Serialize the a sample endpoint.
     {
         let endpoints = endpoint::Endpoints::new(CheapVec::from_vec(vec![
-            endpoint::Endpoint::default(),
+            endpoint::Endpoint::new(
+                "ListProducts".to_compact_string(),
+                "/products/{size}".to_compact_string(),
+                Some("v1".to_compact_string()),
+                HttpMethod::Get,
+                Default::default(),
+                Some(endpoint::Execute::MySQL {
+                    query: "SELECT * FROM products WHERE size = {size}".to_compact_string(),
+                }),
+                Some("Get all the products by the given size.".to_compact_string()),
+                CheapVec::from_vec(vec!["products".to_compact_string()]),
+                Default::default(),
+                Default::default(),
+                false,
+                Default::default(),
+                false,
+                false,
+            ),
             endpoint::Endpoint::new(
                 "ListPosts".to_compact_string(),
                 "posts".to_compact_string(),

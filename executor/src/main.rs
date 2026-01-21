@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Oscar Alvarez Gonzalez
 
 use waveless_commons::{logger::*, output::handle_main, *};
+use waveless_databases::*;
 use waveless_executor::{build_loader::*, frontend_options::*, router_loader::*, server::*, *};
 
 use anyhow::{Context, Result, anyhow};
@@ -52,7 +53,7 @@ async fn try_main() -> Result<ResultContext> {
                 .set(load_router()?)
                 .map_err(|_| anyhow!("Cannot load router into global."))?;
 
-            databases::DatabasesConnections::load().await?;
+            DatabasesConnections::load(build()?.general().databases().to_owned()).await?;
 
             serve(addr).await
         }

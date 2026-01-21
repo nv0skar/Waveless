@@ -93,7 +93,7 @@ pub struct Compiler {
 impl Default for Compiler {
     fn default() -> Self {
         Self {
-            endpoint_discovery: Some(Default::default()),
+            endpoint_discovery: None,
             endpoints_dir: "./endpoints/".to_compact_string(),
             hooks_dir: Some("./hooks/".to_compact_string()),
             bootstrap_scripts_dir: Some("./bootstrap/".to_compact_string()),
@@ -197,7 +197,7 @@ pub struct DatabaseConfig {
     /// Holds the database type, the address and the credentials.
     connection: DatabaseConnection,
 
-    /// Whether or not to checksum the database schema on build.
+    /// Whether or not to checksum the the schema of the 'discovered' database on build.
     checksum_schema: bool,
 
     /// Defines the minimum number of simultaneous connections, by default this will be half the `pool_max_size`.
