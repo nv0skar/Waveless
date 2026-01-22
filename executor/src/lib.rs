@@ -14,7 +14,7 @@ use waveless_binary::*;
 use waveless_commons::*;
 use waveless_config::*;
 use waveless_databases::*;
-use waveless_schema::*;
+use waveless_endpoint::*;
 
 use rustyrosetta::{codec::*, *};
 
@@ -59,7 +59,7 @@ use tower_http::{compression::*, cors::*, timeout::*};
 use tower_http_cache::prelude::*;
 use tracing::*;
 
-pub type EndpointRouter = DashMap<endpoint::HttpMethod, Router<endpoint::Endpoint>>;
+pub type EndpointRouter = DashMap<HttpMethod, Router<Endpoint>>;
 
 pub static BUILD: OnceLock<binary::Build> = OnceLock::new();
 

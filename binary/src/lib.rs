@@ -5,7 +5,7 @@ pub mod binary;
 
 use waveless_commons::*;
 use waveless_config::*;
-use waveless_schema::*;
+use waveless_endpoint::*;
 
 use rustyrosetta::{codec::*, *};
 

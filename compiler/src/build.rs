@@ -24,7 +24,7 @@ pub async fn build<T: 'static>() -> Result<SmallBox<dyn Any, S64>> {
     );
 
     // Deserializes user's endpoints.
-    let mut endpoints = endpoint::Endpoints::new(CheapVec::new());
+    let mut endpoints = Endpoints::new(CheapVec::new());
     {
         let endpoints_dir = get_project_root()?.join(config.compiler().endpoints_dir());
 
@@ -35,7 +35,7 @@ pub async fn build<T: 'static>() -> Result<SmallBox<dyn Any, S64>> {
             let endpoint_path = endpoint_path?;
             match read(endpoint_path.path()) {
                 Ok(file_buffer) => {
-                    match toml::from_slice::<endpoint::Endpoints>(&file_buffer) {
+                    match toml::from_slice::<Endpoints>(&file_buffer) {
                         Ok(new_endpoints) => endpoints.merge(new_endpoints)?,
                         Err(err) => {
                             Err(anyhow!(

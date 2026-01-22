@@ -24,7 +24,7 @@ pub struct Build {
     server_settings: project::Server,
 
     /// Defines all the API endpoints.
-    endpoints: endpoint::Endpoints,
+    endpoints: Endpoints,
 
     /// Contains all the databases' checksum.
     /// TODO: in the future there will be a method to checksum all the database's
@@ -60,9 +60,7 @@ impl Default for Build {
         Self {
             general: Default::default(),
             server_settings: Default::default(),
-            endpoints: endpoint::Endpoints::new(CheapVec::from_vec(vec![
-                endpoint::Endpoint::default(),
-            ])),
+            endpoints: Endpoints::new(CheapVec::from_vec(vec![Endpoint::default()])),
             databases_checksums: CheapVec::new(),
         }
     }

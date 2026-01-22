@@ -11,7 +11,7 @@ use waveless_binary::*;
 use waveless_commons::*;
 use waveless_config::*;
 use waveless_databases::*;
-use waveless_schema::{endpoint::HttpMethod, *};
+use waveless_endpoint::*;
 
 use rustyrosetta::{codec::*, *};
 

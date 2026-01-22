@@ -1,17 +1,20 @@
 // Waveless
 // Copyright (C) 2026 Oscar Alvarez Gonzalez
 
+pub mod schema;
+
 use waveless_binary::*;
 use waveless_commons::*;
 use waveless_config::*;
 
-use rustyrosetta::*;
+use rustyrosetta::{codec::*, *};
 
 use std::any::Any;
 use std::mem::MaybeUninit;
 
 use anyhow::{Result, anyhow, bail};
 use arrayvec::ArrayVec;
+use compact_str::*;
 use derive_more::Constructor;
 use rclite::Arc;
 use sea_orm::SqlxMySqlPoolConnection; // Switched from sqlx, as sqlx doesn't support conversion into JSON for arbitrary schemas.
@@ -30,7 +33,7 @@ pub struct DatabasesConnections {
     inner: Arc<ArrayVec<(DatabaseId, AnyDatabaseConnection), { DATABASE_LIMIT - 1 }>>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum AnyDatabaseConnection {
     MySQL(SqlxMySqlPoolConnection),
 }

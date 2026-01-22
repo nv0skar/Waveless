@@ -1,5 +1,5 @@
 [package]
-name = "waveless_schema"
+name = "waveless_endpoint"
 edition = "2024"
 
 [dependencies]

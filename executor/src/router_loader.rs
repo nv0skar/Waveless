@@ -17,7 +17,7 @@ pub fn router() -> Result<&'static EndpointRouter> {
 pub fn load_router() -> Result<EndpointRouter> {
     let build = build_loader::build()?;
 
-    let endpoint_routes = DashMap::<endpoint::HttpMethod, Router<endpoint::Endpoint>>::new();
+    let endpoint_routes = DashMap::<HttpMethod, Router<Endpoint>>::new();
 
     for endpoint in build.endpoints().inner() {
         let mut full_route = PathBuf::new();

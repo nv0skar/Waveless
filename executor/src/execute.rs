@@ -4,7 +4,7 @@
 use crate::*;
 
 #[derive(Clone, PartialEq, Constructor, Debug)]
-pub struct ExecuteExt(endpoint::Execute);
+pub struct ExecuteExt(Execute);
 
 impl ExecuteExt {
     /// Executes a query using the given executor and database connection.
@@ -13,12 +13,12 @@ impl ExecuteExt {
     #[instrument(skip_all)]
     pub async fn execute(
         &self,
-        method: endpoint::HttpMethod,
+        method: HttpMethod,
         db_conn: &AnyDatabaseConnection,
         params: HashMap<CompactString, Option<CompactString>>,
     ) -> Result<serde_json::Value, ConnHandlerError> {
         match &self.0 {
-            endpoint::Execute::MySQL { query } => {
+            Execute::MySQL { query } => {
                 let AnyDatabaseConnection::MySQL(mysql_pool) = db_conn;
 
                 // Replaces Waveless' query's parameters placeholders with MySQL's ones.
@@ -51,7 +51,7 @@ impl ExecuteExt {
                     {
                         Some(value) => ordered_values.push(sea_orm::Value::from(value.to_string())),
                         None => {
-                            if method == endpoint::HttpMethod::Put {
+                            if method == HttpMethod::Put {
                                 // Modifies the query and strip `?`'s at the positions.
                                 // As it is a PUT query we have to strip the column's name, '?' at the current position
 
@@ -111,7 +111,7 @@ impl ExecuteExt {
 
                 return Ok(json!(&rows));
             }
-            endpoint::Execute::Hook { .. } => {
+            Execute::Hook { .. } => {
                 todo!("Custom endpoint hooks aren't implemented yet.")
             }
         }

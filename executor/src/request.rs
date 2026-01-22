@@ -52,7 +52,7 @@ pub async fn try_handle_endpoint(
             .unwrap_or_default()
     );
 
-    let method = endpoint::HttpMethod::from(request.method().as_str());
+    let method = HttpMethod::from(request.method().as_str());
 
     // Extracts the route from the method-aware router.
     let Some(router) = router_loader::router()?.get(&method) else {

@@ -6,7 +6,7 @@ edition = "2024"
 waveless_commons.workspace = true
 waveless_binary.workspace = true
 waveless_databases.workspace = true
-waveless_schema = { workspace = true, features = ["toml_codec"] }
+waveless_endpoint = { workspace = true, features = ["toml_codec"] }
 waveless_config = { workspace = true, features = ["toml_codec"] }
 rustyrosetta = { workspace = true, features = ["all"] }
 tokio = { workspace = true, features = ["full"] }

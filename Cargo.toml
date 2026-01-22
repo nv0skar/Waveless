@@ -11,7 +11,7 @@ members = [
     "executor",
     "frontend",
     "databases",
-    "schema",
+    "endpoint",
     "binary",
     "config",
 ]
@@ -22,7 +22,7 @@ waveless_compiler = { path = "./compiler" }
 waveless_executor = { path = "./executor" }
 waveless_frontend = { path = "./frontend" }
 waveless_databases = { path = "./databases" }
-waveless_schema = { path = "./schema" }
+waveless_endpoint = { path = "./endpoint" }
 waveless_binary = { path = "./binary" }
 waveless_config = { path = "./config" }
 

@@ -10,7 +10,7 @@ use crate::*;
 
 /// Discovers all endpoints from the project's database.
 #[instrument(skip_all)]
-pub async fn discover() -> Result<Option<(endpoint::Endpoints, binary::DatabaseChecksum)>> {
+pub async fn discover() -> Result<Option<(Endpoints, binary::DatabaseChecksum)>> {
     let config = config_loader::project_config()?;
 
     if let Some(discovery_config) = config.compiler().endpoint_discovery() {
@@ -27,30 +27,21 @@ pub async fn discover() -> Result<Option<(endpoint::Endpoints, binary::DatabaseC
             })
             .ok_or(anyhow!("No database with the matching criteria was found."))?;
 
-        let (db_conn, raw_conn) = AnyDatabaseConnection::new(db_config).await?;
+        let schema = waveless_databases::schema::AnySchema::load_schema(db_config).await?;
 
-        match (discovery_config.method(), db_conn) {
+        match (discovery_config.method(), schema.to_owned()) {
             (
                 project::DataSchemaDiscoveryMethod::MySQL { skip_tables },
-                AnyDatabaseConnection::MySQL(_),
+                waveless_databases::schema::AnySchema::MySQL(mysql_schema),
             ) => {
+                let mut discovered_endpoints = Endpoints::new(CheapVec::new());
+
                 let project::DatabaseConnection::MySQL { db, .. } = db_config.connection() else {
                     bail!("Unexpected error, cannot retrieve the database's name.")
                 };
 
-                let mysql_raw_pool = raw_conn.downcast::<Pool<MySql>>().unwrap();
-
-                let schema = sea_schema::mysql::discovery::SchemaDiscovery::new(
-                    (*mysql_raw_pool).to_owned(),
-                    db,
-                )
-                .discover()
-                .await?;
-
-                let mut discovered_endpoints = endpoint::Endpoints::new(CheapVec::new());
-
                 // For each table generate a GET, POST, UPDATE and DELETE endpoints.
-                for table in schema.tables {
+                for table in mysql_schema.tables {
                     if skip_tables.contains(&table.info.name.to_compact_string()) {
                         continue;
                     }
@@ -88,8 +79,8 @@ pub async fn discover() -> Result<Option<(endpoint::Endpoints, binary::DatabaseC
                     for method in METHODS_TO_GENERATE {
                         match method {
                             HttpMethod::Get => {
-                                let mut endpoint_one = endpoint::EndpointBuilder::default();
-                                let mut endpoint_many = endpoint::EndpointBuilder::default();
+                                let mut endpoint_one = EndpointBuilder::default();
+                                let mut endpoint_many = EndpointBuilder::default();
 
                                 endpoint_one
                                     .id(format!("{}_GetOne", table.info.name).to_compact_string())
@@ -104,7 +95,7 @@ pub async fn discover() -> Result<Option<(endpoint::Endpoints, binary::DatabaseC
                                         .to_compact_string(),
                                     ))
                                     .target_database(Some(db_config.id().to_owned()))
-                                    .execute(Some(endpoint::Execute::MySQL {
+                                    .execute(Some(Execute::MySQL {
                                         query: format!(
                                             "SELECT * FROM {} WHERE {} = {}",
                                             table.info.name, pk_id, "{id}"
@@ -132,7 +123,7 @@ pub async fn discover() -> Result<Option<(endpoint::Endpoints, binary::DatabaseC
                                             .to_compact_string(),
                                     ))
                                     .target_database(Some(db_config.id().to_owned()))
-                                    .execute(Some(endpoint::Execute::MySQL {
+                                    .execute(Some(Execute::MySQL {
                                         query: format!("SELECT * FROM {}", table.info.name,)
                                             .to_compact_string(),
                                     }))
@@ -151,7 +142,7 @@ pub async fn discover() -> Result<Option<(endpoint::Endpoints, binary::DatabaseC
                                 discovered_endpoints.add(endpoint_many.build()?)?;
                             }
                             HttpMethod::Post => {
-                                let mut endpoint = endpoint::EndpointBuilder::default();
+                                let mut endpoint = EndpointBuilder::default();
 
                                 endpoint
                                     .id(format!("{}_Post", table.info.name).to_compact_string())
@@ -163,7 +154,7 @@ pub async fn discover() -> Result<Option<(endpoint::Endpoints, binary::DatabaseC
                                             .to_compact_string(),
                                     ))
                                     .target_database(Some(db_config.id().to_owned()))
-                                    .execute(Some(endpoint::Execute::MySQL {
+                                    .execute(Some(Execute::MySQL {
                                         query: format!(
                                             "INSERT INTO {} ({}) VALUES ({})",
                                             table.info.name,
@@ -203,7 +194,7 @@ pub async fn discover() -> Result<Option<(endpoint::Endpoints, binary::DatabaseC
                                 discovered_endpoints.add(endpoint.build()?)?;
                             }
                             HttpMethod::Put => {
-                                let mut endpoint = endpoint::EndpointBuilder::default();
+                                let mut endpoint = EndpointBuilder::default();
 
                                 endpoint
                                     .id(format!("{}_Put", table.info.name).to_compact_string())
@@ -218,7 +209,7 @@ pub async fn discover() -> Result<Option<(endpoint::Endpoints, binary::DatabaseC
                                         .to_compact_string(),
                                     ))
                                     .target_database(Some(db_config.id().to_owned()))
-                                    .execute(Some(endpoint::Execute::MySQL {
+                                    .execute(Some(Execute::MySQL {
                                         query: format!(
                                             "UPDATE {} SET {} WHERE {} = {} ",
                                             table.info.name,
@@ -251,7 +242,7 @@ pub async fn discover() -> Result<Option<(endpoint::Endpoints, binary::DatabaseC
                                 discovered_endpoints.add(endpoint.build()?)?;
                             }
                             HttpMethod::Delete => {
-                                let mut endpoint = endpoint::EndpointBuilder::default();
+                                let mut endpoint = EndpointBuilder::default();
 
                                 endpoint
                                     .id(format!("{}_Delete", table.info.name).to_compact_string())
@@ -266,7 +257,7 @@ pub async fn discover() -> Result<Option<(endpoint::Endpoints, binary::DatabaseC
                                         .to_compact_string(),
                                     ))
                                     .target_database(Some(db_config.id().to_owned()))
-                                    .execute(Some(endpoint::Execute::MySQL {
+                                    .execute(Some(Execute::MySQL {
                                         query: format!(
                                             "DELETE FROM {} WHERE {} = {} ",
                                             table.info.name, pk_id, "{id}"
@@ -294,12 +285,7 @@ pub async fn discover() -> Result<Option<(endpoint::Endpoints, binary::DatabaseC
 
                 return Ok(Some((
                     discovered_endpoints.to_owned(),
-                    binary::DatabaseChecksum::new(
-                        db_config.id().to_owned(),
-                        CheapVec::from_slice(
-                            &crc32fast::hash(&(discovered_endpoints.encode()?)).to_ne_bytes(),
-                        ),
-                    ),
+                    schema.checksum(db.to_owned()).await?,
                 )));
             }
             _ => Err(anyhow!(

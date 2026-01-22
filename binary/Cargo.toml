@@ -4,7 +4,7 @@ edition = "2024"
 
 [dependencies]
 waveless_commons.workspace = true
-waveless_schema = { workspace = true, features = ["postcard_codec"] }
+waveless_endpoint = { workspace = true, features = ["postcard_codec"] }
 waveless_config = { workspace = true, features = ["postcard_codec"] }
 rustyrosetta = { workspace = true, features = ["all"] }
 serde.workspace = true
