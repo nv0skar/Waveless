@@ -23,6 +23,7 @@ use std::convert::Infallible;
 use std::fs::{File, create_dir, read, read_dir, write};
 use std::mem::MaybeUninit;
 use std::net::SocketAddr;
+use std::ops::RangeInclusive;
 use std::path::PathBuf;
 use std::sync::{LazyLock, OnceLock};
 use std::time::Duration;
@@ -46,7 +47,6 @@ use matchit::*;
 use rclite::Arc;
 use sea_orm::{
     DbBackend, FromQueryResult, SqlxMySqlPoolConnection, Statement, entity::*, prelude::*,
-    query::JsonValue,
 }; // Switched from sqlx, as sqlx doesn't support conversion into JSON for arbitrary schemas.
 use serde::{Deserialize, Serialize};
 use serde_json::json;

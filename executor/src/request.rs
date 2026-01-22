@@ -74,25 +74,32 @@ pub async fn try_handle_endpoint(
     // Retrieves the endpoint's target database.
     let database_id = endpoint_def.value.target_database();
 
-    let dbs_conns = DATABASES_CONNS
+    let db_conns = DATABASES_CONNS
         .get()
         .unwrap()
         .search(database_id.to_owned())?;
 
     // Checks for path params, query params and body params.
-    let mut request_params = HashMap::<CompactString, CompactString>::new();
+    let mut request_params = HashMap::<CompactString, Option<CompactString>>::new();
 
     for (key, value) in endpoint_def.params.iter() {
-        request_params.insert(key.to_compact_string(), value.to_compact_string());
+        request_params.insert(key.to_compact_string(), Some(value.to_compact_string()));
     }
 
     if let Some(queries) = request.uri().query() {
-        let queries = queries.split('&');
-        for query in queries {
-            let (key, value) = query
-                .split_once('=')
-                .ok_or(anyhow!("Cannot parse request's query."))?;
-            request_params.insert(key.to_compact_string(), value.to_compact_string());
+        let queries = queries.split('&').map(|elem| {
+            elem.split_once('=')
+                .ok_or(anyhow!("Cannot parse request's query."))
+                .unwrap()
+        });
+        for key in endpoint_def.value.query_params() {
+            let mut owned_iterator = queries.to_owned();
+            match owned_iterator.find(|elem| elem.0 == key) {
+                Some((key, value)) => {
+                    request_params.insert(key.to_compact_string(), Some(value.to_compact_string()))
+                }
+                None => request_params.insert(key.to_compact_string(), None),
+            };
         }
     }
 
@@ -125,22 +132,19 @@ pub async fn try_handle_endpoint(
         };
 
         for key in endpoint_def.value.body_params() {
-            let Some(value) = json_body.as_object().unwrap().get(key.as_str()) else {
-                return Err(ConnHandlerError::Expected(
-                    StatusCode::BAD_REQUEST,
-                    "Invalid request's body. Cannot find all the required parameters."
-                        .to_compact_string(),
-                ));
+            let value = {
+                match json_body.as_object().unwrap().get(key.as_str()) {
+                    Some(res) => Some(
+                        res.as_str()
+                            .map(|s| s.to_string())
+                            .unwrap_or(res.to_string())
+                            .to_compact_string(),
+                    ),
+                    None => None,
+                }
             };
 
-            request_params.insert(
-                key.to_owned(),
-                value
-                    .as_str()
-                    .map(|s| s.to_string())
-                    .unwrap_or(value.to_string())
-                    .to_compact_string(),
-            );
+            request_params.insert(key.to_owned(), value);
         }
     }
 
@@ -154,7 +158,7 @@ pub async fn try_handle_endpoint(
 
     let executor = execute::ExecuteExt::new(execute_strategy.to_owned());
 
-    Ok(executor.execute(dbs_conns, request_params).await?)
+    Ok(executor.execute(method, db_conns, request_params).await?)
 }
 
 #[derive(Error, Debug)]

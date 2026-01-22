@@ -17,7 +17,6 @@ use rustyrosetta::{codec::*, *};
 
 use std::any::{Any, TypeId};
 use std::env::current_dir;
-use std::fmt::{Debug, Display};
 use std::fs::{File, create_dir, read, read_dir, write};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};

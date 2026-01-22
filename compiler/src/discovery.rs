@@ -32,7 +32,7 @@ pub async fn discover() -> Result<Option<(endpoint::Endpoints, binary::DatabaseC
         match (discovery_config.method(), db_conn) {
             (
                 project::DataSchemaDiscoveryMethod::MySQL { skip_tables },
-                AnyDatabaseConnection::MySQL(mysql_pool),
+                AnyDatabaseConnection::MySQL(_),
             ) => {
                 let project::DatabaseConnection::MySQL { db, .. } = db_config.connection() else {
                     bail!("Unexpected error, cannot retrieve the database's name.")

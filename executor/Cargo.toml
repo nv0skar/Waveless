@@ -30,6 +30,7 @@ dashmap.workspace = true
 clap.workspace = true
 chrono.workspace = true
 owo-colors.workspace = true
+regex.workspace = true
 rclite.workspace = true
 tracing.workspace = true
 nestify.workspace = true
