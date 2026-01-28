@@ -16,7 +16,7 @@ pub fn new_project(name: CompactString) -> Result<ResultContext> {
     let project_path = current_dir()?.join(&name);
 
     {
-        if let Err(err) = create_dir(project_path.to_owned()) {
+        if let Err(err) = create_dir(&project_path) {
             Err(anyhow!(
                 "Cannot create project's folder {}. Are you sure that there is no project with the same name and that you have write permissions?%{}",
                 name,
@@ -49,7 +49,7 @@ pub fn new_project(name: CompactString) -> Result<ResultContext> {
             ),
         )?;
 
-        create_dir(project_path.join(default_project.compiler().endpoints_dir().to_owned()))?;
+        create_dir(project_path.join(default_project.compiler().endpoints_dir()))?;
 
         create_dir(
             project_path.join(
@@ -111,7 +111,7 @@ pub fn new_project(name: CompactString) -> Result<ResultContext> {
 
         let mut sample_endpoint_file = File::create_new(
             project_path
-                .join(default_project.compiler().endpoints_dir().to_owned())
+                .join(default_project.compiler().endpoints_dir())
                 .join("sample_endpoint.toml"),
         )
         .context("Unexpected error, cannot create `sample_endpoint.toml` file.")?;

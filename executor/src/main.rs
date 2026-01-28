@@ -1,12 +1,13 @@
 // Waveless
 // Copyright (C) 2026 Oscar Alvarez Gonzalez
 
-use waveless_commons::{logger::*, output::handle_main, *};
+use waveless_commons::{logger::*, runtime::handle_main, *};
 use waveless_databases::*;
 use waveless_executor::{build_loader::*, frontend_options::*, router_loader::*, server::*, *};
 
 use anyhow::{Context, Result, anyhow, bail};
 use clap::Parser;
+use tracing::*;
 
 ///
 /// The Waveless' executor frontend.
@@ -31,9 +32,8 @@ struct ExecutorFrontend {
     subcommand: Option<ExecutorFrontendOptions>,
 }
 
-#[tokio::main]
-async fn main() {
-    handle_main(try_main).await
+fn main() {
+    handle_main(try_main)
 }
 
 async fn try_main() -> Result<ResultContext> {
@@ -53,25 +53,8 @@ async fn try_main() -> Result<ResultContext> {
                 .set(load_router()?)
                 .map_err(|_| anyhow!("Cannot load router into global."))?;
 
-            for build_checksum in build()?.databases_checksums() {
-                let db_config = build()?
-                    .general()
-                    .databases()
-                    .iter()
-                    .find(|db_config| db_config.id() == build_checksum.database_id())
-                    .ok_or(anyhow!("No database with the matching criteria was found."))?;
-
-                let schema = waveless_databases::schema::AnySchema::load_schema(db_config).await?;
-
-                let current_checksum = schema
-                    .checksum(build_checksum.database_id().to_owned())
-                    .await?;
-
-                if current_checksum != *build_checksum {
-                    bail!(
-                        "The database schema has changed since the last build! Build the project again using the current schema."
-                    )
-                }
+            if *build()?.server_settings().check_databases_cheksums() {
+                check_checksums_in_build(build()?.to_owned()).await?;
             }
 
             DatabasesConnections::load(build()?.general().databases().to_owned()).await?;

@@ -1,8 +1,6 @@
 // Waveless
 // Copyright (C) 2026 Oscar Alvarez Gonzalez
 
-use compact_str::ToCompactString;
-
 ///
 /// -- The Waveless's binary format --
 /// Waveless follows a compiler-like design:
@@ -50,7 +48,7 @@ impl Build {
 
     /// Removes the magic bytes from the beginning of the file and deserializes the binary.
     pub fn decode_binary(buffer: &Bytes) -> Result<Self> {
-        Ok(Build::decode(&buffer[BINARY_MAGIC.len()..])?)
+        Build::decode(&buffer[BINARY_MAGIC.len()..])
     }
 }
 

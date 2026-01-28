@@ -14,7 +14,7 @@ use crate::*;
 
 /// Builds the project in the current path (if no `config.toml` file is present in the current directory it will be searched in parent directories)
 #[instrument(skip_all)]
-pub async fn build<T: 'static>() -> Result<SmallBox<dyn Any, S64>> {
+pub async fn build<T: 'static>() -> Result<Either<binary::Build, Bytes>> {
     let config = config_loader::project_config()?;
 
     debug!(
@@ -59,31 +59,30 @@ pub async fn build<T: 'static>() -> Result<SmallBox<dyn Any, S64>> {
         debug!("Deserialized user's endpoints: {:#?}", endpoints);
     }
 
-    // Discovers database's schema.
-    let mut databases_checksums = CheapVec::new();
-    if config.compiler().endpoint_discovery().is_some() {
-        if let Some((discovered_endpoints, cheksum)) = discovery::discover().await? {
-            if let Ok(_) = create_dir(get_project_root()?.join(".discovered_endpoints")) {
-                debug!("`.discovered_endpoints` directory does't exist, a new one will be created.")
-            };
+    // Discovers the endpoints and checksums the database's schema.
+    let (db_endpoints, db_checksums) = discovery::discover().await?;
 
-            let target_file = get_project_root()?
-                .join(".discovered_endpoints")
-                .join("schema_endpoints.toml");
+    if create_dir(get_project_root()?.join(".discovered_endpoints")).is_ok() {
+        debug!("'.discovered_endpoints' directory does't exist, a new one will be created.")
+    };
 
-            write(
-                target_file.to_owned(),
-                toml::to_string_pretty(&discovered_endpoints)?.as_bytes(),
-            )?;
+    for (db_id, discovered_endpoints) in db_endpoints {
+        let target_file = get_project_root()?
+            .join(".discovered_endpoints")
+            .join(format!("{}.toml", db_id));
 
-            info!(
-                "Discovered endpoints were dumped into '{}'.",
-                target_file.display()
-            );
+        write(
+            &target_file,
+            toml::to_string_pretty(&discovered_endpoints)?.as_bytes(),
+        )?;
 
-            endpoints.merge(discovered_endpoints)?;
-            databases_checksums.push(cheksum);
-        }
+        info!(
+            "Discovered endpoints from '{}' were dumped into '{}'.",
+            target_file.display(),
+            db_id
+        );
+
+        endpoints.merge(discovered_endpoints)?;
     }
 
     // Serializes the project's build.
@@ -91,7 +90,7 @@ pub async fn build<T: 'static>() -> Result<SmallBox<dyn Any, S64>> {
         config.general().to_owned(),
         config.server().to_owned(),
         endpoints,
-        databases_checksums,
+        db_checksums,
     );
 
     if TypeId::of::<T>() == TypeId::of::<Bytes>() {
@@ -102,9 +101,9 @@ pub async fn build<T: 'static>() -> Result<SmallBox<dyn Any, S64>> {
             chrono::Local::now(),
         );
 
-        Ok(smallbox!(buff))
+        Ok(Right(buff))
     } else if TypeId::of::<T>() == TypeId::of::<binary::Build>() {
-        Ok(smallbox!(build))
+        Ok(Left(build))
     } else {
         panic!("Unexpected type.")
     }
@@ -112,8 +111,6 @@ pub async fn build<T: 'static>() -> Result<SmallBox<dyn Any, S64>> {
 
 /// Generates the binary's file from the provided buffer.
 pub fn binary_file_from_buff(buff: Bytes) -> Result<ResultContext> {
-    let target_file: PathBuf;
-
     // Set the build file's name a combination of its CRC32 hash and the current timestamp
     let build_name = format!(
         "{}_{}.wv",
@@ -121,13 +118,13 @@ pub fn binary_file_from_buff(buff: Bytes) -> Result<ResultContext> {
         crc32fast::hash(buff.as_slice())
     );
 
-    if let Ok(_) = create_dir(get_project_root()?.join("target")) {
-        debug!("`target` directory does't exist, a new one will be created.")
+    let target_file = get_project_root()?.join("target").join(build_name);
+
+    if create_dir(get_project_root()?.join("target")).is_ok() {
+        debug!("`target` directory doesn't exist, a new one will be created.")
     };
 
-    target_file = get_project_root()?.join("target").join(build_name);
-
-    write(target_file.to_owned(), buff)?;
+    write(&target_file, buff)?;
 
     debug!("Emitted build file on {}", target_file.display());
 

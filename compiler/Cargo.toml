@@ -18,7 +18,6 @@ serde_with.workspace = true
 toml.workspace = true
 arrayvec.workspace = true
 compact_str.workspace = true
-smallbox.workspace = true
 clap.workspace = true
 crc32fast.workspace = true
 owo-colors.workspace = true

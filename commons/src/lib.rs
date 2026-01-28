@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Oscar Alvarez Gonzalez
 
 pub mod logger;
-pub mod output;
+pub mod runtime;
 pub mod serialize;
 
 use std::cell::Cell;
@@ -12,6 +12,7 @@ use rustyrosetta::*;
 use anyhow::{Context, Result};
 use compact_str::*;
 use iocraft::prelude::*;
+use tokio::runtime::Builder;
 use tracing::*;
 
 pub type ResultContext = CompactString; // TODO: Replace this with custom error types.
@@ -20,5 +21,5 @@ pub type ResultContext = CompactString; // TODO: Replace this with custom error 
 pub const DATABASE_LIMIT: usize = 9;
 
 thread_local! {
-    pub static BINARY_MODE: Cell<bool> = Cell::new(false); // This will likely be fixed in the future. https://github.com/serde-rs/serde/issues/1732
+    pub static BINARY_MODE: Cell<bool> = const { Cell::new(false) }; // This will likely be fixed in the future. https://github.com/serde-rs/serde/issues/1732
 }

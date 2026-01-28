@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Oscar Alvarez Gonzalez
 
 use waveless_binary::*;
-use waveless_commons::{logger::*, output::handle_main, *};
+use waveless_commons::{logger::*, runtime::handle_main, *};
 use waveless_compiler::{build::*, new::*};
 use waveless_databases::*;
 use waveless_executor::{
@@ -82,9 +82,8 @@ nest! {
     }
 }
 
-#[tokio::main]
-async fn main() {
-    handle_main(try_main).await;
+fn main() {
+    handle_main(try_main);
 }
 
 async fn try_main() -> Result<ResultContext> {
@@ -97,26 +96,27 @@ async fn try_main() -> Result<ResultContext> {
     match cli.subcommand {
         Some(Subcommands::New { name }) => new_project(name),
         Some(Subcommands::Run { addr }) => {
-            let build = build::<binary::Build>()
-                .await?
-                .downcast::<binary::Build>()
-                .unwrap();
+            let build = build::<binary::Build>().await?.left().unwrap();
 
             BUILD
-                .set((*build).to_owned())
+                .set(build.to_owned())
                 .map_err(|_| anyhow!("Cannot load build into global."))?;
 
             ROUTER
                 .set(load_router()?)
                 .map_err(|_| anyhow!("Cannot load router into global."))?;
 
-            DatabasesConnections::load((*build).general().databases().to_owned()).await?;
+            if *build.server_settings().check_databases_cheksums() {
+                warn!("Skipping databases' schema checksum verification.");
+            }
+
+            DatabasesConnections::load(build.general().databases().to_owned()).await?;
 
             serve(addr).await
         }
         Some(Subcommands::Build) => {
-            let buff = build::<Bytes>().await?.downcast::<Bytes>().unwrap();
-            binary_file_from_buff((*buff).to_owned())
+            let buff = build::<Bytes>().await?.right().unwrap();
+            binary_file_from_buff(buff)
         }
         Some(Subcommands::Bootstrap) => todo!(),
         Some(Subcommands::Executor(executor_options)) => match executor_options {
@@ -129,8 +129,13 @@ async fn try_main() -> Result<ResultContext> {
                     .set(load_router()?)
                     .map_err(|_| anyhow!("Cannot load router into global."))?;
 
-                DatabasesConnections::load(build_loader::build()?.general().databases().to_owned())
-                    .await?;
+                let build = build_loader::build()?.to_owned();
+
+                if *build.server_settings().check_databases_cheksums() {
+                    check_checksums_in_build(build.to_owned()).await?;
+                }
+
+                DatabasesConnections::load(build.general().databases().to_owned()).await?;
 
                 serve(addr).await
             }

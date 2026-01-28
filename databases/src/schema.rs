@@ -11,6 +11,8 @@ pub enum AnySchema {
 
 impl AnySchema {
     pub async fn load_schema(db_config: &project::DatabaseConfig) -> Result<Self> {
+        info!("Loading database schema of '{}'.", db_config.id());
+
         let (db_conn, raw_conn) = AnyDatabaseConnection::new(db_config).await?;
 
         match db_conn {

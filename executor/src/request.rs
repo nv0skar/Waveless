@@ -5,6 +5,7 @@ use crate::*;
 
 /// Endpoint handler wrapper that serializes response into JSON.
 /// TODO: Convert this into a service layer.
+#[instrument(skip_all)]
 pub async fn handle_endpoint(request: Request<Incoming>) -> Result<Response<String>> {
     let response = Response::builder()
         .header("Content-Type", "application/json; charset=utf-8")
@@ -158,7 +159,7 @@ pub async fn try_handle_endpoint(
 
     let executor = execute::ExecuteExt::new(execute_strategy.to_owned());
 
-    Ok(executor.execute(method, db_conns, request_params).await?)
+    executor.execute(method, db_conns, request_params).await
 }
 
 #[derive(Error, Debug)]

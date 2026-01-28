@@ -3,13 +3,20 @@
 
 use crate::*;
 
-/// An exit handler to prettify success and error contexts.
+/// A Tokio runtime creator and an exit handler to prettify success and error contexts
 /// TODO: Replace this with custom error types.
-pub async fn handle_main<T>(main_fn: T)
+pub fn handle_main<T>(main_fn: T)
 where
     T: AsyncFn() -> Result<CompactString>,
 {
-    match main_fn().await {
+    let runtime = Builder::new_multi_thread()
+        .enable_all()
+        .thread_stack_size(65520)
+        .build()
+        .unwrap();
+
+    runtime.block_on(async {
+match main_fn().await {
         Ok(res) => {
             if !res.is_empty() {
                 element! {
@@ -50,4 +57,5 @@ where
             .print();
         }
     }
+    })
 }

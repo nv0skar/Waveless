@@ -26,9 +26,9 @@ use std::sync::OnceLock;
 use anyhow::{Context, Result, anyhow, bail};
 use compact_str::*;
 use derive_more::Constructor;
+use either::*;
 use owo_colors::*;
 use serde::{Deserialize, Serialize};
-use smallbox::{space::S64, *};
 use sqlx::{MySql, pool::Pool};
 use tracing::*;
 
@@ -53,7 +53,7 @@ pub fn get_project_root() -> Result<PathBuf> {
                     }
                 }
             };
-            return Err(anyhow!("The project's path cannot be determined."));
+            Err(anyhow!("The project's path cannot be determined."))
         }
     }
 }

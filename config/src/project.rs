@@ -75,9 +75,9 @@ impl Default for General {
 #[getset(get = "pub")]
 pub struct Compiler {
     /// this option defines the compiler's strategy to analyze the data schema.
-    /// if set to `None`, the compiler will only include the user defined endpoints
-    #[serde(default, skip_serializing_if = "should_skip_option")]
-    endpoint_discovery: Option<DataSchemaDiscoveryConfig>,
+    /// if the array is empty, the compiler will only include the user defined endpoints
+    #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
+    endpoint_discovery: CheapVec<DataSchemaDiscoveryConfig>,
 
     /// this is the directory where all the user defined endpoints will be located
     endpoints_dir: CompactString,
@@ -93,7 +93,7 @@ pub struct Compiler {
 impl Default for Compiler {
     fn default() -> Self {
         Self {
-            endpoint_discovery: None,
+            endpoint_discovery: CheapVec::new(),
             endpoints_dir: "./endpoints/".to_compact_string(),
             hooks_dir: Some("./hooks/".to_compact_string()),
             bootstrap_scripts_dir: Some("./bootstrap/".to_compact_string()),
@@ -117,7 +117,7 @@ pub struct Server {
     api_prefix: CompactString,
 
     /// the compiler will generate a checksum of the schema of each database, if this option is marked, the server executor will check whether the checksum on each start
-    check_databases_cheksums: bool, // TODO
+    check_databases_cheksums: bool,
 
     /// set the http cache time header
     http_cache_time: usize,
@@ -161,7 +161,7 @@ impl Default for DataSchemaDiscoveryConfig {
 #[derive(Clone, PartialEq, Serialize, Deserialize, Display, Debug)]
 // #[cfg_attr(feature = "toml_codec", serde(tag = "type"))]
 pub enum DataSchemaDiscoveryMethod {
-    /// The MySQL discovey strategy will analyze a MySQL database in order to generate a representation of the data model that will be analyzed by the endpoint generator backend.
+    /// The MySQL discovery strategy will analyze a MySQL database in order to generate a representation of the data model that will be analyzed by the endpoint generator backend.
     #[display("MySQL schema discovery (skipping: {:?})", skip_tables)]
     MySQL {
         #[serde(default, skip_serializing_if = "should_skip_cheapvec")]

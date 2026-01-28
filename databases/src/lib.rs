@@ -40,6 +40,7 @@ pub enum AnyDatabaseConnection {
 
 impl DatabasesConnections {
     /// Creates a new databases pools manager and loads it into the `DATABASE_POOL`'s `OnceCell`.
+    #[instrument(skip_all)]
     pub async fn load(databases: CheapVec<project::DatabaseConfig>) -> Result<()> {
         if !databases.iter().any(|db| *db.is_primary()) {
             bail!("There is no database set as primary.")
@@ -50,7 +51,7 @@ impl DatabasesConnections {
             ArrayVec::new_const();
 
         for db_config in databases {
-            debug!("Creating {}'s pool.", db_config.id());
+            info!("Creating {}'s pool.", db_config.id());
 
             let (pool, _) = AnyDatabaseConnection::new(&db_config).await?;
 
@@ -89,6 +90,7 @@ impl DatabasesConnections {
 
 impl AnyDatabaseConnection {
     /// Creates a new database connection from the given config.
+    #[instrument(skip_all)]
     pub async fn new(
         db_config: &project::DatabaseConfig,
     ) -> Result<(Self, SmallBox<dyn Any, S64>)> {
@@ -101,6 +103,11 @@ impl AnyDatabaseConnection {
                 password,
                 db,
             } => {
+                info!(
+                    "Creating new MySQL database connection ({}) on {}",
+                    host, db
+                );
+
                 let conn_options = MySqlConnectOptions::new()
                     .host(&host.ip().to_string())
                     .port(host.port())
@@ -126,4 +133,35 @@ impl AnyDatabaseConnection {
             }
         }
     }
+}
+
+pub async fn check_checksums_in_build(build: binary::Build) -> Result<()> {
+    for build_checksum in build.databases_checksums() {
+        let db_config = build
+            .general()
+            .databases()
+            .iter()
+            .find(|db_config| db_config.id() == build_checksum.database_id())
+            .ok_or(anyhow!(
+                "The are checksums whose id doesn't match with any database."
+            ))?;
+
+        let schema = schema::AnySchema::load_schema(db_config).await?;
+
+        let current_checksum = schema
+            .checksum(build_checksum.database_id().to_owned())
+            .await?;
+
+        if current_checksum != *build_checksum {
+            bail!(
+                "The database schema has changed since the last build! Build the project again using the current schema."
+            );
+        } else {
+            info!(
+                "Database's schema checksum of '{}' has been verified.",
+                db_config.id()
+            );
+        }
+    }
+    Ok(())
 }
