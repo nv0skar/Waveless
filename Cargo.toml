@@ -157,7 +157,6 @@ derive_more = { version = "2.0", features = ["constructor", "display"] }
 # style-file = "style/main.scss"
 # tailwind-input-file = "style/tailwind.css"
 
-
 [profile.release]
 codegen-units = 1
 lto = true
