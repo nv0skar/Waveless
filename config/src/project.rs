@@ -37,7 +37,7 @@ pub struct General {
 
     /// contains all project's databases
     #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
-    databases: CheapVec<DatabaseConfig>,
+    databases: CheapVec<DatabaseConfig, 0>,
 
     /// contains authentication settings
     authentication: Authentication,
@@ -77,7 +77,7 @@ pub struct Compiler {
     /// this option defines the compiler's strategy to analyze the data schema.
     /// if the array is empty, the compiler will only include the user defined endpoints
     #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
-    endpoint_discovery: CheapVec<DataSchemaDiscoveryConfig>,
+    endpoint_discovery: CheapVec<DataSchemaDiscoveryConfig, 0>,
 
     /// this is the directory where all the user defined endpoints will be located
     endpoints_dir: CompactString,
@@ -165,7 +165,7 @@ pub enum DataSchemaDiscoveryMethod {
     #[display("MySQL schema discovery (skipping: {:?})", skip_tables)]
     MySQL {
         #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
-        skip_tables: CheapVec<CompactString>, // Do not forget that auth, session and role tables are also skipped
+        skip_tables: CheapVec<CompactString, 0>, // Do not forget that auth, session and role tables are also skipped
     },
 
     /// The external module will use the project's hooks tp establish a database connection.
@@ -263,7 +263,7 @@ pub struct Authentication {
 
     /// All the available methods to authenticate.
     #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
-    methods: CheapVec<AuthenticationMethod>,
+    methods: CheapVec<AuthenticationMethod, 0>,
 
     /// Session token config.
     session: Session,
@@ -302,7 +302,7 @@ pub struct Admin {
 
     /// All roles that are considered admins.
     #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
-    allowed_roles: CheapVec<CompactString>,
+    allowed_roles: CheapVec<CompactString, 0>,
 
     /// Whether to gather statistics or not.
     statistics: bool, // TODO

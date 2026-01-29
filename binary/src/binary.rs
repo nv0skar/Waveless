@@ -27,7 +27,7 @@ pub struct Build {
     /// Contains all the databases' checksum.
     /// TODO: in the future there will be a method to checksum all the database's
     /// schema regardless of whether they have been 'discovered'.
-    databases_checksums: CheapVec<DatabaseChecksum>,
+    databases_checksums: CheapVec<DatabaseChecksum, 0>,
 }
 
 impl Build {

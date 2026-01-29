@@ -15,14 +15,14 @@ use crate::*;
 /// Discovers all endpoints from the project's database and calculate the checksum per database.
 #[instrument(skip_all)]
 pub async fn discover() -> Result<(
-    CheapVec<(CompactString, Endpoints)>,
-    CheapVec<binary::DatabaseChecksum>,
+    CheapVec<(CompactString, Endpoints), 0>,
+    CheapVec<binary::DatabaseChecksum, 0>,
 )> {
     let config = config_loader::project_config()?;
 
-    let mut db_endpoints = CheapVec::<(CompactString, Endpoints)>::new();
+    let mut db_endpoints = CheapVec::<(CompactString, Endpoints), 0>::new();
 
-    let mut checksums = CheapVec::<binary::DatabaseChecksum>::new();
+    let mut checksums = CheapVec::<binary::DatabaseChecksum, 0>::new();
 
     for db_config in config.general().databases() {
         let discovery_config =

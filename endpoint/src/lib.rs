@@ -33,7 +33,7 @@ pub struct Endpoints {
         default,
         skip_serializing_if = "should_skip_cheapvec"
     )]
-    inner: CheapVec<Endpoint>,
+    inner: CheapVec<Endpoint, 0>,
 }
 
 impl Endpoints {
@@ -114,7 +114,7 @@ pub struct Endpoint {
 
     /// Sets the tags of this endpoint. By default the target table name will be adde as a tag.
     #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
-    tags: CheapVec<CompactString>,
+    tags: CheapVec<CompactString, 0>,
 
     /// DEPRECATED: Path parameters are indicated in the route.
     /// Sets the accepted path parameters.
@@ -123,18 +123,18 @@ pub struct Endpoint {
 
     /// Sets the accepted query parameters.
     #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
-    query_params: CheapVec<CompactString>,
+    query_params: CheapVec<CompactString, 0>,
 
     /// Sets the accepted body parameters.
     #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
-    body_params: CheapVec<CompactString>,
+    body_params: CheapVec<CompactString, 0>,
 
     /// Whether to require auth.
     require_auth: bool,
 
     /// All allowed roles to query the endpoint.
     #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
-    allowed_roles: CheapVec<CompactString>,
+    allowed_roles: CheapVec<CompactString, 0>,
 
     /// Whether this endpoint es deprecated.
     #[serde(skip_serializing_if = "should_skip")]

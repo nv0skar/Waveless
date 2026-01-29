@@ -41,7 +41,7 @@ impl ExecuteExt {
                     .collect::<CompactString>();
 
                 // Gets parameter values in the order they appear.
-                let mut ordered_values = CheapVec::new();
+                let mut ordered_values = CheapVec::<_, 8>::new();
 
                 for param_id in params_order.iter() {
                     match params
@@ -95,7 +95,7 @@ impl ExecuteExt {
                         )
                     })?;
 
-                let mut rows = CheapVec::new();
+                let mut rows = CheapVec::<_, 0>::new();
 
                 for row in res {
                     rows.push(

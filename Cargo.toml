@@ -26,7 +26,7 @@ waveless_endpoint = { path = "./endpoint" }
 waveless_binary = { path = "./binary" }
 waveless_config = { path = "./config" }
 
-rustyrosetta = { git = "https://github.com/nv0skar/RustyRosetta.git", tag = "rustyrosetta_0.0.1", features = [
+rustyrosetta = { git = "https://github.com/nv0skar/RustyRosetta.git", tag = "rustyrosetta_0.0.2", features = [
     "all",
 ] }
 
