@@ -27,6 +27,7 @@ serde_json.workspace = true
 arrayvec.workspace = true
 compact_str.workspace = true
 dashmap.workspace = true
+mimalloc.workspace = true
 clap.workspace = true
 chrono.workspace = true
 owo-colors.workspace = true

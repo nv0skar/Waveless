@@ -17,8 +17,12 @@ use anyhow::{Context, Result, anyhow};
 use clap::{Parser, Subcommand};
 use compact_str::*;
 use iocraft::prelude::*;
+use mimalloc::MiMalloc;
 use nestify::nest;
 use tracing::*;
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 nest! {
     ///

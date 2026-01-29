@@ -17,6 +17,7 @@ serde_with.workspace = true
 toml.workspace = true
 arrayvec.workspace = true
 compact_str.workspace = true
+mimalloc.workspace = true
 clap.workspace = true
 iocraft.workspace = true
 owo-colors.workspace = true

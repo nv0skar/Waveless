@@ -104,6 +104,9 @@ atomic_refcell = "0.1"
 flume = "0.12"
 dashmap = { version = "6.1", features = ["serde"] }
 compact_str = { version = "0.9", features = ["serde"] }
+
+mimalloc = { version = "0.1.48", features = ["secure"] }
+
 rand = "0.9"
 
 blake3 = "1.8"

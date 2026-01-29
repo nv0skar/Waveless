@@ -5,9 +5,12 @@ use waveless_commons::{logger::*, runtime::handle_main, *};
 use waveless_databases::*;
 use waveless_executor::{build_loader::*, frontend_options::*, router_loader::*, server::*, *};
 
-use anyhow::{Context, Result, anyhow, bail};
+use anyhow::{Result, anyhow};
 use clap::Parser;
-use tracing::*;
+use mimalloc::MiMalloc;
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 ///
 /// The Waveless' executor frontend.
