@@ -1,5 +1,6 @@
 [package]
 name = "waveless_frontend"
+description = "Generate APIs and UIs from the application data model."
 edition = "2024"
 
 [dependencies]
