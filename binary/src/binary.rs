@@ -1,14 +1,14 @@
 // Waveless
 // Copyright (C) 2026 Oscar Alvarez Gonzalez
 
-///!
-///! -- The Waveless's binary format --
-///! Waveless follows a compiler-like design:
-///! - There is the frontend/compiler, which generates the binary that represents the whole api: all endpoints all server configuration, database checksums...
-///!   This is built upon user-defined endpoints and automatically generated endpoints from various discovery strategies.
-///! - The server executor/runtime, which loads the Waveless's project's binary and serves all endpoints, static files, interfaces with every database, generates statistics, manages authentication and session logic, admin panel...
-///! Note that when the binary is built, the magic bytes are appended to the beginning of the file
-///!
+//!
+//! -- The Waveless's binary format --
+//! Waveless follows a compiler-like design:
+//! - There is the frontend/compiler, which generates the binary that represents the whole api: all endpoints all server configuration, database checksums...
+//!   This is built upon user-defined endpoints and automatically generated endpoints from various discovery strategies.
+//! - The server executor/runtime, which loads the Waveless's project's binary and serves all endpoints, static files, interfaces with every database, generates statistics, manages authentication and session logic, admin panel...
+//! Note that when the binary is built, the magic bytes are appended to the beginning of the file
+//!
 use crate::*;
 
 /// The project's build file

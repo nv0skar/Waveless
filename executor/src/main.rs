@@ -12,9 +12,9 @@ use mimalloc::MiMalloc;
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
 
-///!
-///! The Waveless' executor frontend.
-///!
+//!
+//! The Waveless' executor frontend.
+//!
 #[derive(Parser)]
 #[command(
     name = "waveless_executor",

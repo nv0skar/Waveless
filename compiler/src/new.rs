@@ -1,9 +1,9 @@
 // Waveless
 // Copyright (C) 2026 Oscar Alvarez Gonzalez
 
-///!
-///!  Handles the new project creation.
-///!
+//!
+//!  Handles the new project creation.
+//!
 use crate::*;
 
 /// Create a new project in the current dir with the specified name

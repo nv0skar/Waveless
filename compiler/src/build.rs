@@ -1,15 +1,15 @@
 // Waveless
 // Copyright (C) 2026 Oscar Alvarez Gonzalez
 
-///!
-///! The Waveless' project's builder.
-///! The builder tasks are:
-///! 1. Serialize the `config.toml` file.
-///! 2. Load user's endpoints.
-///! 3. Discover the endpoints (optional).
-///! 4. Hash the current state of the databases (optional).
-///! 5. Build and serialize the project's binary file.
-///!
+//!
+//! The Waveless' project's builder.
+//! The builder tasks are:
+//! 1. Serialize the `config.toml` file.
+//! 2. Load user's endpoints.
+//! 3. Discover the endpoints (optional).
+//! 4. Hash the current state of the databases (optional).
+//! 5. Build and serialize the project's binary file.
+//!
 use crate::*;
 
 /// Builds the project in the current path (if no `config.toml` file is present in the current directory it will be searched in parent directories)
