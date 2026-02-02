@@ -23,7 +23,7 @@ use rust_decimal::prelude::*;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use tracing::*;
 
-/// Holds all the endpoints, is a wrapper of the CheapVec<Endpoint> type.
+/// Holds all the endpoints, is a wrapper of the `CheapVec<Endpoint>` type.
 #[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
 #[getset(get = "pub")]
 #[serde(default)]

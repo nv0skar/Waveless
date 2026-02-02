@@ -16,6 +16,10 @@ members = [
     "config",
 ]
 
+[[bin]]
+name = "waveless_frontend"
+path = "frontend"
+
 [workspace.dependencies]
 waveless_commons = { path = "./commons" }
 waveless_compiler = { path = "./compiler" }
@@ -160,8 +164,13 @@ derive_more = { version = "2.0", features = ["constructor", "display"] }
 # style-file = "style/main.scss"
 # tailwind-input-file = "style/tailwind.css"
 
+[profile.dev.package."*"]
+debug = false
+codegen-units = 256
+opt-level = 'z'
+
 [profile.release]
-codegen-units = 1
+codegen-units = 256
 lto = true
 opt-level = 'z'
 

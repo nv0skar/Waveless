@@ -1,15 +1,15 @@
 // Waveless
 // Copyright (C) 2026 Oscar Alvarez Gonzalez
 
-///
-/// The Waveless' endpoints discovery and schema's checksum calculator.
-/// Connects to the specified the project's databases, scans their schema to produce
-/// endpoints accordingly and produces the schema's checksum.
-/// NOTE: Instead of making schema discovery and database's schema's checksum calculation different methods
-/// they have been unified into a single method, which in turn opens only one connection for databases
-/// that require both endpoint discovery and schema's checksum, also this avoid complex global connection
-/// handling per database.
-///
+///!
+///! The Waveless' endpoints discovery and schema's checksum calculator.
+///! Connects to the specified the project's databases, scans their schema to produce
+///! endpoints accordingly and produces the schema's checksum.
+///! NOTE: Instead of making schema discovery and database's schema's checksum calculation different methods
+///! they have been unified into a single method, which in turn opens only one connection for databases
+///! that require both endpoint discovery and schema's checksum, also this avoid complex global connection
+///! handling per database.
+///!
 use crate::*;
 
 /// Discovers all endpoints from the project's database and calculate the checksum per database.

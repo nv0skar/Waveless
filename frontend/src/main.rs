@@ -25,9 +25,9 @@ use tracing::*;
 static GLOBAL: MiMalloc = MiMalloc;
 
 nest! {
-    ///
-    /// The Waveless' frontend.
-    ///
+    ///!
+    ///! The Waveless' frontend.
+    ///!
     #[derive(Parser)]
     #[command(
         name = "waveless",
