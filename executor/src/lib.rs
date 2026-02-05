@@ -41,7 +41,7 @@ use hyper::{
 };
 use hyper_util::{rt::TokioIo, service::TowerToHyperService};
 use matchit::*;
-use sea_orm::{DbBackend, FromQueryResult, QueryResult, Statement}; // Switched from sqlx, as sqlx doesn't support conversion into JSON for arbitrary schemas.
+use sea_orm::{FromQueryResult, QueryResult}; // Switched from sqlx, as sqlx doesn't support conversion into JSON for arbitrary schemas.
 use serde_json::json;
 use thiserror::Error;
 use tokio::sync::OnceCell;

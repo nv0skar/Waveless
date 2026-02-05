@@ -13,6 +13,8 @@ use sea_orm::{DbBackend, Statement};
 #[derive(Clone, Debug)]
 pub struct MySQLConnection(SqlxMySqlPoolConnection);
 
+boxed_any!(MySQLConnection);
+
 #[async_trait]
 impl AnyDatabaseConnection for MySQLConnection {
     fn name(&self) -> &str {
@@ -57,6 +59,8 @@ pub struct MySQLDBConnectionConfig {
     password: CompactString,
     db: CompactString,
 }
+
+boxed_any!(MySQLDBConnectionConfig);
 
 #[typetag::serde(name = "MySQL")]
 #[async_trait]

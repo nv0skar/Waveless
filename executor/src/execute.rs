@@ -96,7 +96,10 @@ impl ExecuteExt {
                 };
 
                 let res = res.downcast::<Vec<QueryResult>>().map_err(|err| {
-                    ConnHandlerError::Other(anyhow!("Cannot downcast to MySQL query result."))
+                    ConnHandlerError::Other(anyhow!(
+                        "Cannot downcast to MySQL query result. {:?}",
+                        err
+                    ))
                 })?;
 
                 let mut rows = CheapVec::<_, 0>::new();

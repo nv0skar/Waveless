@@ -6,6 +6,5 @@ pub mod mysql;
 use crate::*;
 
 use build::*;
-use databases::*;
 
 use sqlx::{mysql::*, pool::*};

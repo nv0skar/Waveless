@@ -62,12 +62,6 @@ impl DatabasesConnections {
         for db_config in databases {
             info!("Creating {}'s pool.", db_config.id());
 
-            db_config.connection().new_conn(
-                db_config.id().to_owned(),
-                *db_config.pool_min_size(),
-                *db_config.pool_max_size(),
-            );
-
             let (pool, _) = db_config
                 .connection()
                 .new_conn(

@@ -10,7 +10,6 @@ pub mod new;
 use waveless_commons::*;
 
 use endpoint::*;
-use schema::*;
 use waveless_commons::build::*;
 
 use rustyrosetta::*;
@@ -18,14 +17,13 @@ use rustyrosetta::*;
 use std::any::{Any, TypeId};
 use std::env::current_dir;
 use std::fs::{File, create_dir, read, read_dir, write};
-use std::io::{Read, Write};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::sync::{Arc, OnceLock};
 
 use anyhow::{Context, Result, anyhow, bail};
 use compact_str::*;
-use derive_more::Constructor;
 use either::*;
 use owo_colors::*;
 use tracing::*;

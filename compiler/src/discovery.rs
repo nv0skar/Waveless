@@ -61,12 +61,13 @@ pub async fn discover() -> Result<(
 
         // Discover endpoints from the schema.
         if *discovery_config.unwrap().generate_endpoints() {
+            // TODO: each discovery method should have it's generic endpoint generation.
             if let Some(discovery_config) = discovery_config {
-                let discovery_method =
-                    discovery_config.method().to_owned() as Arc<dyn Any + Send + Sync + 'static>;
-
-                if let Some(mysql_discovery) =
-                    discovery_method.downcast_ref::<MySQLSchemaDiscoveryMethod>()
+                if let Some(mysql_discovery) = discovery_config
+                    .method()
+                    .to_owned()
+                    .into_arc_any()
+                    .downcast_ref::<MySQLSchemaDiscoveryMethod>()
                 {
                     let Ok(mysql_schema) = schema.downcast::<Schema>() else {
                         bail!("Cannot downcast to MySQL schema.")

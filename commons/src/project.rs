@@ -180,7 +180,7 @@ impl Default for DataSchemaDiscoveryConfig {
 /// TODO: add documentation.
 #[typetag::serde]
 #[async_trait]
-pub trait AnyDataSchemaDiscoveryMethod: Any + DynClone + Send + Sync + Debug {
+pub trait AnyDataSchemaDiscoveryMethod: Any + BoxedAny + DynClone + Send + Sync + Debug {
     async fn schema(
         &self,
         db_config: Arc<dyn AnyDatabaseConnectionConfig>,
@@ -195,6 +195,8 @@ pub struct ExternalSchemaDiscoveryMethod {
     id: DataSchemaDiscoveryMethodId,
     config: HashMap<CompactString, Bytes>,
 }
+
+boxed_any!(ExternalSchemaDiscoveryMethod);
 
 #[typetag::serde]
 #[async_trait]
@@ -258,7 +260,7 @@ impl Default for DatabaseConfig {
 /// TODO: add documentation.
 #[typetag::serde]
 #[async_trait]
-pub trait AnyDatabaseConnectionConfig: Any + DynClone + Send + Sync + Debug {
+pub trait AnyDatabaseConnectionConfig: Any + BoxedAny + DynClone + Send + Sync + Debug {
     async fn new_conn(
         &self,
         id: CompactString,
@@ -274,6 +276,8 @@ pub struct ExternalDBConnectionConfig {
     id: ExternalDriverId,
     connection: CompactString,
 }
+
+boxed_any!(ExternalDBConnectionConfig);
 
 #[typetag::serde]
 #[async_trait]
