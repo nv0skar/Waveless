@@ -14,13 +14,11 @@ impl ExecuteExt {
     pub async fn execute(
         &self,
         method: HttpMethod,
-        db_conn: &AnyDatabaseConnection,
+        db_conn: Arc<dyn AnyDatabaseConnection>,
         params: HashMap<CompactString, Option<CompactString>>,
     ) -> Result<serde_json::Value, ConnHandlerError> {
         match &self.0 {
             Execute::MySQL { query } => {
-                let AnyDatabaseConnection::MySQL(mysql_pool) = db_conn;
-
                 // Replaces Waveless' query's parameters placeholders with MySQL's ones.
                 let params_order = query
                     .trim_start_matches(|c| c != '{')
@@ -81,12 +79,8 @@ impl ExecuteExt {
                     }
                 }
 
-                let res = mysql_pool
-                    .query_all(Statement::from_sql_and_values(
-                        DbBackend::MySql,
-                        mysql_query.to_string(),
-                        ordered_values,
-                    ))
+                let res = db_conn
+                    .execute(DatabaseInput::QueryValues(mysql_query, ordered_values))
                     .await
                     .map_err(|err| {
                         ConnHandlerError::Expected(
@@ -95,9 +89,19 @@ impl ExecuteExt {
                         )
                     })?;
 
+                let DatabaseOutput::Any(res) = res else {
+                    return Err(ConnHandlerError::Other(anyhow!(
+                        "Unexpected database's executor's output."
+                    )));
+                };
+
+                let res = res.downcast::<Vec<QueryResult>>().map_err(|err| {
+                    ConnHandlerError::Other(anyhow!("Cannot downcast to MySQL query result."))
+                })?;
+
                 let mut rows = CheapVec::<_, 0>::new();
 
-                for row in res {
+                for row in *res {
                     rows.push(
                         sea_orm::JsonValue::from_query_result(&row, "").map_err(|err| {
                             ConnHandlerError::Expected(

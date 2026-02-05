@@ -63,7 +63,9 @@ chrono = { version = "0.4.42", default-features = false, features = [
 
 # gloo-net = { version = "0.6.0", features = ["http"] }
 
+typetag = "0.2"
 async-trait = "0.1.89"
+dyn-clone = "1.0.20"
 
 ### Dependency to implement the query cache
 

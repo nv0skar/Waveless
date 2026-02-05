@@ -23,7 +23,7 @@ use std::convert::Infallible;
 use std::fs::read;
 use std::net::SocketAddr;
 use std::path::PathBuf;
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use anyhow::{Context, Result, anyhow, bail};
@@ -41,8 +41,7 @@ use hyper::{
 };
 use hyper_util::{rt::TokioIo, service::TowerToHyperService};
 use matchit::*;
-
-use sea_orm::{DbBackend, FromQueryResult, Statement}; // Switched from sqlx, as sqlx doesn't support conversion into JSON for arbitrary schemas.
+use sea_orm::{DbBackend, FromQueryResult, QueryResult, Statement}; // Switched from sqlx, as sqlx doesn't support conversion into JSON for arbitrary schemas.
 use serde_json::json;
 use thiserror::Error;
 use tokio::sync::OnceCell;

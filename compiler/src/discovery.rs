@@ -12,7 +12,12 @@
 //!
 use crate::*;
 
+use schema::mysql::MySQLSchemaDiscoveryMethod;
+
+use sea_schema::mysql::def::Schema;
+
 /// Discovers all endpoints from the project's database and calculate the checksum per database.
+/// TODO: Maybe the endpoint generation logic should be delegated to the `AnyDataSchemaDiscoveryMethod` trait.
 #[instrument(skip_all)]
 pub async fn discover() -> Result<(
     CheapVec<(CompactString, Endpoints), 0>,
@@ -25,44 +30,56 @@ pub async fn discover() -> Result<(
     let mut checksums = CheapVec::<DatabaseChecksum, 0>::new();
 
     for db_config in config.config().databases() {
-        let discovery_config =
-            config
-                .compiler()
-                .endpoint_discovery()
-                .iter()
-                .find(|discovery_config| {
-                    if let Some(db_id) = discovery_config.database_id() {
-                        db_config.id() == db_id
-                    } else {
-                        *db_config.is_primary()
-                    }
-                });
+        let discovery_config = config
+            .config()
+            .schema_discovery()
+            .iter()
+            .find(|discovery_config| {
+                if let Some(db_id) = discovery_config.database_id() {
+                    db_config.id() == db_id
+                } else {
+                    *db_config.is_primary()
+                }
+            });
 
-        // If schema discovery and checksum is disabled → skip.
-        if discovery_config.is_none() && !db_config.checksum_schema() {
+        // If schema discovery method is not present for the given database id → skip.
+        if discovery_config.is_none() {
             continue;
         }
 
         // Load the schema.
-        let schema = AnySchema::load_schema(db_config).await?;
+        let (schema, checksum) = discovery_config
+            .unwrap()
+            .method()
+            .schema(db_config.connection().to_owned())
+            .await?;
 
         // Check if checksum for the current db has to be computed.
-        if *db_config.checksum_schema() {
-            checksums.push(schema.checksum(db_config.id().to_owned()).await?);
+        if *discovery_config.unwrap().checksum() {
+            checksums.push(checksum);
         }
 
         // Discover endpoints from the schema.
-        if let Some(discovery_config) = discovery_config {
-            match (discovery_config.method(), schema.to_owned()) {
-                (
-                    project::DataSchemaDiscoveryMethod::MySQL { skip_tables },
-                    AnySchema::MySQL(mysql_schema),
-                ) => {
+        if *discovery_config.unwrap().generate_endpoints() {
+            if let Some(discovery_config) = discovery_config {
+                let discovery_method =
+                    discovery_config.method().to_owned() as Arc<dyn Any + Send + Sync + 'static>;
+
+                if let Some(mysql_discovery) =
+                    discovery_method.downcast_ref::<MySQLSchemaDiscoveryMethod>()
+                {
+                    let Ok(mysql_schema) = schema.downcast::<Schema>() else {
+                        bail!("Cannot downcast to MySQL schema.")
+                    };
+
                     let mut discovered_endpoints = Endpoints::new(CheapVec::new());
 
                     // For each table generate a GET, POST, UPDATE and DELETE endpoints.
                     for table in mysql_schema.tables {
-                        if skip_tables.contains(&table.info.name.to_compact_string()) {
+                        if mysql_discovery
+                            .skip_tables()
+                            .contains(&table.info.name.to_compact_string())
+                        {
                             continue;
                         }
 
@@ -311,8 +328,7 @@ pub async fn discover() -> Result<(
                     }
 
                     db_endpoints.push((db_config.id().to_owned(), discovered_endpoints));
-                }
-                _ => {
+                } else {
                     return Err(anyhow!(
                         "Unimplemented discovery method or invalid discovery solver for the given database id."
                     ));

@@ -184,7 +184,6 @@ impl Default for Endpoint {
 
 /// Defines all methods available to handle requests to the endpoints.
 #[derive(Clone, PartialEq, Serialize, Deserialize, Display, Debug)]
-// #[cfg_attr(feature = "toml_codec", serde(tag = "type"))]
 pub enum Execute {
     #[display("SQL query: {:?}", query)]
     MySQL { query: CompactString },

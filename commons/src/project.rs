@@ -7,7 +7,12 @@
 //!
 //! TODO: maybe implement default variants
 //!
+use std::fmt::Debug;
+
 use crate::*;
+
+use build::*;
+use databases::*;
 
 /// Includes all the project's config
 #[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
@@ -36,14 +41,18 @@ pub struct Config {
     /// Project's name.
     name: CompactString,
 
-    /// contains all project's databases
+    /// Contains all project's databases.
     #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
     databases: CheapVec<DatabaseConfig, 0>,
 
-    /// contains authentication settings
+    /// this option defines the compiler's strategy to analyze the databases' data schema.
+    #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
+    schema_discovery: CheapVec<DataSchemaDiscoveryConfig, 0>,
+
+    /// Contains authentication settings.
     authentication: Authentication,
 
-    /// contains admin settings
+    /// Contains admin settings.
     admin: Admin,
 }
 
@@ -56,15 +65,15 @@ impl Default for Config {
                 DatabaseConfig {
                     id: "secondary".to_compact_string(),
                     is_primary: false,
-                    connection: DatabaseConnection::ExternalModule {
+                    connection: Arc::new(ExternalDBConnectionConfig {
                         id: "custom_database_driver".to_compact_string(),
                         connection: "...".to_compact_string(),
-                    },
-                    checksum_schema: false,
+                    }),
                     pool_min_size: None,
                     pool_max_size: None,
                 },
             ]),
+            schema_discovery: CheapVec::new(),
             authentication: Default::default(),
             admin: Default::default(),
         }
@@ -75,11 +84,6 @@ impl Default for Config {
 #[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
 #[getset(get = "pub")]
 pub struct Compiler {
-    /// this option defines the compiler's strategy to analyze the data schema.
-    /// if the array is empty, the compiler will only include the user defined endpoints
-    #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
-    endpoint_discovery: CheapVec<DataSchemaDiscoveryConfig, 0>,
-
     /// this is the directory where all the user defined endpoints will be located
     endpoints_dir: CompactString,
 
@@ -94,7 +98,6 @@ pub struct Compiler {
 impl Default for Compiler {
     fn default() -> Self {
         Self {
-            endpoint_discovery: CheapVec::new(),
             endpoints_dir: "./endpoints/".to_compact_string(),
             hooks_dir: Some("./hooks/".to_compact_string()),
             bootstrap_scripts_dir: Some("./bootstrap/".to_compact_string()),
@@ -137,56 +140,75 @@ impl Default for Server {
 }
 
 /// Defines parameters to be used by the data schema discovery
-#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
+#[derive(Clone, Constructor, Serialize, Deserialize, Getters, Debug)]
 #[getset(get = "pub")]
 pub struct DataSchemaDiscoveryConfig {
-    /// Strategy to discover endpoints.
-    method: DataSchemaDiscoveryMethod,
-
     /// Identifier of the database to analyze.
     /// If it is set to `None` the primary database will be used.
     #[serde(default, skip_serializing_if = "should_skip_option")]
     database_id: Option<DatabaseId>,
+
+    /// Strategy to discover endpoints.
+    method: Arc<dyn AnyDataSchemaDiscoveryMethod>,
+
+    /// Generate endpoints from the database's schema if marked.
+    generate_endpoints: bool,
+
+    // Whether to checksum the database's schema.
+    checksum: bool,
+}
+
+impl PartialEq for DataSchemaDiscoveryConfig {
+    fn eq(&self, other: &Self) -> bool {
+        self.database_id == other.database_id
+    }
 }
 
 impl Default for DataSchemaDiscoveryConfig {
     fn default() -> Self {
         Self {
-            method: Default::default(),
             database_id: Some("main".to_compact_string()),
+            method: Arc::new(schema::mysql::MySQLSchemaDiscoveryMethod::new(
+                CheapVec::from_vec(vec!["_private_table".to_compact_string()]),
+            )),
+            generate_endpoints: true,
+            checksum: true,
         }
     }
 }
 
-/// Defines every available strategy to discover endpoints
-#[derive(Clone, PartialEq, Serialize, Deserialize, Display, Debug)]
-// #[cfg_attr(feature = "toml_codec", serde(tag = "type"))]
-pub enum DataSchemaDiscoveryMethod {
-    /// The MySQL discovery strategy will analyze a MySQL database in order to generate a representation of the data model that will be analyzed by the endpoint generator backend.
-    #[display("MySQL schema discovery (skipping: {:?})", skip_tables)]
-    MySQL {
-        #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
-        skip_tables: CheapVec<CompactString, 0>, // Do not forget that auth, session and role tables are also skipped
-    },
-
-    /// The external module will use the project's hooks tp establish a database connection.
-    #[display("{:?}: {:?}", id, config)]
-    ExternalModule {
-        id: DataSchemaDiscoveryMethodId,
-        config: HashMap<CompactString, Bytes>,
-    },
+/// TODO: add documentation.
+#[typetag::serde]
+#[async_trait]
+pub trait AnyDataSchemaDiscoveryMethod: Any + DynClone + Send + Sync + Debug {
+    async fn schema(
+        &self,
+        db_config: Arc<dyn AnyDatabaseConnectionConfig>,
+    ) -> Result<(Box<dyn Any>, DatabaseChecksum)>;
 }
 
-impl Default for DataSchemaDiscoveryMethod {
-    fn default() -> Self {
-        Self::MySQL {
-            skip_tables: CheapVec::from_vec(vec!["_private_table".to_compact_string()]),
-        }
+/// The external module will use the project's hooks tp establish a database connection.
+/// TODO: load custom schema discovery drivers.
+#[derive(Clone, PartialEq, Serialize, Deserialize, Display, Debug)]
+#[display("{:?}: {:?}", id, config)]
+pub struct ExternalSchemaDiscoveryMethod {
+    id: DataSchemaDiscoveryMethodId,
+    config: HashMap<CompactString, Bytes>,
+}
+
+#[typetag::serde]
+#[async_trait]
+impl AnyDataSchemaDiscoveryMethod for ExternalSchemaDiscoveryMethod {
+    async fn schema(
+        &self,
+        _db_conn_config: Arc<dyn AnyDatabaseConnectionConfig>,
+    ) -> Result<(Box<dyn Any>, DatabaseChecksum)> {
+        todo!("Not yet implemented.")
     }
 }
 
 /// Defines a database to be used by Waveless
-#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
+#[derive(Clone, Constructor, Serialize, Deserialize, Getters, Debug)]
 #[getset(get = "pub")]
 pub struct DatabaseConfig {
     /// Unique identifier of the database.
@@ -195,11 +217,8 @@ pub struct DatabaseConfig {
     /// Indicates whether this database is primary (no need to set database id on auth, session and role storage).
     is_primary: bool,
 
-    /// Holds the database type, the address and the credentials.
-    connection: DatabaseConnection,
-
-    /// Whether or not to checksum the the schema of the 'discovered' database on build.
-    checksum_schema: bool,
+    /// Defines credentials for all database backends
+    connection: Arc<dyn AnyDatabaseConnectionConfig>,
 
     /// Defines the minimum number of simultaneous connections, by default this will be half the `pool_max_size`.
     #[serde(default, skip_serializing_if = "should_skip_option")]
@@ -210,48 +229,62 @@ pub struct DatabaseConfig {
     pool_max_size: Option<usize>,
 }
 
+impl PartialEq for DatabaseConfig {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+            && self.is_primary == other.is_primary
+            && self.pool_min_size == other.pool_min_size
+            && self.pool_max_size == other.pool_max_size
+    }
+}
+
 impl Default for DatabaseConfig {
     fn default() -> Self {
         Self {
             id: "main".to_compact_string(),
             is_primary: true,
-            connection: Default::default(),
-            checksum_schema: true,
+            connection: Arc::new(databases::mysql::MySQLDBConnectionConfig::new(
+                SocketAddr::new("127.0.0.1".parse().unwrap(), 3306),
+                "example_user".to_compact_string(),
+                "example_password".to_compact_string(),
+                "example_db".to_compact_string(),
+            )),
             pool_min_size: Some(std::thread::available_parallelism().unwrap().get() * 2),
             pool_max_size: Some(std::thread::available_parallelism().unwrap().get() * 2),
         }
     }
 }
 
-/// Defines credentials for all database backends
-#[derive(Clone, PartialEq, Serialize, Deserialize, Display, Debug)]
-// #[cfg_attr(feature = "toml_codec", serde(tag = "type"))]
-pub enum DatabaseConnection {
-    // TODO - Support more authentication methods
-    /// MySQL database
-    #[display("MySQL: {}@{} on {}", username, host, db)]
-    MySQL {
-        host: SocketAddr,
-        username: CompactString,
-        password: CompactString,
-        db: CompactString,
-    },
-    /// TODO: load custom database drivers
-    #[display("{:?}: {}", id, connection)]
-    ExternalModule {
-        id: ExternalDriverId,
-        connection: CompactString,
-    },
+/// TODO: add documentation.
+#[typetag::serde]
+#[async_trait]
+pub trait AnyDatabaseConnectionConfig: Any + DynClone + Send + Sync + Debug {
+    async fn new_conn(
+        &self,
+        id: CompactString,
+        pool_min_size: Option<usize>,
+        pool_max_size: Option<usize>,
+    ) -> Result<(Arc<dyn AnyDatabaseConnection>, Box<dyn Any>)>;
 }
 
-impl Default for DatabaseConnection {
-    fn default() -> Self {
-        Self::MySQL {
-            host: SocketAddr::new("127.0.0.1".parse().unwrap(), 3306),
-            username: "example_user".to_compact_string(),
-            password: "example_password".to_compact_string(),
-            db: "example_db".to_compact_string(),
-        }
+/// TODO: load custom database drivers.
+#[derive(Clone, PartialEq, Serialize, Deserialize, Display, Debug)]
+#[display("{:?}: {}", id, connection)]
+pub struct ExternalDBConnectionConfig {
+    id: ExternalDriverId,
+    connection: CompactString,
+}
+
+#[typetag::serde]
+#[async_trait]
+impl AnyDatabaseConnectionConfig for ExternalDBConnectionConfig {
+    async fn new_conn(
+        &self,
+        _id: CompactString,
+        _pool_min_size: Option<usize>,
+        _pool_max_size: Option<usize>,
+    ) -> Result<(Arc<dyn AnyDatabaseConnection>, Box<dyn Any>)> {
+        todo!("Not yet implemented.");
     }
 }
 
@@ -322,7 +355,6 @@ impl Default for Admin {
 /// Defines all the available user authentication mechanisms.
 /// Note that the auth data does not have to live in a SQL database...
 #[derive(Clone, PartialEq, Serialize, Deserialize, Display, Debug)]
-// #[cfg_attr(feature = "toml_codec", serde(tag = "type"))]
 pub enum AuthenticationMethod {
     #[display("Name & password authentication on SQL using table {}", table_name)]
     SqlNamePassword {
@@ -398,7 +430,6 @@ impl Default for Roles {
 
 /// Defines the backing storage of the session token
 #[derive(Clone, PartialEq, Serialize, Deserialize, Display, Debug)]
-// #[cfg_attr(feature = "toml_codec", serde(tag = "type"))]
 pub enum SessionStorage {
     /// Note that a single user may have many tokens
     #[display("SQL backed token on table {}", table_name)]
@@ -433,7 +464,6 @@ impl Default for SessionStorage {
 
 /// Defines all the availables ways of checking users' roles
 #[derive(Clone, PartialEq, Serialize, Deserialize, Display, Debug)]
-// #[cfg_attr(feature = "toml_codec", serde(tag = "type"))]
 pub enum RoleStorage {
     /// Note that a single user may have multiple roles
     #[display("SQL backed users' roles check on {}", table_name)]

@@ -17,19 +17,22 @@ pub use serialize_utils::*;
 use std::any::Any;
 use std::cell::Cell;
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::mem::MaybeUninit;
 use std::net::SocketAddr;
+use std::sync::Arc;
 
 use rustyrosetta::{codec::*, *};
 
 use anyhow::{Context, Result, anyhow, bail};
 use arrayvec::ArrayVec;
+use async_trait::*;
 use compact_str::*;
 use derive_builder::*;
 use derive_more::{Constructor, Display};
+use dyn_clone::*;
 use getset::*;
 use iocraft::prelude::*;
-use rclite::Arc;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use smallbox::{space::S64, *};
 use tokio::{runtime::Builder, sync::OnceCell};
@@ -46,6 +49,8 @@ pub const BINARY_MAGIC: &'static [u8] = b"waveless_binary";
 
 /// The maximum number of databases the user's application can connect to.
 pub const DATABASE_LIMIT: usize = 9;
+
+pub static DATABASES_CONNS: OnceCell<databases::DatabasesConnections> = OnceCell::const_new();
 
 thread_local! {
     pub static BINARY_MODE: Cell<bool> = const { Cell::new(false) }; // This will likely be fixed in the future. https://github.com/serde-rs/serde/issues/1732

@@ -75,7 +75,7 @@ pub async fn try_handle_endpoint(
     // Retrieves the endpoint's target database.
     let database_id = endpoint_def.value.target_database();
 
-    let db_conns = DATABASES_CONNS
+    let db_conn = DATABASES_CONNS
         .get()
         .unwrap()
         .search(database_id.to_owned())?;
@@ -159,7 +159,7 @@ pub async fn try_handle_endpoint(
 
     let executor = execute::ExecuteExt::new(execute_strategy.to_owned());
 
-    executor.execute(method, db_conns, request_params).await
+    executor.execute(method, db_conn, request_params).await
 }
 
 #[derive(Error, Debug)]
