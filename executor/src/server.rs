@@ -20,7 +20,7 @@ pub async fn serve(addr: Option<SocketAddr>) -> Result<ResultContext> {
 
     info!(
         "Executing '{}' on {} at {}",
-        build.general().name(),
+        build.config().name(),
         listener.local_addr().unwrap(),
         chrono::Local::now()
     );
@@ -51,45 +51,43 @@ pub async fn serve(addr: Option<SocketAddr>) -> Result<ResultContext> {
         governor_limiter.retain_recent();
     });
 
+    // This would have worked ad-hoc without modifying the original crate if it has implemented `From<String>` for `GovernorError`...
+    let governor = tower_governor::GovernorLayer::new(governor_conf).error_handler(|err| {
+        Response::builder()
+            .status(http::StatusCode::TOO_MANY_REQUESTS)
+            .header("Content-Type", "application/json")
+            .body(
+                serde_json::to_string_pretty(&json!({
+                    "error": err.to_compact_string()
+                }))
+                .unwrap(),
+            )
+            .unwrap()
+    });
+
+    let compression = CompressionLayer::new().compress_when(predicate::SizeAbove::new(2048));
+
+    let svc = ServiceBuilder::new()
+        .layer(cache)
+        .layer(compression)
+        .layer(CorsLayer::permissive())
+        .layer(TimeoutLayer::with_status_code(
+            http::StatusCode::REQUEST_TIMEOUT,
+            Duration::from_secs(10),
+        ))
+        .layer(governor) // Rate limiting does not apply for cached requests.
+        .service_fn(request::handle_endpoint);
+
+    let svc = TowerToHyperService::new(svc);
+
     loop {
         let (stream, _) = listener.accept().await?;
 
         let io = TokioIo::new(stream);
 
-        let cache = cache.to_owned();
-        let governor_conf = governor_conf.to_owned();
+        let svc = svc.to_owned();
 
         tokio::task::spawn(async move {
-            let compression =
-                CompressionLayer::new().compress_when(predicate::SizeAbove::new(2048));
-
-            // This would have worked ad-hoc without modifying the original crate if it has implemented `From<String>` for `GovernorError`...
-            let governor = tower_governor::GovernorLayer::new(governor_conf).error_handler(|err| {
-                Response::builder()
-                    .status(http::StatusCode::TOO_MANY_REQUESTS)
-                    .header("Content-Type", "application/json")
-                    .body(
-                        serde_json::to_string_pretty(&json!({
-                            "error": err.to_compact_string()
-                        }))
-                        .unwrap(),
-                    )
-                    .unwrap()
-            });
-
-            let svc = ServiceBuilder::new()
-                .layer(cache)
-                .layer(compression)
-                .layer(CorsLayer::permissive())
-                .layer(TimeoutLayer::with_status_code(
-                    http::StatusCode::REQUEST_TIMEOUT,
-                    Duration::from_secs(10),
-                ))
-                .layer(governor) // Rate limiting does not apply for cached requests.
-                .service_fn(request::handle_endpoint);
-
-            let svc = TowerToHyperService::new(svc);
-
             if let Err(err) = http1::Builder::new().serve_connection(io, svc).await {
                 error!("Internal error occurred in request handler: {:?}", err);
             }

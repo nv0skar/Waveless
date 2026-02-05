@@ -16,15 +16,15 @@ use crate::*;
 #[instrument(skip_all)]
 pub async fn discover() -> Result<(
     CheapVec<(CompactString, Endpoints), 0>,
-    CheapVec<binary::DatabaseChecksum, 0>,
+    CheapVec<DatabaseChecksum, 0>,
 )> {
     let config = config_loader::project_config()?;
 
     let mut db_endpoints = CheapVec::<(CompactString, Endpoints), 0>::new();
 
-    let mut checksums = CheapVec::<binary::DatabaseChecksum, 0>::new();
+    let mut checksums = CheapVec::<DatabaseChecksum, 0>::new();
 
-    for db_config in config.general().databases() {
+    for db_config in config.config().databases() {
         let discovery_config =
             config
                 .compiler()
@@ -44,7 +44,7 @@ pub async fn discover() -> Result<(
         }
 
         // Load the schema.
-        let schema = waveless_databases::schema::AnySchema::load_schema(db_config).await?;
+        let schema = AnySchema::load_schema(db_config).await?;
 
         // Check if checksum for the current db has to be computed.
         if *db_config.checksum_schema() {
@@ -56,7 +56,7 @@ pub async fn discover() -> Result<(
             match (discovery_config.method(), schema.to_owned()) {
                 (
                     project::DataSchemaDiscoveryMethod::MySQL { skip_tables },
-                    waveless_databases::schema::AnySchema::MySQL(mysql_schema),
+                    AnySchema::MySQL(mysql_schema),
                 ) => {
                     let mut discovered_endpoints = Endpoints::new(CheapVec::new());
 

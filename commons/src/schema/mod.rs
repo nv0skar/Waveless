@@ -3,6 +3,11 @@
 
 use crate::*;
 
+use build::*;
+use databases::*;
+
+use sqlx::{mysql::*, pool::*};
+
 /// TODO: Add docs here.
 #[derive(Clone, Debug)]
 pub enum AnySchema {
@@ -39,9 +44,9 @@ impl AnySchema {
         }
     }
 
-    pub async fn checksum(&self, db_id: CompactString) -> Result<binary::DatabaseChecksum> {
+    pub async fn checksum(&self, db_id: CompactString) -> Result<DatabaseChecksum> {
         match self {
-            AnySchema::MySQL(schema) => Ok(binary::DatabaseChecksum::new(
+            AnySchema::MySQL(schema) => Ok(DatabaseChecksum::new(
                 db_id,
                 CheapVec::from_slice(
                     &crc32fast::hash(format!("{:?}", schema).as_str().as_bytes()).to_ne_bytes(),

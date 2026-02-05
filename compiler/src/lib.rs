@@ -7,13 +7,13 @@ pub mod config_loader;
 pub mod discovery;
 pub mod new;
 
-use waveless_binary::*;
 use waveless_commons::*;
-use waveless_config::*;
-use waveless_databases::*;
-use waveless_endpoint::*;
 
-use rustyrosetta::{codec::*, *};
+use endpoint::*;
+use schema::*;
+use waveless_commons::build::*;
+
+use rustyrosetta::*;
 
 use std::any::{Any, TypeId};
 use std::env::current_dir;
@@ -28,8 +28,6 @@ use compact_str::*;
 use derive_more::Constructor;
 use either::*;
 use owo_colors::*;
-use serde::{Deserialize, Serialize};
-use sqlx::{MySql, pool::Pool};
 use tracing::*;
 
 pub static PROJECT_ROOT: OnceLock<PathBuf> = OnceLock::new();

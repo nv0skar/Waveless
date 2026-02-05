@@ -1,22 +1,26 @@
 // Waveless
 // Copyright (C) 2026 Oscar Alvarez Gonzalez
 
-use waveless_binary::*;
+//!
+//! The Waveless' frontend.
+//!
+
 use waveless_commons::{logger::*, runtime::handle_main, *};
 use waveless_compiler::{build::*, new::*};
-use waveless_databases::*;
 use waveless_executor::{
     build_loader::load_build, frontend_options::*, router_loader::*, server::serve, *,
 };
+
+use build::*;
+use databases::*;
 
 use rustyrosetta::*;
 
 use std::net::SocketAddr;
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Result, anyhow};
 use clap::{Parser, Subcommand};
 use compact_str::*;
-use iocraft::prelude::*;
 use mimalloc::MiMalloc;
 use nestify::nest;
 use tracing::*;
@@ -25,9 +29,6 @@ use tracing::*;
 static GLOBAL: MiMalloc = MiMalloc;
 
 nest! {
-    ///
-    /// The Waveless' frontend.
-    ///
     #[derive(Parser)]
     #[command(
         name = "waveless",
@@ -100,7 +101,7 @@ async fn try_main() -> Result<ResultContext> {
     match cli.subcommand {
         Some(Subcommands::New { name }) => new_project(name),
         Some(Subcommands::Run { addr }) => {
-            let build = build::<binary::Build>().await?.left().unwrap();
+            let build = build::<Build>().await?.left().unwrap();
 
             BUILD
                 .set(build.to_owned())
@@ -114,7 +115,7 @@ async fn try_main() -> Result<ResultContext> {
                 warn!("Skipping databases' schema checksum verification.");
             }
 
-            DatabasesConnections::load(build.general().databases().to_owned()).await?;
+            DatabasesConnections::load(build.config().databases().to_owned()).await?;
 
             serve(addr).await
         }
@@ -139,7 +140,7 @@ async fn try_main() -> Result<ResultContext> {
                     check_checksums_in_build(build.to_owned()).await?;
                 }
 
-                DatabasesConnections::load(build.general().databases().to_owned()).await?;
+                DatabasesConnections::load(build.config().databases().to_owned()).await?;
 
                 serve(addr).await
             }

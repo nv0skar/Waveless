@@ -11,12 +11,16 @@
 //!
 use crate::*;
 
+use endpoint::*;
+use project::*;
+
 /// The project's build file
 #[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
 #[getset(get = "pub")]
 pub struct Build {
     /// Contains general settings shared with the frontend/compiler.
-    general: project::General,
+    #[serde(flatten)]
+    config: Config,
 
     /// Specific server settings.
     server_settings: project::Server,
@@ -56,7 +60,7 @@ impl Build {
 impl Default for Build {
     fn default() -> Self {
         Self {
-            general: Default::default(),
+            config: Default::default(),
             server_settings: Default::default(),
             endpoints: Endpoints::new(CheapVec::from_vec(vec![Endpoint::default()])),
             databases_checksums: CheapVec::new(),

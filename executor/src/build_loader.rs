@@ -4,7 +4,7 @@
 use crate::*;
 
 /// Retrieves the project's build from the `BUILD`'s `OnceLock` or panics if it is not present.
-pub fn build() -> Result<&'static binary::Build> {
+pub fn build() -> Result<&'static Build> {
     match BUILD.get() {
         Some(build) => Ok(build),
         None => {
@@ -14,9 +14,9 @@ pub fn build() -> Result<&'static binary::Build> {
 }
 
 /// Deserializes the project's build into the `BUILD`'s `OnceLock`.
-pub fn load_build(path: PathBuf) -> Result<binary::Build> {
+pub fn load_build(path: PathBuf) -> Result<Build> {
     match read(path.to_owned()) {
-        Ok(file_buffer) => match binary::Build::decode_binary(&CheapVec::from_vec(file_buffer)) {
+        Ok(file_buffer) => match Build::decode_binary(&CheapVec::from_vec(file_buffer)) {
             Ok(build) => Ok(build),
             Err(err) => Err(anyhow!(
                 "Cannot deserialize the binary '{}'.%{}",

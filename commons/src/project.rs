@@ -13,7 +13,8 @@ use crate::*;
 #[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
 #[getset(get = "pub")]
 pub struct Project {
-    general: General,
+    #[serde(flatten)]
+    config: Config,
     compiler: Compiler,
     server: Server,
 }
@@ -21,7 +22,7 @@ pub struct Project {
 impl Default for Project {
     fn default() -> Self {
         Self {
-            general: Default::default(),
+            config: Default::default(),
             compiler: Default::default(),
             server: Default::default(),
         }
@@ -31,7 +32,7 @@ impl Default for Project {
 #[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
 #[getset(get = "pub")]
 /// General settings that will be shared across Waveless's components
-pub struct General {
+pub struct Config {
     /// Project's name.
     name: CompactString,
 
@@ -46,7 +47,7 @@ pub struct General {
     admin: Admin,
 }
 
-impl Default for General {
+impl Default for Config {
     fn default() -> Self {
         Self {
             name: "Example".to_compact_string(),
@@ -465,7 +466,6 @@ impl Default for RoleStorage {
 }
 
 #[cfg(test)]
-#[cfg(feature = "toml_codec")]
 mod tests {
     use super::*;
 

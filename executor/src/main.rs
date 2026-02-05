@@ -1,8 +1,11 @@
 // Waveless
 // Copyright (C) 2026 Oscar Alvarez Gonzalez
 
-use waveless_commons::{logger::*, runtime::handle_main, *};
-use waveless_databases::*;
+//!
+//! The Waveless' executor frontend.
+//!
+
+use waveless_commons::{databases::*, logger::*, runtime::handle_main, *};
 use waveless_executor::{build_loader::*, frontend_options::*, router_loader::*, server::*, *};
 
 use anyhow::{Result, anyhow};
@@ -12,9 +15,6 @@ use mimalloc::MiMalloc;
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
 
-//!
-//! The Waveless' executor frontend.
-//!
 #[derive(Parser)]
 #[command(
     name = "waveless_executor",
@@ -60,7 +60,7 @@ async fn try_main() -> Result<ResultContext> {
                 check_checksums_in_build(build()?.to_owned()).await?;
             }
 
-            DatabasesConnections::load(build()?.general().databases().to_owned()).await?;
+            DatabasesConnections::load(build()?.config().databases().to_owned()).await?;
 
             serve(addr).await
         }

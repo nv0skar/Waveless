@@ -1,27 +1,12 @@
 // Waveless
 // Copyright (C) 2026 Oscar Alvarez Gonzalez
 
-pub mod schema;
+use crate::*;
 
-use waveless_binary::*;
-use waveless_commons::*;
-use waveless_config::*;
+use build::*;
 
-use rustyrosetta::{codec::*, *};
-
-use std::any::Any;
-use std::mem::MaybeUninit;
-
-use anyhow::{Result, anyhow, bail};
-use arrayvec::ArrayVec;
-use compact_str::*;
-use derive_more::Constructor;
-use rclite::Arc;
 use sea_orm::SqlxMySqlPoolConnection; // Switched from sqlx, as sqlx doesn't support conversion into JSON for arbitrary schemas.
-use smallbox::{space::S64, *};
 use sqlx::{mysql::*, pool::*};
-use tokio::sync::OnceCell;
-use tracing::*;
 
 pub static DATABASES_CONNS: OnceCell<DatabasesConnections> = OnceCell::const_new();
 
@@ -135,10 +120,10 @@ impl AnyDatabaseConnection {
     }
 }
 
-pub async fn check_checksums_in_build(build: binary::Build) -> Result<()> {
+pub async fn check_checksums_in_build(build: Build) -> Result<()> {
     for build_checksum in build.databases_checksums() {
         let db_config = build
-            .general()
+            .config()
             .databases()
             .iter()
             .find(|db_config| db_config.id() == build_checksum.database_id())

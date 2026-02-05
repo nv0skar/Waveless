@@ -14,19 +14,19 @@ use crate::*;
 
 /// Builds the project in the current path (if no `config.toml` file is present in the current directory it will be searched in parent directories)
 #[instrument(skip_all)]
-pub async fn build<T: 'static>() -> Result<Either<binary::Build, Bytes>> {
-    let config = config_loader::project_config()?;
+pub async fn build<T: 'static>() -> Result<Either<Build, Bytes>> {
+    let project = config_loader::project_config()?;
 
     debug!(
         "Started building at {} with the following settings {:#?}.",
         chrono::Local::now(),
-        config
+        project
     );
 
     // Deserializes user's endpoints.
     let mut endpoints = Endpoints::new(CheapVec::new());
     {
-        let endpoints_dir = get_project_root()?.join(config.compiler().endpoints_dir());
+        let endpoints_dir = get_project_root()?.join(project.compiler().endpoints_dir());
 
         let endpoints_path = read_dir(endpoints_dir)
             .context("Unexpected error, the endpoints directory cannot be listed.")?;
@@ -86,9 +86,9 @@ pub async fn build<T: 'static>() -> Result<Either<binary::Build, Bytes>> {
     }
 
     // Serializes the project's build.
-    let build = binary::Build::new(
-        config.general().to_owned(),
-        config.server().to_owned(),
+    let build = Build::new(
+        project.config().to_owned(),
+        project.server().to_owned(),
         endpoints,
         db_checksums,
     );
@@ -102,7 +102,7 @@ pub async fn build<T: 'static>() -> Result<Either<binary::Build, Bytes>> {
         );
 
         Ok(Right(buff))
-    } else if TypeId::of::<T>() == TypeId::of::<binary::Build>() {
+    } else if TypeId::of::<T>() == TypeId::of::<Build>() {
         Ok(Left(build))
     } else {
         panic!("Unexpected type.")
@@ -130,7 +130,7 @@ pub fn binary_file_from_buff(buff: Bytes) -> Result<ResultContext> {
 
     Ok(format!(
         "'{}' has been built at {}",
-        config_loader::project_config()?.general().name(),
+        config_loader::project_config()?.config().name(),
         target_file
             .file_name()
             .ok_or(anyhow!("No build file name."))?
