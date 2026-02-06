@@ -35,7 +35,7 @@ struct ExecutorFrontend {
     subcommand: Option<ExecutorFrontendOptions>,
 }
 
-fn main() {
+fn main() -> Result<()> {
     handle_main(try_main)
 }
 

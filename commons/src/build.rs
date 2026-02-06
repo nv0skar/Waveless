@@ -19,7 +19,7 @@ use project::*;
 #[getset(get = "pub")]
 pub struct Build {
     /// Contains general settings shared with the frontend/compiler.
-    #[serde(flatten)]
+    // #[serde(flatten)]
     config: Config,
 
     /// Specific server settings.

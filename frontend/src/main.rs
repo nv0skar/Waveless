@@ -87,8 +87,8 @@ nest! {
     }
 }
 
-fn main() {
-    handle_main(try_main);
+fn main() -> Result<()> {
+    handle_main(try_main)
 }
 
 async fn try_main() -> Result<ResultContext> {

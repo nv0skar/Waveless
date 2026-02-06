@@ -132,7 +132,7 @@ pub async fn check_checksums_in_build(build: Build) -> Result<()> {
 
         let (_, current_checksum) = discovery_method
             .method()
-            .schema(db_config.connection().to_owned())
+            .schema(db_config.id().to_owned(), db_config.connection().to_owned())
             .await?;
 
         if current_checksum != *build_checksum {

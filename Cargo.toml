@@ -3,20 +3,19 @@ members = ["commons", "compiler", "executor", "frontend"]
 default-members = ["frontend"]
 resolver = "3"
 
-
 [workspace.dependencies]
 waveless_commons = { path = "./commons" }
 waveless_compiler = { path = "./compiler" }
 waveless_executor = { path = "./executor" }
 waveless_frontend = { path = "./frontend" }
 
-rustyrosetta = { git = "https://github.com/nv0skar/RustyRosetta.git", tag = "rustyrosetta_0.0.2", features = [
+rustyrosetta = { git = "https://github.com/nv0skar/RustyRosetta.git", tag = "rustyrosetta_0.0.3", features = [
     "all",
 ] }
 
 tokio = "1.48"
 
-serde = { version = "1.0.228", features = ["derive"] }
+serde = { version = "1.0.228", features = ["derive", "rc"] }
 toml = "0.9.8"
 serde_json = "1.0.149"
 serde_with = { version = "3.16", features = ["chrono"] }

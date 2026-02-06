@@ -51,7 +51,7 @@ pub async fn discover() -> Result<(
         let (schema, checksum) = discovery_config
             .unwrap()
             .method()
-            .schema(db_config.connection().to_owned())
+            .schema(db_config.id().to_owned(), db_config.connection().to_owned())
             .await?;
 
         // Check if checksum for the current db has to be computed.

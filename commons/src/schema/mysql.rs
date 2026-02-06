@@ -24,6 +24,7 @@ boxed_any!(MySQLSchemaDiscoveryMethod);
 impl AnyDataSchemaDiscoveryMethod for MySQLSchemaDiscoveryMethod {
     async fn schema(
         &self,
+        db_id: CompactString,
         db_conn_config: Arc<dyn AnyDatabaseConnectionConfig>,
     ) -> Result<(Box<dyn Any>, DatabaseChecksum)> {
         let Ok(db_conn_config) = db_conn_config
@@ -64,7 +65,7 @@ impl AnyDataSchemaDiscoveryMethod for MySQLSchemaDiscoveryMethod {
         Ok((
             Box::new(schema.to_owned()),
             DatabaseChecksum::new(
-                db_conn_config.db().to_owned(),
+                db_id,
                 CheapVec::from_slice(
                     &crc32fast::hash(format!("{:?}", schema).as_str().as_bytes()).to_ne_bytes(),
                 ),

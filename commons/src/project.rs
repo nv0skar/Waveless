@@ -183,6 +183,7 @@ impl Default for DataSchemaDiscoveryConfig {
 pub trait AnyDataSchemaDiscoveryMethod: Any + BoxedAny + DynClone + Send + Sync + Debug {
     async fn schema(
         &self,
+        db_id: CompactString,
         db_config: Arc<dyn AnyDatabaseConnectionConfig>,
     ) -> Result<(Box<dyn Any>, DatabaseChecksum)>;
 }
@@ -203,6 +204,7 @@ boxed_any!(ExternalSchemaDiscoveryMethod);
 impl AnyDataSchemaDiscoveryMethod for ExternalSchemaDiscoveryMethod {
     async fn schema(
         &self,
+        _db_id: CompactString,
         _db_conn_config: Arc<dyn AnyDatabaseConnectionConfig>,
     ) -> Result<(Box<dyn Any>, DatabaseChecksum)> {
         todo!("Not yet implemented.")
