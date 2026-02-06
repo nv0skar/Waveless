@@ -5,6 +5,7 @@ pub mod build;
 pub mod databases;
 pub mod endpoint;
 pub mod entry;
+pub mod execute;
 pub mod logger;
 pub mod project;
 pub mod runtime;
@@ -33,8 +34,11 @@ use derive_builder::*;
 use derive_more::{Constructor, Display};
 use dyn_clone::*;
 use getset::*;
+use http::StatusCode;
 use iocraft::prelude::*;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
+use thiserror::*;
 use tokio::{runtime::Builder, sync::OnceCell};
 use tracing::*;
 
@@ -90,4 +94,12 @@ macro_rules! boxed_any {
             }
         }
     };
+}
+
+#[derive(Error, Debug)]
+pub enum RequestError {
+    #[error("Request error.")]
+    Expected(StatusCode, CompactString),
+    #[error(transparent)]
+    Other(#[from] anyhow::Error),
 }

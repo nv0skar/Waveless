@@ -7,8 +7,7 @@ use super::*;
 
 use project::*;
 
-use sea_orm::SqlxMySqlPoolConnection;
-use sea_orm::{DbBackend, Statement};
+use sea_orm::{DbBackend, SqlxMySqlPoolConnection, Statement};
 
 #[derive(Clone, Debug)]
 pub struct MySQLConnection(SqlxMySqlPoolConnection);

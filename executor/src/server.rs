@@ -89,7 +89,10 @@ pub async fn serve(addr: Option<SocketAddr>) -> Result<ResultContext> {
 
         tokio::task::spawn(async move {
             if let Err(err) = http1::Builder::new().serve_connection(io, svc).await {
-                error!("Internal error occurred in request handler: {:?}", err);
+                error!(
+                    "Internal error occurred while building a new connection handler: {:?}",
+                    err
+                );
             }
         });
     }

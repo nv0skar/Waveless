@@ -3,6 +3,8 @@
 
 use crate::*;
 
+use execute::*;
+
 /// Holds all the endpoints, is a wrapper of the `CheapVec<Endpoint>` type.
 #[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
 #[getset(get = "pub")]
@@ -86,7 +88,7 @@ pub struct Endpoint {
 
     /// Establishes the endpoint handler. Note that if no executor is set, the server will try to handle the request internally.
     #[serde(default, skip_serializing_if = "should_skip_option")]
-    execute: Option<Execute>,
+    execute: Option<Arc<dyn AnyExecute>>,
 
     /// Sets the endpoint description.
     #[serde(default, skip_serializing_if = "should_skip_option")]
@@ -180,14 +182,4 @@ impl Default for Endpoint {
             auto_generated: false,
         }
     }
-}
-
-/// Defines all methods available to handle requests to the endpoints.
-#[derive(Clone, PartialEq, Serialize, Deserialize, Display, Debug)]
-pub enum Execute {
-    #[display("SQL query: {:?}", query)]
-    MySQL { query: CompactString },
-
-    #[display("Hook name: {:?}", fn_name)]
-    Hook { fn_name: CompactString },
 }

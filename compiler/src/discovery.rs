@@ -118,13 +118,13 @@ pub async fn discover() -> Result<(
                                         .to_compact_string(),
                                     ))
                                     .target_database(Some(db_config.id().to_owned()))
-                                    .execute(Some(Execute::MySQL {
-                                        query: format!(
+                                    .execute(Some(Arc::new(MySQLExecute::new(
+                                        format!(
                                             "SELECT * FROM {} WHERE {} = {}",
                                             table.info.name, pk_id, "{id}"
                                         )
                                         .to_compact_string(),
-                                    }))
+                                    ))))
                                     .tags(CheapVec::from_vec(vec![
                                         table.info.name.to_compact_string(),
                                         "get_one".to_compact_string(),
@@ -146,10 +146,10 @@ pub async fn discover() -> Result<(
                                             .to_compact_string(),
                                     ))
                                     .target_database(Some(db_config.id().to_owned()))
-                                    .execute(Some(Execute::MySQL {
-                                        query: format!("SELECT * FROM {}", table.info.name,)
+                                    .execute(Some(Arc::new(MySQLExecute::new(
+                                        format!("SELECT * FROM {}", table.info.name,)
                                             .to_compact_string(),
-                                    }))
+                                    ))))
                                     .tags(CheapVec::from_vec(vec![
                                         table.info.name.to_compact_string(),
                                         "get_all".to_compact_string(),
@@ -177,8 +177,8 @@ pub async fn discover() -> Result<(
                                             .to_compact_string(),
                                     ))
                                     .target_database(Some(db_config.id().to_owned()))
-                                    .execute(Some(Execute::MySQL {
-                                        query: format!(
+                                    .execute(Some(Arc::new(MySQLExecute::new(
+                                        format!(
                                             "INSERT INTO {} ({}) VALUES ({})",
                                             table.info.name,
                                             columns_names
@@ -201,7 +201,7 @@ pub async fn discover() -> Result<(
                                                 ),
                                         )
                                         .to_compact_string(),
-                                    }))
+                                    ))))
                                     .body_params(columns_names.to_owned())
                                     .tags(CheapVec::from_vec(vec![
                                         table.info.name.to_compact_string(),
@@ -232,8 +232,8 @@ pub async fn discover() -> Result<(
                                         .to_compact_string(),
                                     ))
                                     .target_database(Some(db_config.id().to_owned()))
-                                    .execute(Some(Execute::MySQL {
-                                        query: format!(
+                                    .execute(Some(Arc::new(MySQLExecute::new(
+                                        format!(
                                             "UPDATE {} SET {} WHERE {} = {} ",
                                             table.info.name,
                                             columns_names
@@ -250,7 +250,7 @@ pub async fn discover() -> Result<(
                                             "{id}"
                                         )
                                         .to_compact_string(),
-                                    }))
+                                    ))))
                                     .tags(CheapVec::from_vec(vec![
                                         table.info.name.to_compact_string(),
                                         "put".to_compact_string(),
@@ -280,13 +280,13 @@ pub async fn discover() -> Result<(
                                         .to_compact_string(),
                                     ))
                                     .target_database(Some(db_config.id().to_owned()))
-                                    .execute(Some(Execute::MySQL {
-                                        query: format!(
+                                    .execute(Some(Arc::new(MySQLExecute::new(
+                                        format!(
                                             "DELETE FROM {} WHERE {} = {} ",
                                             table.info.name, pk_id, "{id}"
                                         )
                                         .to_compact_string(),
-                                    }))
+                                    ))))
                                     .body_params(columns_names.to_owned())
                                     .tags(CheapVec::from_vec(vec![
                                         table.info.name.to_compact_string(),

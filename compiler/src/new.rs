@@ -77,9 +77,9 @@ pub fn new_project(name: CompactString) -> Result<ResultContext> {
                 Some("v1".to_compact_string()),
                 HttpMethod::Get,
                 Default::default(),
-                Some(Execute::MySQL {
-                    query: "SELECT * FROM products WHERE size = {size}".to_compact_string(),
-                }),
+                Some(Arc::new(MySQLExecute::new(
+                    "SELECT * FROM products WHERE size = {size}".to_compact_string(),
+                ))),
                 Some("Get all the products by the given size.".to_compact_string()),
                 CheapVec::from_vec(vec!["products".to_compact_string()]),
                 Default::default(),
@@ -95,9 +95,9 @@ pub fn new_project(name: CompactString) -> Result<ResultContext> {
                 Some("v1".to_compact_string()),
                 HttpMethod::Get,
                 None,
-                Some(Execute::MySQL {
-                    query: "SELECT * FROM posts".to_compact_string(),
-                }),
+                Some(Arc::new(MySQLExecute::new(
+                    "SELECT * FROM posts".to_compact_string(),
+                ))),
                 Some("Get all posts.".to_compact_string()),
                 CheapVec::from_vec(vec!["posts".to_compact_string()]),
                 Default::default(),

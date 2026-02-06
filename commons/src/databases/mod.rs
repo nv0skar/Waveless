@@ -35,7 +35,7 @@ pub enum DatabaseInput {
     Query(CompactString),
     QueryValues(CompactString, CheapVec<Value, 8>),
     Bytes(Bytes),
-    Any(Arc<dyn Any + Send + Sync>),
+    Any(Box<dyn Any + Send + Sync>),
 }
 
 #[derive(Debug)]

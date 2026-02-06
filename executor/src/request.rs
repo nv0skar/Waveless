@@ -6,34 +6,42 @@ use crate::*;
 /// Endpoint handler wrapper that serializes response into JSON.
 /// TODO: Convert this into a service layer.
 #[instrument(skip_all)]
-pub async fn handle_endpoint(request: Request<Incoming>) -> Result<Response<String>> {
+pub async fn handle_endpoint(request: Request<Incoming>) -> Result<Response<String>, Infallible> {
     let response = Response::builder()
         .header("Content-Type", "application/json; charset=utf-8")
         .header(
             "Cache-Control",
             format!(
                 "max-age={}",
-                *build_loader::build()?.server_settings().http_cache_time() as u32
+                *build_loader::build()
+                    .unwrap()
+                    .server_settings()
+                    .http_cache_time() as u32
             ),
         );
 
     match try_handle_endpoint(request).await {
-        Ok(value) => Ok(response
+        Ok(output) => Ok(response
             .status(200)
-            .body(serde_json::to_string_pretty(&value)?)?),
+            .body(match output {
+                ExecuteOutput::Json(val) => serde_json::to_string_pretty(&val).unwrap(),
+                ExecuteOutput::Any(val) => serde_json::to_string_pretty(&json!({
+                    "data": val.encode().unwrap()
+                })).unwrap(),
+            }).unwrap()),
         Err(err) => Ok(response
             .status({
                 match err {
-                    ConnHandlerError::Expected(status, _) => status,
-                    ConnHandlerError::Other(_) => StatusCode::INTERNAL_SERVER_ERROR,
+                    RequestError::Expected(status, _) => status,
+                    RequestError::Other(_) => StatusCode::INTERNAL_SERVER_ERROR,
                 }
             })
             .body(serde_json::to_string_pretty(&json!({
                 "error": match err {
-                    ConnHandlerError::Expected(_, err) => err,
-                    ConnHandlerError::Other(err) => format!("Unexpected error: {}", err).to_compact_string(),
+                    RequestError::Expected(_, err) => err,
+                    RequestError::Other(err) => format!("Unexpected error: {}", err).to_compact_string(),
                 }
-            }))?)?),
+            })).unwrap()).unwrap()),
     }
 }
 
@@ -41,7 +49,7 @@ pub async fn handle_endpoint(request: Request<Incoming>) -> Result<Response<Stri
 #[instrument(skip_all)]
 pub async fn try_handle_endpoint(
     request: Request<Incoming>,
-) -> Result<serde_json::Value, ConnHandlerError> {
+) -> Result<ExecuteOutput, RequestError> {
     info!(
         "{} request at {} from {}",
         request.method(),
@@ -57,7 +65,7 @@ pub async fn try_handle_endpoint(
 
     // Extracts the route from the method-aware router.
     let Some(router) = router_loader::router()?.get(&method) else {
-        return Err(ConnHandlerError::Expected(
+        return Err(RequestError::Expected(
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("There is no route that accepts {}.", method).to_compact_string(),
         ));
@@ -66,7 +74,7 @@ pub async fn try_handle_endpoint(
     let route = request.uri().path().trim_matches('/').to_owned();
 
     let Ok(endpoint_def) = router.at(&route) else {
-        return Err(ConnHandlerError::Expected(
+        return Err(RequestError::Expected(
             StatusCode::NOT_FOUND,
             format!("Route '{}' is not defined. HINT: Go to your project's endpoints folder and check the endpoint's routes.", route).to_compact_string(),
         ));
@@ -109,7 +117,7 @@ pub async fn try_handle_endpoint(
             .collect()
             .await
             .map_err(|err| {
-                ConnHandlerError::Expected(
+                RequestError::Expected(
                     StatusCode::INTERNAL_SERVER_ERROR,
                     format!("Cannot get request's body. {}", err).to_compact_string(),
                 )
@@ -117,7 +125,7 @@ pub async fn try_handle_endpoint(
             .to_bytes();
 
         if req_body.is_empty() {
-            return Err(ConnHandlerError::Expected(
+            return Err(RequestError::Expected(
                 StatusCode::BAD_REQUEST,
                 "The request's body for this endpoint cannot be empty.".to_compact_string(),
             ));
@@ -125,7 +133,7 @@ pub async fn try_handle_endpoint(
 
         let Ok(json_body) = serde_json::from_slice::<serde_json::Value>(req_body.iter().as_slice())
         else {
-            return Err(ConnHandlerError::Expected(
+            return Err(RequestError::Expected(
                 StatusCode::BAD_REQUEST,
                 "Invalid request's body. The provided JSON's format is unsupported."
                     .to_compact_string(),
@@ -151,21 +159,13 @@ pub async fn try_handle_endpoint(
 
     // Executes request.
     let Some(execute_strategy) = endpoint_def.value.execute() else {
-        return Err(ConnHandlerError::Expected(
+        return Err(RequestError::Expected(
             StatusCode::INTERNAL_SERVER_ERROR,
             "The route wasn't managed by any of the request handlers.".to_compact_string(),
         ));
     };
 
-    let executor = execute::ExecuteExt::new(execute_strategy.to_owned());
-
-    executor.execute(method, db_conn, request_params).await
-}
-
-#[derive(Error, Debug)]
-pub enum ConnHandlerError {
-    #[error("Request error.")]
-    Expected(StatusCode, CompactString),
-    #[error(transparent)]
-    Other(#[from] anyhow::Error),
+    execute_strategy
+        .execute(method, db_conn, ExecuteParams::StringMap(request_params))
+        .await
 }

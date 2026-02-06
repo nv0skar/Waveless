@@ -10,6 +10,7 @@ pub mod new;
 use waveless_commons::*;
 
 use endpoint::*;
+use execute::mysql::*;
 use waveless_commons::build::*;
 
 use rustyrosetta::*;
