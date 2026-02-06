@@ -6,7 +6,7 @@
 //!
 
 use waveless_commons::{databases::*, logger::*, runtime::handle_main, *};
-use waveless_executor::{frontend_options::*, router_loader::*, runtime_build::*, server::*, *};
+use waveless_executor::{frontend_options::*, server::*, *};
 
 use std::sync::Arc;
 
@@ -52,20 +52,14 @@ async fn try_main() -> Result<ResultContext> {
     // Handle frontend subcommands
     match cli.subcommand {
         Some(ExecutorFrontendOptions::Run { path, addr }) => {
-            RUNTIME_BUILD
-                .set(Arc::new(RwLock::new(load_build_from_file(path)?)))
-                .map_err(|_| anyhow!("Cannot load build into global."))?;
+            RuntimeCx::set_cx(RuntimeCx::from_path(path).await?);
 
-            ROUTER
-                .set(load_router().await?)
-                .map_err(|_| anyhow!("Cannot load router into global."))?;
-
-            let _build_lock = build().await?;
+            let _build_lock = RuntimeCx::acquire().build();
 
             if *_build_lock
                 .read()
                 .await
-                .server_settings()
+                .executor()
                 .check_databases_cheksums()
             {
                 check_checksums_in_build(&(*_build_lock.read().await)).await?;

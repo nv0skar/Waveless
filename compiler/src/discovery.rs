@@ -23,13 +23,15 @@ pub async fn discover() -> Result<(
     CheapVec<(CompactString, Endpoints), 0>,
     CheapVec<DatabaseChecksum, 0>,
 )> {
-    let config = runtime_project::project()?;
+    let cx = CompilerCx::acquire();
+
+    let project = cx.project();
 
     let mut db_endpoints = CheapVec::<(CompactString, Endpoints), 0>::new();
 
     let mut checksums = CheapVec::<DatabaseChecksum, 0>::new();
 
-    for db_config in config.config().databases() {
+    for db_config in project.config().databases() {
         // If schema discovery method is not present for the given database id → skip.
         let Some(schema_discovery) = db_config.schema_discovery() else {
             continue;

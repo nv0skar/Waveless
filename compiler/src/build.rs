@@ -14,8 +14,11 @@ use crate::*;
 
 /// Builds the project in the current path (if no `project.toml` file is present in the current directory it will be searched in parent directories)
 #[instrument(skip_all)]
-pub async fn build<T: 'static>() -> Result<Either<Build, Bytes>> {
-    let project = runtime_project::project()?;
+pub async fn build<T: 'static>() -> Result<Either<ExecutorBuild, Bytes>> {
+    let cx = CompilerCx::acquire();
+
+    let project = cx.project();
+    let workspace_root = cx.workspace_root();
 
     debug!(
         "Started building at {} with the following settings {:#?}.",
@@ -26,7 +29,7 @@ pub async fn build<T: 'static>() -> Result<Either<Build, Bytes>> {
     // Deserializes user's endpoints.
     let mut endpoints = Endpoints::new(CheapVec::new());
     {
-        let endpoints_dir = get_project_root()?.join(project.compiler().endpoints_dir());
+        let endpoints_dir = workspace_root.join(project.compiler().endpoints_dir());
 
         let endpoints_path = read_dir(endpoints_dir)
             .context("Unexpected error, the endpoints directory cannot be listed.")?;
@@ -62,12 +65,12 @@ pub async fn build<T: 'static>() -> Result<Either<Build, Bytes>> {
     // Discovers the endpoints and checksums the database's schema.
     let (db_endpoints, db_checksums) = discovery::discover().await?;
 
-    if create_dir(get_project_root()?.join(".discovered_endpoints")).is_ok() {
+    if create_dir(workspace_root.join(".discovered_endpoints")).is_ok() {
         debug!("'.discovered_endpoints' directory does't exist, a new one will be created.")
     };
 
     for (db_id, discovered_endpoints) in db_endpoints {
-        let target_file = get_project_root()?
+        let target_file = workspace_root
             .join(".discovered_endpoints")
             .join(format!("{}.toml", db_id));
 
@@ -86,7 +89,7 @@ pub async fn build<T: 'static>() -> Result<Either<Build, Bytes>> {
     }
 
     // Serializes the project's build.
-    let build = Build::new(
+    let build = ExecutorBuild::new(
         project.config().to_owned(),
         project.server().to_owned(),
         endpoints,
@@ -102,7 +105,7 @@ pub async fn build<T: 'static>() -> Result<Either<Build, Bytes>> {
         );
 
         Ok(Right(buff))
-    } else if TypeId::of::<T>() == TypeId::of::<Build>() {
+    } else if TypeId::of::<T>() == TypeId::of::<ExecutorBuild>() {
         Ok(Left(build))
     } else {
         panic!("Unexpected type.")
@@ -111,6 +114,11 @@ pub async fn build<T: 'static>() -> Result<Either<Build, Bytes>> {
 
 /// Generates the binary's file from the provided buffer.
 pub fn binary_file_from_buff(buff: Bytes) -> Result<ResultContext> {
+    let cx = CompilerCx::acquire();
+
+    let project = cx.project();
+    let workspace_root = cx.workspace_root();
+
     // Set the build file's name a combination of its CRC32 hash and the current timestamp
     let build_name = format!(
         "{}_{}.wv",
@@ -118,9 +126,9 @@ pub fn binary_file_from_buff(buff: Bytes) -> Result<ResultContext> {
         crc32fast::hash(buff.as_slice())
     );
 
-    let target_file = get_project_root()?.join("target").join(build_name);
+    let target_file = workspace_root.join("target").join(build_name);
 
-    if create_dir(get_project_root()?.join("target")).is_ok() {
+    if create_dir(workspace_root.join("target")).is_ok() {
         debug!("`target` directory doesn't exist, a new one will be created.")
     };
 
@@ -130,7 +138,7 @@ pub fn binary_file_from_buff(buff: Bytes) -> Result<ResultContext> {
 
     Ok(format!(
         "'{}' has been built at {}",
-        runtime_project::project()?.config().name(),
+        project.config().name(),
         target_file
             .file_name()
             .ok_or(anyhow!("No build file name."))?

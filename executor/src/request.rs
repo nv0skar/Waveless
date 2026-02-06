@@ -13,12 +13,11 @@ pub async fn handle_endpoint(request: Request<Incoming>) -> Result<Response<Stri
             "Cache-Control",
             format!(
                 "max-age={}",
-                (*runtime_build::build()
-                    .await
-                    .unwrap()
+                (*RuntimeCx::acquire()
+                    .build()
                     .read()
                     .await
-                    .server_settings()
+                    .executor()
                     .http_cache_time()) as u32
             ),
         );
@@ -67,7 +66,7 @@ pub async fn try_handle_endpoint(
     let method = HttpMethod::from(request.method().as_str());
 
     // Extracts the route from the method-aware router.
-    let Some(router) = router_loader::router()?.get(&method) else {
+    let Some(router) = RuntimeCx::acquire().router().get(&method) else {
         return Err(RequestError::Expected(
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("There is no route that accepts {}.", method).to_compact_string(),

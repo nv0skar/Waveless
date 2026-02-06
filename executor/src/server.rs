@@ -5,14 +5,14 @@ use crate::*;
 
 #[instrument(skip_all)]
 pub async fn serve(addr: Option<SocketAddr>) -> Result<ResultContext> {
-    let _build_lock = runtime_build::build().await?;
+    let _build_lock = RuntimeCx::acquire().build();
 
     let listener = tokio::net::TcpListener::bind(
         addr.unwrap_or(
             _build_lock
                 .read()
                 .await
-                .server_settings()
+                .executor()
                 .listening_addr()
                 .ok_or(anyhow!("No server address was provided."))?,
         ),

@@ -6,10 +6,8 @@
 //!
 
 use waveless_commons::{logger::*, runtime::handle_main, *};
-use waveless_compiler::{build::*, new::*};
-use waveless_executor::{
-    frontend_options::*, router_loader::*, runtime_build::load_build_from_file, server::serve, *,
-};
+use waveless_compiler::{build::*, compiler_cx::*, new::*};
+use waveless_executor::{frontend_options::*, server::serve, *};
 
 use build::*;
 use databases::*;
@@ -17,14 +15,12 @@ use databases::*;
 use rustyrosetta::*;
 
 use std::net::SocketAddr;
-use std::sync::Arc;
 
 use anyhow::{Result, anyhow};
 use clap::{Parser, Subcommand};
 use compact_str::*;
 use mimalloc::MiMalloc;
 use nestify::nest;
-use tokio::sync::RwLock;
 use tracing::*;
 
 #[global_allocator]
@@ -103,48 +99,53 @@ async fn try_main() -> Result<ResultContext> {
     match cli.subcommand {
         Some(Subcommands::New { name }) => new_project(name),
         Some(Subcommands::Run { addr }) => {
-            let build = build::<Build>().await?.left().unwrap();
+            CompilerCx::set_cx(CompilerCx::from_workspace().await?);
 
-            RUNTIME_BUILD
-                .set(Arc::new(RwLock::new(build.to_owned())))
-                .map_err(|_| anyhow!("Cannot load build into global."))?;
+            let build = build::<ExecutorBuild>().await?.left().unwrap();
 
-            ROUTER
-                .set(load_router().await?)
-                .map_err(|_| anyhow!("Cannot load router into global."))?;
+            RuntimeCx::set_cx(RuntimeCx::from_build(build).await?);
 
-            if *build.server_settings().check_databases_cheksums() {
+            let _build_lock = RuntimeCx::acquire().build();
+
+            if *_build_lock
+                .read()
+                .await
+                .executor()
+                .check_databases_cheksums()
+            {
                 warn!("Skipping databases' schema checksum verification.");
             }
 
-            DatabasesConnections::load(build.config().databases().to_owned()).await?;
+            DatabasesConnections::load(_build_lock.read().await.config().databases().to_owned())
+                .await?;
 
             serve(addr).await
         }
         Some(Subcommands::Build) => {
+            CompilerCx::set_cx(CompilerCx::from_workspace().await?);
             let buff = build::<Bytes>().await?.right().unwrap();
             binary_file_from_buff(buff)
         }
         Some(Subcommands::Bootstrap) => todo!(),
         Some(Subcommands::Executor(executor_options)) => match executor_options {
             ExecutorFrontendOptions::Run { path, addr } => {
-                RUNTIME_BUILD
-                    .set(Arc::new(RwLock::new(load_build_from_file(path)?)))
-                    .map_err(|_| anyhow!("Cannot load build into global."))?;
+                RuntimeCx::set_cx(RuntimeCx::from_path(path).await?);
 
-                ROUTER
-                    .set(load_router().await?)
-                    .map_err(|_| anyhow!("Cannot load router into global."))?;
+                let _build_lock = RuntimeCx::acquire().build();
 
-                let _build_lock = runtime_build::build().await?;
-
-                let build = _build_lock.read().await;
-
-                if *build.server_settings().check_databases_cheksums() {
-                    check_checksums_in_build(&build).await?;
+                if *_build_lock
+                    .read()
+                    .await
+                    .executor()
+                    .check_databases_cheksums()
+                {
+                    check_checksums_in_build(&(*_build_lock.read().await)).await?;
                 }
 
-                DatabasesConnections::load(build.config().databases().to_owned()).await?;
+                DatabasesConnections::load(
+                    _build_lock.read().await.config().databases().to_owned(),
+                )
+                .await?;
 
                 serve(addr).await
             }

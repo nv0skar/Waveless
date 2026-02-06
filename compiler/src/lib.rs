@@ -3,9 +3,11 @@
 
 pub mod bootstrap;
 pub mod build;
+pub mod compiler_cx;
 pub mod discovery;
 pub mod new;
-pub mod runtime_project;
+
+pub use compiler_cx::*;
 
 use waveless_commons::*;
 
@@ -21,39 +23,18 @@ use std::fs::{File, create_dir, read, read_dir, write};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::exit;
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 
 use anyhow::{Context, Result, anyhow, bail};
 use compact_str::*;
+use derive_more::Constructor;
 use either::*;
+use getset::*;
 use owo_colors::*;
+use tokio::sync::OnceCell;
 use tracing::*;
 
-pub static PROJECT_ROOT: OnceLock<PathBuf> = OnceLock::new();
-
-pub static PROJECT_CONFIG: OnceLock<project::Project> = OnceLock::new();
-
-/// Get's the project's root folder's path.
-pub fn get_project_root() -> Result<PathBuf> {
-    match PROJECT_ROOT.get() {
-        Some(path) => Ok(path.to_owned()),
-        None => {
-            let mut current_dir = current_dir().unwrap();
-            if current_dir.join("project.toml").exists() {
-                PROJECT_ROOT.set(current_dir.to_owned()).unwrap();
-                return Ok(current_dir);
-            } else {
-                while current_dir.pop() {
-                    if current_dir.join("project.toml").exists() {
-                        PROJECT_ROOT.set(current_dir.to_owned()).unwrap();
-                        return Ok(current_dir);
-                    }
-                }
-            };
-            Err(anyhow!("The project's path cannot be determined."))
-        }
-    }
-}
+pub static COMPILER_CX: OnceCell<CompilerCx> = OnceCell::const_new();
 
 pub fn expected_error(reason: String, hint: Option<&'static str>, error: String) {
     println!(

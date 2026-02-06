@@ -103,7 +103,7 @@ impl DatabasesConnections {
     }
 }
 
-pub async fn check_checksums_in_build(build: &Build) -> Result<()> {
+pub async fn check_checksums_in_build(build: &ExecutorBuild) -> Result<()> {
     for build_checksum in build.databases_checksums() {
         let db_config = build
             .config()

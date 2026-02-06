@@ -21,7 +21,7 @@ pub struct Project {
     #[serde(flatten)]
     config: Config,
     compiler: Compiler,
-    server: Server,
+    server: Executor,
 }
 
 impl Default for Project {
@@ -104,7 +104,7 @@ impl Default for Compiler {
 /// Runtime settings: these parameters will be used by the server exclusively
 #[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
 #[getset(get = "pub")]
-pub struct Server {
+pub struct Executor {
     /// can be set through cli parameters or env variables
     #[serde(default, skip_serializing_if = "should_skip_option")]
     listening_addr: Option<SocketAddr>,
@@ -123,7 +123,7 @@ pub struct Server {
     http_cache_time: usize,
 }
 
-impl Default for Server {
+impl Default for Executor {
     fn default() -> Self {
         Self {
             listening_addr: Some(SocketAddr::new("127.0.0.1".parse().unwrap(), 8080)),

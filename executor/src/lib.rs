@@ -3,9 +3,10 @@
 
 pub mod frontend_options;
 pub mod request;
-pub mod router_loader;
-pub mod runtime_build;
+pub mod runtime_cx;
 pub mod server;
+
+pub use runtime_cx::*;
 
 use waveless_commons::*;
 
@@ -20,13 +21,14 @@ use std::convert::Infallible;
 use std::fs::read;
 use std::net::SocketAddr;
 use std::path::PathBuf;
-use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use anyhow::{Context, Result, anyhow, bail};
 use clap::Subcommand;
 use compact_str::*;
 use dashmap::DashMap;
+use derive_more::Constructor;
+use getset::*;
 use http::StatusCode;
 use http_body_util::{BodyExt, Full};
 use hyper::{
@@ -47,6 +49,4 @@ use tracing::*;
 
 pub type EndpointRouter = DashMap<HttpMethod, Router<Endpoint>>;
 
-pub static RUNTIME_BUILD: OnceLock<Arc<RwLock<Build>>> = OnceLock::new();
-
-pub static ROUTER: OnceCell<EndpointRouter> = OnceCell::const_new();
+pub static RUNTIME_CX: OnceCell<RuntimeCx> = OnceCell::const_new();

@@ -17,13 +17,13 @@ use project::*;
 /// The project's build file
 #[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
 #[getset(get = "pub")]
-pub struct Build {
+pub struct ExecutorBuild {
     /// Contains general settings shared with the frontend/compiler.
     // #[serde(flatten)]
     config: Config,
 
-    /// Specific server settings.
-    server_settings: project::Server,
+    /// Specific executor (server) settings.
+    executor: project::Executor,
 
     /// Defines all the API endpoints.
     endpoints: Endpoints,
@@ -34,7 +34,7 @@ pub struct Build {
     databases_checksums: CheapVec<DatabaseChecksum, 0>,
 }
 
-impl Build {
+impl ExecutorBuild {
     /// Serializes the binary and appends the magic bytes to the beginning of the buffer.
     /// NOTE: the `BINARY_MODE` flag is set as a workaround of the issue <https://github.com/serde-rs/serde/issues/1732>,
     /// so now we can safely serialize all repository's structures and enums regardless whether the serializer being
@@ -52,16 +52,16 @@ impl Build {
 
     /// Removes the magic bytes from the beginning of the file and deserializes the binary.
     pub fn decode_binary(buffer: &Bytes) -> Result<Self> {
-        Build::decode(&buffer[BINARY_MAGIC.len()..])
+        ExecutorBuild::decode(&buffer[BINARY_MAGIC.len()..])
     }
 }
 
 /// Default implementation for testing and validation.
-impl Default for Build {
+impl Default for ExecutorBuild {
     fn default() -> Self {
         Self {
             config: Default::default(),
-            server_settings: Default::default(),
+            executor: Default::default(),
             endpoints: Endpoints::new(CheapVec::from_vec(vec![Endpoint::default()])),
             databases_checksums: CheapVec::new(),
         }
@@ -94,14 +94,14 @@ mod tests {
 
     #[test]
     fn default_into_bin_and_back() -> Result<()> {
-        let build = Build::default();
+        let build = ExecutorBuild::default();
 
         let serialized = build
             .encode_binary()
             .context("Cannot serialize project build.")?;
 
         let deserialized =
-            Build::decode_binary(&serialized).context("Cannot deserialize project build. Did you disable the `toml_codec` flag on `waveless_config` and `waveless_schema`?")?;
+            ExecutorBuild::decode_binary(&serialized).context("Cannot deserialize project build. Did you disable the `toml_codec` flag on `waveless_config` and `waveless_schema`?")?;
 
         assert_eq!(build, deserialized);
 
