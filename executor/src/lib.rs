@@ -1,10 +1,10 @@
 // Waveless
 // Copyright (C) 2026 Oscar Alvarez Gonzalez
 
-pub mod build_loader;
 pub mod frontend_options;
 pub mod request;
 pub mod router_loader;
+pub mod runtime_build;
 pub mod server;
 
 use waveless_commons::*;
@@ -27,7 +27,6 @@ use anyhow::{Context, Result, anyhow, bail};
 use clap::Subcommand;
 use compact_str::*;
 use dashmap::DashMap;
-use derive_more::Constructor;
 use http::StatusCode;
 use http_body_util::{BodyExt, Full};
 use hyper::{
@@ -38,10 +37,8 @@ use hyper::{
 };
 use hyper_util::{rt::TokioIo, service::TowerToHyperService};
 use matchit::*;
-use sea_orm::{FromQueryResult, QueryResult}; // Switched from sqlx, as sqlx doesn't support conversion into JSON for arbitrary schemas.
 use serde_json::json;
-use thiserror::Error;
-use tokio::sync::OnceCell;
+use tokio::sync::{OnceCell, RwLock};
 use tower::ServiceBuilder;
 use tower_governor::{governor::*, key_extractor::*};
 use tower_http::{compression::*, cors::*, timeout::*};
@@ -50,6 +47,6 @@ use tracing::*;
 
 pub type EndpointRouter = DashMap<HttpMethod, Router<Endpoint>>;
 
-pub static BUILD: OnceLock<Build> = OnceLock::new();
+pub static RUNTIME_BUILD: OnceLock<Arc<RwLock<Build>>> = OnceLock::new();
 
 pub static ROUTER: OnceCell<EndpointRouter> = OnceCell::const_new();

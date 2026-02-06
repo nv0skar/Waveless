@@ -4,9 +4,9 @@
 use crate::*;
 
 /// Retrieves the project's build from the `BUILD`'s `OnceLock` or panics if it is not present.
-pub fn build() -> Result<&'static Build> {
-    match BUILD.get() {
-        Some(build) => Ok(build),
+pub async fn build() -> Result<Arc<RwLock<Build>>> {
+    match RUNTIME_BUILD.get() {
+        Some(build) => Ok(build.to_owned()),
         None => {
             panic!("The `BUILD` global is not set.")
         }
@@ -14,7 +14,7 @@ pub fn build() -> Result<&'static Build> {
 }
 
 /// Deserializes the project's build into the `BUILD`'s `OnceLock`.
-pub fn load_build(path: PathBuf) -> Result<Build> {
+pub fn load_build_from_file(path: PathBuf) -> Result<Build> {
     match read(path.to_owned()) {
         Ok(file_buffer) => match Build::decode_binary(&CheapVec::from_vec(file_buffer)) {
             Ok(build) => Ok(build),

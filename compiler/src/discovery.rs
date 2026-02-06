@@ -23,7 +23,7 @@ pub async fn discover() -> Result<(
     CheapVec<(CompactString, Endpoints), 0>,
     CheapVec<DatabaseChecksum, 0>,
 )> {
-    let config = config_loader::project_config()?;
+    let config = runtime_project::project()?;
 
     let mut db_endpoints = CheapVec::<(CompactString, Endpoints), 0>::new();
 

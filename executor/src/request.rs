@@ -13,10 +13,13 @@ pub async fn handle_endpoint(request: Request<Incoming>) -> Result<Response<Stri
             "Cache-Control",
             format!(
                 "max-age={}",
-                *build_loader::build()
+                (*runtime_build::build()
+                    .await
                     .unwrap()
+                    .read()
+                    .await
                     .server_settings()
-                    .http_cache_time() as u32
+                    .http_cache_time()) as u32
             ),
         );
 

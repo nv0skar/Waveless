@@ -3,9 +3,9 @@
 
 pub mod bootstrap;
 pub mod build;
-pub mod config_loader;
 pub mod discovery;
 pub mod new;
+pub mod runtime_project;
 
 use waveless_commons::*;
 
@@ -15,7 +15,7 @@ use waveless_commons::build::*;
 
 use rustyrosetta::*;
 
-use std::any::{Any, TypeId};
+use std::any::TypeId;
 use std::env::current_dir;
 use std::fs::{File, create_dir, read, read_dir, write};
 use std::io::Write;
@@ -39,12 +39,12 @@ pub fn get_project_root() -> Result<PathBuf> {
         Some(path) => Ok(path.to_owned()),
         None => {
             let mut current_dir = current_dir().unwrap();
-            if current_dir.join("config.toml").exists() {
+            if current_dir.join("project.toml").exists() {
                 PROJECT_ROOT.set(current_dir.to_owned()).unwrap();
                 return Ok(current_dir);
             } else {
                 while current_dir.pop() {
-                    if current_dir.join("config.toml").exists() {
+                    if current_dir.join("project.toml").exists() {
                         PROJECT_ROOT.set(current_dir.to_owned()).unwrap();
                         return Ok(current_dir);
                     }

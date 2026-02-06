@@ -85,7 +85,6 @@ arrayvec = { version = "0.7", features = ["serde"] }
 stackalloc = "1"
 smallbox = "0.8"
 rclite = "0.4"
-atomic_refcell = "0.1"
 flume = "0.12"
 dashmap = { version = "6.1", features = ["serde"] }
 compact_str = { version = "0.9", features = ["serde"] }

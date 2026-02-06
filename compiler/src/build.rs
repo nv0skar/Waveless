@@ -4,7 +4,7 @@
 //!
 //! The Waveless' project's builder.
 //! The builder tasks are:
-//! 1. Serialize the `config.toml` file.
+//! 1. Serialize the `project.toml` file.
 //! 2. Load user's endpoints.
 //! 3. Discover the endpoints (optional).
 //! 4. Hash the current state of the databases (optional).
@@ -12,10 +12,10 @@
 //!
 use crate::*;
 
-/// Builds the project in the current path (if no `config.toml` file is present in the current directory it will be searched in parent directories)
+/// Builds the project in the current path (if no `project.toml` file is present in the current directory it will be searched in parent directories)
 #[instrument(skip_all)]
 pub async fn build<T: 'static>() -> Result<Either<Build, Bytes>> {
-    let project = config_loader::project_config()?;
+    let project = runtime_project::project()?;
 
     debug!(
         "Started building at {} with the following settings {:#?}.",
@@ -130,7 +130,7 @@ pub fn binary_file_from_buff(buff: Bytes) -> Result<ResultContext> {
 
     Ok(format!(
         "'{}' has been built at {}",
-        config_loader::project_config()?.config().name(),
+        runtime_project::project()?.config().name(),
         target_file
             .file_name()
             .ok_or(anyhow!("No build file name."))?

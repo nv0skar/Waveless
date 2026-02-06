@@ -5,11 +5,13 @@ use crate::*;
 
 #[instrument(skip_all)]
 pub async fn serve(addr: Option<SocketAddr>) -> Result<ResultContext> {
-    let build = build_loader::build()?;
+    let _build_lock = runtime_build::build().await?;
 
     let listener = tokio::net::TcpListener::bind(
         addr.unwrap_or(
-            build
+            _build_lock
+                .read()
+                .await
                 .server_settings()
                 .listening_addr()
                 .ok_or(anyhow!("No server address was provided."))?,
@@ -20,7 +22,7 @@ pub async fn serve(addr: Option<SocketAddr>) -> Result<ResultContext> {
 
     info!(
         "Executing '{}' on {} at {}",
-        build.config().name(),
+        _build_lock.read().await.config().name(),
         listener.local_addr().unwrap(),
         chrono::Local::now()
     );
@@ -28,7 +30,7 @@ pub async fn serve(addr: Option<SocketAddr>) -> Result<ResultContext> {
     let governor_conf = std::sync::Arc::new(
         GovernorConfigBuilder::default()
             .per_second(1)
-            .burst_size(1000) // TODO: Make this a parameter in the 'config.toml'.
+            .burst_size(1000) // TODO: Make this a parameter in the 'project.toml'.
             .key_extractor(GlobalKeyExtractor) // TODO: Change this setting to allow IP-based rate limiting.
             .finish()
             .unwrap(),
@@ -36,7 +38,7 @@ pub async fn serve(addr: Option<SocketAddr>) -> Result<ResultContext> {
 
     // TODO: A POST request to an endpoint invalidates the caches of the GET endpoints with the same route.
     let cache = CacheLayer::builder(InMemoryBackend::new(4096))
-        .ttl(Duration::from_secs(5)) // TODO: Make this a parameter in the 'config.toml'.
+        .ttl(Duration::from_secs(5)) // TODO: Make this a parameter in the 'project.toml'.
         .stale_while_revalidate(Duration::from_secs(1))
         .build();
 

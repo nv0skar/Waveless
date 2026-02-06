@@ -8,7 +8,7 @@
 use waveless_commons::{logger::*, runtime::handle_main, *};
 use waveless_compiler::{build::*, new::*};
 use waveless_executor::{
-    build_loader::load_build, frontend_options::*, router_loader::*, server::serve, *,
+    frontend_options::*, router_loader::*, runtime_build::load_build_from_file, server::serve, *,
 };
 
 use build::*;
@@ -17,12 +17,14 @@ use databases::*;
 use rustyrosetta::*;
 
 use std::net::SocketAddr;
+use std::sync::Arc;
 
 use anyhow::{Result, anyhow};
 use clap::{Parser, Subcommand};
 use compact_str::*;
 use mimalloc::MiMalloc;
 use nestify::nest;
+use tokio::sync::RwLock;
 use tracing::*;
 
 #[global_allocator]
@@ -48,8 +50,8 @@ nest! {
         #[arg(short = 'd', long = "display_endpoints", default_value_t = true, help = "Whether to show all included endpoints in the build file.")]
         display_endpoints_on_build: bool,
 
-        /// Whether to skip endpoint discovery and only include user-defined endpoints (this overrides the `config.toml` file)
-        #[arg(short = 'S', long = "skip_endpoint_discovery", default_value_t = false, help = "Whether to skip endpoint discovery and only include user-defined endpoints (this overrides the `config.toml` file)")]
+        /// Whether to skip endpoint discovery and only include user-defined endpoints (this overrides the `project.toml` file)
+        #[arg(short = 'S', long = "skip_endpoint_discovery", default_value_t = false, help = "Whether to skip endpoint discovery and only include user-defined endpoints (this overrides the `project.toml` file)")]
         skip_endpoint_discovery: bool,
 
         /// All cli subcommands
@@ -103,12 +105,12 @@ async fn try_main() -> Result<ResultContext> {
         Some(Subcommands::Run { addr }) => {
             let build = build::<Build>().await?.left().unwrap();
 
-            BUILD
-                .set(build.to_owned())
+            RUNTIME_BUILD
+                .set(Arc::new(RwLock::new(build.to_owned())))
                 .map_err(|_| anyhow!("Cannot load build into global."))?;
 
             ROUTER
-                .set(load_router()?)
+                .set(load_router().await?)
                 .map_err(|_| anyhow!("Cannot load router into global."))?;
 
             if *build.server_settings().check_databases_cheksums() {
@@ -126,18 +128,20 @@ async fn try_main() -> Result<ResultContext> {
         Some(Subcommands::Bootstrap) => todo!(),
         Some(Subcommands::Executor(executor_options)) => match executor_options {
             ExecutorFrontendOptions::Run { path, addr } => {
-                BUILD
-                    .set(load_build(path)?)
+                RUNTIME_BUILD
+                    .set(Arc::new(RwLock::new(load_build_from_file(path)?)))
                     .map_err(|_| anyhow!("Cannot load build into global."))?;
 
                 ROUTER
-                    .set(load_router()?)
+                    .set(load_router().await?)
                     .map_err(|_| anyhow!("Cannot load router into global."))?;
 
-                let build = build_loader::build()?.to_owned();
+                let _build_lock = runtime_build::build().await?;
+
+                let build = _build_lock.read().await;
 
                 if *build.server_settings().check_databases_cheksums() {
-                    check_checksums_in_build(build.to_owned()).await?;
+                    check_checksums_in_build(&build).await?;
                 }
 
                 DatabasesConnections::load(build.config().databases().to_owned()).await?;
@@ -145,6 +149,6 @@ async fn try_main() -> Result<ResultContext> {
                 serve(addr).await
             }
         },
-        None => Err(anyhow!("No subcommand provided!")),
+        None => Err(anyhow!("No subcommdand provided!")),
     }
 }

@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Oscar Alvarez Gonzalez
 
 //!
-//! The Waveless's project's 'config.toml' file will be divided into: compiler settings, runtime settings, authentication and database authentication credentials
+//! The Waveless's project's 'project.toml' file will be divided into: compiler settings, runtime settings, authentication and database authentication credentials
 //! Both Authentication and CheapVec<DatabaseAuth> will be shared with the compiler and the runtime.
 //!
 //! TODO: maybe implement default variants

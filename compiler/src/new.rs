@@ -9,7 +9,7 @@ use crate::*;
 /// Create a new project in the current dir with the specified name
 #[instrument(skip_all)]
 pub fn new_project(name: CompactString) -> Result<ResultContext> {
-    // Create the default `config.toml` file.
+    // Create the default `project.toml` file.
     let default_project = project::Project::default();
 
     // Create the project's folder.
@@ -27,14 +27,14 @@ pub fn new_project(name: CompactString) -> Result<ResultContext> {
         debug!("Created project's folder at {}.", project_path.display());
     }
 
-    // Serialize default `config.toml` file.
+    // Serialize default `project.toml` file.
     {
-        let mut config_file = File::create_new(project_path.join("config.toml"))
-            .context("Unexpected error, cannot create `config.toml` file.")?;
+        let mut config_file = File::create_new(project_path.join("project.toml"))
+            .context("Unexpected error, cannot create `project.toml` file.")?;
 
         let _ = config_file.write(toml::to_string_pretty(&default_project)?.as_bytes())?;
 
-        debug!("Loaded default `config.toml` file.");
+        debug!("Loaded default `project.toml` file.");
     }
 
     // Generate all subfolders.
@@ -123,7 +123,7 @@ pub fn new_project(name: CompactString) -> Result<ResultContext> {
         "New project '{}' was created at '{}' with a default '{}' and a sample endpoint at '{}'.",
         name,
         project_path.display(),
-        "config.toml",
+        "project.toml",
         Path::new(default_project.compiler().endpoints_dir())
             .join("sample_endpoint.toml")
             .display()

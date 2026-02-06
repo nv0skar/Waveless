@@ -14,8 +14,10 @@ pub fn router() -> Result<&'static EndpointRouter> {
 }
 
 /// Loads all the build's endpoints into the router using the `BUILD` global.
-pub fn load_router() -> Result<EndpointRouter> {
-    let build = build_loader::build()?;
+pub async fn load_router() -> Result<EndpointRouter> {
+    let _build_lock = runtime_build::build().await?;
+
+    let build = _build_lock.read().await;
 
     let endpoint_routes = DashMap::<HttpMethod, Router<Endpoint>>::new();
 

@@ -6,11 +6,15 @@
 //!
 
 use waveless_commons::{databases::*, logger::*, runtime::handle_main, *};
-use waveless_executor::{build_loader::*, frontend_options::*, router_loader::*, server::*, *};
+use waveless_executor::{frontend_options::*, router_loader::*, runtime_build::*, server::*, *};
+
+use std::sync::Arc;
 
 use anyhow::{Result, anyhow};
 use clap::Parser;
+use compact_str::*;
 use mimalloc::MiMalloc;
+use tokio::sync::RwLock;
 
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
@@ -48,19 +52,27 @@ async fn try_main() -> Result<ResultContext> {
     // Handle frontend subcommands
     match cli.subcommand {
         Some(ExecutorFrontendOptions::Run { path, addr }) => {
-            BUILD
-                .set(load_build(path)?)
+            RUNTIME_BUILD
+                .set(Arc::new(RwLock::new(load_build_from_file(path)?)))
                 .map_err(|_| anyhow!("Cannot load build into global."))?;
 
             ROUTER
-                .set(load_router()?)
+                .set(load_router().await?)
                 .map_err(|_| anyhow!("Cannot load router into global."))?;
 
-            if *build()?.server_settings().check_databases_cheksums() {
-                check_checksums_in_build(build()?.to_owned()).await?;
+            let _build_lock = build().await?;
+
+            if *_build_lock
+                .read()
+                .await
+                .server_settings()
+                .check_databases_cheksums()
+            {
+                check_checksums_in_build(&(*_build_lock.read().await)).await?;
             }
 
-            DatabasesConnections::load(build()?.config().databases().to_owned()).await?;
+            DatabasesConnections::load(_build_lock.read().await.config().databases().to_owned())
+                .await?;
 
             serve(addr).await
         }
