@@ -114,23 +114,11 @@ pub async fn check_checksums_in_build(build: Build) -> Result<()> {
                 "There are checksums whose id doesn't match with any database."
             ))?;
 
-        let discovery_method = build
-            .config()
-            .schema_discovery()
-            .iter()
-            .find(|discovery_config| {
-                if let Some(db_id) = discovery_config.database_id() {
-                    db_config.id() == db_id
-                } else {
-                    *db_config.is_primary()
-                }
-            })
-            .ok_or(anyhow!(
-                "Cannot find schema's config for the database {}.",
-                db_config.id()
-            ))?;
+        let Some(schema_discovery) = db_config.schema_discovery() else {
+            continue;
+        };
 
-        let (_, current_checksum) = discovery_method
+        let (_, current_checksum) = schema_discovery
             .method()
             .schema(db_config.id().to_owned(), db_config.connection().to_owned())
             .await?;

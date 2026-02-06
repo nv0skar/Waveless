@@ -30,310 +30,287 @@ pub async fn discover() -> Result<(
     let mut checksums = CheapVec::<DatabaseChecksum, 0>::new();
 
     for db_config in config.config().databases() {
-        let discovery_config = config
-            .config()
-            .schema_discovery()
-            .iter()
-            .find(|discovery_config| {
-                if let Some(db_id) = discovery_config.database_id() {
-                    db_config.id() == db_id
-                } else {
-                    *db_config.is_primary()
-                }
-            });
-
         // If schema discovery method is not present for the given database id → skip.
-        if discovery_config.is_none() {
+        let Some(schema_discovery) = db_config.schema_discovery() else {
             continue;
-        }
+        };
 
         // Load the schema.
-        let (schema, checksum) = discovery_config
-            .unwrap()
+        let (schema, checksum) = schema_discovery
             .method()
             .schema(db_config.id().to_owned(), db_config.connection().to_owned())
             .await?;
 
         // Check if checksum for the current db has to be computed.
-        if *discovery_config.unwrap().checksum() {
+        if *schema_discovery.checksum() {
             checksums.push(checksum);
         }
 
         // Discover endpoints from the schema.
-        if *discovery_config.unwrap().generate_endpoints() {
+        if *schema_discovery.generate_endpoints() {
             // TODO: each discovery method should have it's generic endpoint generation.
-            if let Some(discovery_config) = discovery_config {
-                if let Some(mysql_discovery) = discovery_config
-                    .method()
-                    .to_owned()
-                    .into_arc_any()
-                    .downcast_ref::<MySQLSchemaDiscoveryMethod>()
-                {
-                    let Ok(mysql_schema) = schema.downcast::<Schema>() else {
-                        bail!("Cannot downcast to MySQL schema.")
-                    };
+            if let Some(mysql_discovery) = schema_discovery
+                .method()
+                .to_owned()
+                .into_arc_any()
+                .downcast_ref::<MySQLSchemaDiscoveryMethod>()
+            {
+                let Ok(mysql_schema) = schema.downcast::<Schema>() else {
+                    bail!("Cannot downcast to MySQL schema.")
+                };
 
-                    let mut discovered_endpoints = Endpoints::new(CheapVec::new());
+                let mut discovered_endpoints = Endpoints::new(CheapVec::new());
 
-                    // For each table generate a GET, POST, UPDATE and DELETE endpoints.
-                    for table in mysql_schema.tables {
-                        if mysql_discovery
-                            .skip_tables()
-                            .contains(&table.info.name.to_compact_string())
-                        {
-                            continue;
-                        }
-
-                        let pk_id = table
-                            .columns
-                            .iter()
-                            .find(|column| column.key == sea_schema::mysql::def::ColumnKey::Primary)
-                            .ok_or(anyhow!(
-                                "Table {} doesn't have a primary key.",
-                                table.info.name
-                            ))?
-                            .to_owned()
-                            .name;
-
-                        let columns_names = table
-                            .columns
-                            .iter()
-                            .filter(|column| {
-                                column.key != sea_schema::mysql::def::ColumnKey::Primary
-                            })
-                            .map(|column| column.name.to_compact_string())
-                            .collect::<CheapVec<CompactString>>();
-
-                        let route_one = format!("{}/{}", table.info.name.to_lowercase(), "{id}")
-                            .to_compact_string();
-                        let route_many = table.info.name.to_lowercase().to_compact_string();
-
-                        const METHODS_TO_GENERATE: &[HttpMethod] = &[
-                            HttpMethod::Get,
-                            HttpMethod::Post,
-                            HttpMethod::Put,
-                            HttpMethod::Delete,
-                        ];
-
-                        for method in METHODS_TO_GENERATE {
-                            match method {
-                                HttpMethod::Get => {
-                                    let mut endpoint_one = EndpointBuilder::default();
-                                    let mut endpoint_many = EndpointBuilder::default();
-
-                                    endpoint_one
-                                        .id(format!("{}_GetOne", table.info.name)
-                                            .to_compact_string())
-                                        .method(*method)
-                                        .version(Some("v1".to_compact_string()))
-                                        .route(route_one.to_owned())
-                                        .description(Some(
-                                            format!(
-                                                "Get row from {} by it's primary key.",
-                                                table.info.name
-                                            )
-                                            .to_compact_string(),
-                                        ))
-                                        .target_database(Some(db_config.id().to_owned()))
-                                        .execute(Some(Execute::MySQL {
-                                            query: format!(
-                                                "SELECT * FROM {} WHERE {} = {}",
-                                                table.info.name, pk_id, "{id}"
-                                            )
-                                            .to_compact_string(),
-                                        }))
-                                        .tags(CheapVec::from_vec(vec![
-                                            table.info.name.to_compact_string(),
-                                            "get_one".to_compact_string(),
-                                        ]))
-                                        .query_params(CheapVec::new())
-                                        .body_params(CheapVec::new())
-                                        .require_auth(false)
-                                        .allowed_roles(CheapVec::new())
-                                        .deprecated(false)
-                                        .auto_generated(true);
-
-                                    endpoint_many
-                                        .id(format!("{}_GetMany", table.info.name)
-                                            .to_compact_string())
-                                        .method(*method)
-                                        .version(Some("v1".to_compact_string()))
-                                        .route(route_many.to_owned())
-                                        .description(Some(
-                                            format!("Get all rows from {}.", table.info.name)
-                                                .to_compact_string(),
-                                        ))
-                                        .target_database(Some(db_config.id().to_owned()))
-                                        .execute(Some(Execute::MySQL {
-                                            query: format!("SELECT * FROM {}", table.info.name,)
-                                                .to_compact_string(),
-                                        }))
-                                        .tags(CheapVec::from_vec(vec![
-                                            table.info.name.to_compact_string(),
-                                            "get_all".to_compact_string(),
-                                        ]))
-                                        .query_params(CheapVec::new())
-                                        .body_params(CheapVec::new())
-                                        .require_auth(false)
-                                        .allowed_roles(CheapVec::new())
-                                        .deprecated(false)
-                                        .auto_generated(true);
-
-                                    discovered_endpoints.add(endpoint_one.build()?)?;
-                                    discovered_endpoints.add(endpoint_many.build()?)?;
-                                }
-                                HttpMethod::Post => {
-                                    let mut endpoint = EndpointBuilder::default();
-
-                                    endpoint
-                                        .id(format!("{}_Post", table.info.name).to_compact_string())
-                                        .method(*method)
-                                        .version(Some("v1".to_compact_string()))
-                                        .route(route_many.to_owned())
-                                        .description(Some(
-                                            format!("Insert data into {}.", table.info.name)
-                                                .to_compact_string(),
-                                        ))
-                                        .target_database(Some(db_config.id().to_owned()))
-                                        .execute(Some(Execute::MySQL {
-                                            query: format!(
-                                                "INSERT INTO {} ({}) VALUES ({})",
-                                                table.info.name,
-                                                columns_names
-                                                    .iter()
-                                                    .fold(String::new(), |last, next| format!(
-                                                        "{}, {}",
-                                                        last, next
-                                                    ))
-                                                    .trim_matches(
-                                                        |c: char| c.is_whitespace() || c == ','
-                                                    ),
-                                                columns_names
-                                                    .iter()
-                                                    .fold(String::new(), |last, next| format!(
-                                                        "{}, {{ {} }}",
-                                                        last, next
-                                                    ))
-                                                    .trim_matches(
-                                                        |c: char| c.is_whitespace() || c == ','
-                                                    ),
-                                            )
-                                            .to_compact_string(),
-                                        }))
-                                        .body_params(columns_names.to_owned())
-                                        .tags(CheapVec::from_vec(vec![
-                                            table.info.name.to_compact_string(),
-                                            "post".to_compact_string(),
-                                        ]))
-                                        .query_params(CheapVec::new())
-                                        .body_params(columns_names.to_owned())
-                                        .require_auth(false)
-                                        .allowed_roles(CheapVec::new())
-                                        .deprecated(false)
-                                        .auto_generated(true);
-
-                                    discovered_endpoints.add(endpoint.build()?)?;
-                                }
-                                HttpMethod::Put => {
-                                    let mut endpoint = EndpointBuilder::default();
-
-                                    endpoint
-                                        .id(format!("{}_Put", table.info.name).to_compact_string())
-                                        .method(*method)
-                                        .version(Some("v1".to_compact_string()))
-                                        .route(route_one.to_owned())
-                                        .description(Some(
-                                            format!(
-                                                "Updates {} on row with the given primary key.",
-                                                table.info.name
-                                            )
-                                            .to_compact_string(),
-                                        ))
-                                        .target_database(Some(db_config.id().to_owned()))
-                                        .execute(Some(Execute::MySQL {
-                                            query: format!(
-                                                "UPDATE {} SET {} WHERE {} = {} ",
-                                                table.info.name,
-                                                columns_names
-                                                    .iter()
-                                                    .map(|name| format!(
-                                                        "{} = {{ {} }}",
-                                                        name, name
-                                                    ))
-                                                    .fold(String::new(), |last, next| format!(
-                                                        "{}, {}",
-                                                        last, next
-                                                    ))
-                                                    .trim_matches(
-                                                        |c: char| c.is_whitespace() || c == ','
-                                                    ),
-                                                pk_id,
-                                                "{id}"
-                                            )
-                                            .to_compact_string(),
-                                        }))
-                                        .tags(CheapVec::from_vec(vec![
-                                            table.info.name.to_compact_string(),
-                                            "put".to_compact_string(),
-                                        ]))
-                                        .query_params(CheapVec::new())
-                                        .body_params(columns_names.to_owned())
-                                        .require_auth(false)
-                                        .allowed_roles(CheapVec::new())
-                                        .deprecated(false)
-                                        .auto_generated(true);
-
-                                    discovered_endpoints.add(endpoint.build()?)?;
-                                }
-                                HttpMethod::Delete => {
-                                    let mut endpoint = EndpointBuilder::default();
-
-                                    endpoint
-                                        .id(format!("{}_Delete", table.info.name)
-                                            .to_compact_string())
-                                        .method(*method)
-                                        .version(Some("v1".to_compact_string()))
-                                        .route(route_one.to_owned())
-                                        .description(Some(
-                                            format!(
-                                                "Deletes data from {} with the given primary key.",
-                                                table.info.name
-                                            )
-                                            .to_compact_string(),
-                                        ))
-                                        .target_database(Some(db_config.id().to_owned()))
-                                        .execute(Some(Execute::MySQL {
-                                            query: format!(
-                                                "DELETE FROM {} WHERE {} = {} ",
-                                                table.info.name, pk_id, "{id}"
-                                            )
-                                            .to_compact_string(),
-                                        }))
-                                        .body_params(columns_names.to_owned())
-                                        .tags(CheapVec::from_vec(vec![
-                                            table.info.name.to_compact_string(),
-                                            "delete".to_compact_string(),
-                                        ]))
-                                        .query_params(CheapVec::new())
-                                        .body_params(CheapVec::new())
-                                        .require_auth(false)
-                                        .allowed_roles(CheapVec::new())
-                                        .deprecated(false)
-                                        .auto_generated(true);
-
-                                    discovered_endpoints.add(endpoint.build()?)?;
-                                }
-                                HttpMethod::Unknown => {}
-                            }
-                        }
+                // For each table generate a GET, POST, UPDATE and DELETE endpoints.
+                for table in mysql_schema.tables {
+                    if mysql_discovery
+                        .skip_tables()
+                        .contains(&table.info.name.to_compact_string())
+                    {
+                        continue;
                     }
 
-                    db_endpoints.push((db_config.id().to_owned(), discovered_endpoints));
-                } else {
-                    return Err(anyhow!(
-                        "Unimplemented discovery method or invalid discovery solver for the given database id."
-                    ));
+                    let pk_id = table
+                        .columns
+                        .iter()
+                        .find(|column| column.key == sea_schema::mysql::def::ColumnKey::Primary)
+                        .ok_or(anyhow!(
+                            "Table {} doesn't have a primary key.",
+                            table.info.name
+                        ))?
+                        .to_owned()
+                        .name;
+
+                    let columns_names = table
+                        .columns
+                        .iter()
+                        .filter(|column| column.key != sea_schema::mysql::def::ColumnKey::Primary)
+                        .map(|column| column.name.to_compact_string())
+                        .collect::<CheapVec<CompactString>>();
+
+                    let route_one = format!("{}/{}", table.info.name.to_lowercase(), "{id}")
+                        .to_compact_string();
+                    let route_many = table.info.name.to_lowercase().to_compact_string();
+
+                    const METHODS_TO_GENERATE: &[HttpMethod] = &[
+                        HttpMethod::Get,
+                        HttpMethod::Post,
+                        HttpMethod::Put,
+                        HttpMethod::Delete,
+                    ];
+
+                    for method in METHODS_TO_GENERATE {
+                        match method {
+                            HttpMethod::Get => {
+                                let mut endpoint_one = EndpointBuilder::default();
+                                let mut endpoint_many = EndpointBuilder::default();
+
+                                endpoint_one
+                                    .id(format!("{}_GetOne", table.info.name).to_compact_string())
+                                    .method(*method)
+                                    .version(Some("v1".to_compact_string()))
+                                    .route(route_one.to_owned())
+                                    .description(Some(
+                                        format!(
+                                            "Get row from {} by it's primary key.",
+                                            table.info.name
+                                        )
+                                        .to_compact_string(),
+                                    ))
+                                    .target_database(Some(db_config.id().to_owned()))
+                                    .execute(Some(Execute::MySQL {
+                                        query: format!(
+                                            "SELECT * FROM {} WHERE {} = {}",
+                                            table.info.name, pk_id, "{id}"
+                                        )
+                                        .to_compact_string(),
+                                    }))
+                                    .tags(CheapVec::from_vec(vec![
+                                        table.info.name.to_compact_string(),
+                                        "get_one".to_compact_string(),
+                                    ]))
+                                    .query_params(CheapVec::new())
+                                    .body_params(CheapVec::new())
+                                    .require_auth(false)
+                                    .allowed_roles(CheapVec::new())
+                                    .deprecated(false)
+                                    .auto_generated(true);
+
+                                endpoint_many
+                                    .id(format!("{}_GetMany", table.info.name).to_compact_string())
+                                    .method(*method)
+                                    .version(Some("v1".to_compact_string()))
+                                    .route(route_many.to_owned())
+                                    .description(Some(
+                                        format!("Get all rows from {}.", table.info.name)
+                                            .to_compact_string(),
+                                    ))
+                                    .target_database(Some(db_config.id().to_owned()))
+                                    .execute(Some(Execute::MySQL {
+                                        query: format!("SELECT * FROM {}", table.info.name,)
+                                            .to_compact_string(),
+                                    }))
+                                    .tags(CheapVec::from_vec(vec![
+                                        table.info.name.to_compact_string(),
+                                        "get_all".to_compact_string(),
+                                    ]))
+                                    .query_params(CheapVec::new())
+                                    .body_params(CheapVec::new())
+                                    .require_auth(false)
+                                    .allowed_roles(CheapVec::new())
+                                    .deprecated(false)
+                                    .auto_generated(true);
+
+                                discovered_endpoints.add(endpoint_one.build()?)?;
+                                discovered_endpoints.add(endpoint_many.build()?)?;
+                            }
+                            HttpMethod::Post => {
+                                let mut endpoint = EndpointBuilder::default();
+
+                                endpoint
+                                    .id(format!("{}_Post", table.info.name).to_compact_string())
+                                    .method(*method)
+                                    .version(Some("v1".to_compact_string()))
+                                    .route(route_many.to_owned())
+                                    .description(Some(
+                                        format!("Insert data into {}.", table.info.name)
+                                            .to_compact_string(),
+                                    ))
+                                    .target_database(Some(db_config.id().to_owned()))
+                                    .execute(Some(Execute::MySQL {
+                                        query: format!(
+                                            "INSERT INTO {} ({}) VALUES ({})",
+                                            table.info.name,
+                                            columns_names
+                                                .iter()
+                                                .fold(String::new(), |last, next| format!(
+                                                    "{}, {}",
+                                                    last, next
+                                                ))
+                                                .trim_matches(
+                                                    |c: char| c.is_whitespace() || c == ','
+                                                ),
+                                            columns_names
+                                                .iter()
+                                                .fold(String::new(), |last, next| format!(
+                                                    "{}, {{ {} }}",
+                                                    last, next
+                                                ))
+                                                .trim_matches(
+                                                    |c: char| c.is_whitespace() || c == ','
+                                                ),
+                                        )
+                                        .to_compact_string(),
+                                    }))
+                                    .body_params(columns_names.to_owned())
+                                    .tags(CheapVec::from_vec(vec![
+                                        table.info.name.to_compact_string(),
+                                        "post".to_compact_string(),
+                                    ]))
+                                    .query_params(CheapVec::new())
+                                    .body_params(columns_names.to_owned())
+                                    .require_auth(false)
+                                    .allowed_roles(CheapVec::new())
+                                    .deprecated(false)
+                                    .auto_generated(true);
+
+                                discovered_endpoints.add(endpoint.build()?)?;
+                            }
+                            HttpMethod::Put => {
+                                let mut endpoint = EndpointBuilder::default();
+
+                                endpoint
+                                    .id(format!("{}_Put", table.info.name).to_compact_string())
+                                    .method(*method)
+                                    .version(Some("v1".to_compact_string()))
+                                    .route(route_one.to_owned())
+                                    .description(Some(
+                                        format!(
+                                            "Updates {} on row with the given primary key.",
+                                            table.info.name
+                                        )
+                                        .to_compact_string(),
+                                    ))
+                                    .target_database(Some(db_config.id().to_owned()))
+                                    .execute(Some(Execute::MySQL {
+                                        query: format!(
+                                            "UPDATE {} SET {} WHERE {} = {} ",
+                                            table.info.name,
+                                            columns_names
+                                                .iter()
+                                                .map(|name| format!("{} = {{ {} }}", name, name))
+                                                .fold(String::new(), |last, next| format!(
+                                                    "{}, {}",
+                                                    last, next
+                                                ))
+                                                .trim_matches(
+                                                    |c: char| c.is_whitespace() || c == ','
+                                                ),
+                                            pk_id,
+                                            "{id}"
+                                        )
+                                        .to_compact_string(),
+                                    }))
+                                    .tags(CheapVec::from_vec(vec![
+                                        table.info.name.to_compact_string(),
+                                        "put".to_compact_string(),
+                                    ]))
+                                    .query_params(CheapVec::new())
+                                    .body_params(columns_names.to_owned())
+                                    .require_auth(false)
+                                    .allowed_roles(CheapVec::new())
+                                    .deprecated(false)
+                                    .auto_generated(true);
+
+                                discovered_endpoints.add(endpoint.build()?)?;
+                            }
+                            HttpMethod::Delete => {
+                                let mut endpoint = EndpointBuilder::default();
+
+                                endpoint
+                                    .id(format!("{}_Delete", table.info.name).to_compact_string())
+                                    .method(*method)
+                                    .version(Some("v1".to_compact_string()))
+                                    .route(route_one.to_owned())
+                                    .description(Some(
+                                        format!(
+                                            "Deletes data from {} with the given primary key.",
+                                            table.info.name
+                                        )
+                                        .to_compact_string(),
+                                    ))
+                                    .target_database(Some(db_config.id().to_owned()))
+                                    .execute(Some(Execute::MySQL {
+                                        query: format!(
+                                            "DELETE FROM {} WHERE {} = {} ",
+                                            table.info.name, pk_id, "{id}"
+                                        )
+                                        .to_compact_string(),
+                                    }))
+                                    .body_params(columns_names.to_owned())
+                                    .tags(CheapVec::from_vec(vec![
+                                        table.info.name.to_compact_string(),
+                                        "delete".to_compact_string(),
+                                    ]))
+                                    .query_params(CheapVec::new())
+                                    .body_params(CheapVec::new())
+                                    .require_auth(false)
+                                    .allowed_roles(CheapVec::new())
+                                    .deprecated(false)
+                                    .auto_generated(true);
+
+                                discovered_endpoints.add(endpoint.build()?)?;
+                            }
+                            HttpMethod::Unknown => {}
+                        }
+                    }
                 }
+
+                db_endpoints.push((db_config.id().to_owned(), discovered_endpoints));
+            } else {
+                return Err(anyhow!(
+                    "Unimplemented discovery method or invalid discovery solver for the given database id."
+                ));
             }
         }
     }

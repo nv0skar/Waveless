@@ -45,10 +45,6 @@ pub struct Config {
     #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
     databases: CheapVec<DatabaseConfig, 0>,
 
-    /// this option defines the compiler's strategy to analyze the databases' data schema.
-    #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
-    schema_discovery: CheapVec<DataSchemaDiscoveryConfig, 0>,
-
     /// Contains authentication settings.
     authentication: Authentication,
 
@@ -69,11 +65,11 @@ impl Default for Config {
                         id: "custom_database_driver".to_compact_string(),
                         connection: "...".to_compact_string(),
                     }),
+                    schema_discovery: None,
                     pool_min_size: None,
                     pool_max_size: None,
                 },
             ]),
-            schema_discovery: CheapVec::new(),
             authentication: Default::default(),
             admin: Default::default(),
         }
@@ -139,15 +135,107 @@ impl Default for Server {
     }
 }
 
+/// Defines a database to be used by Waveless
+#[derive(Clone, Constructor, Serialize, Deserialize, Getters, Debug)]
+#[getset(get = "pub")]
+pub struct DatabaseConfig {
+    /// Unique identifier of the database.
+    id: DatabaseId,
+
+    /// Indicates whether this database is primary (no need to set database id on auth, session and role storage).
+    is_primary: bool,
+
+    /// Defines credentials for all database backends.
+    connection: Arc<dyn AnyDatabaseConnectionConfig>,
+
+    /// Defines the compiler's strategy to analyze the databases' data schema.
+    /// NOTE: there might be many different types that implement the
+    /// `AnyDataSchemaDiscoveryMethod` trait for a single database type.
+    /// For example, given a single database type (like MySQL), there might be an
+    /// ad-hoc schema discovery implementation and a simple endpoint geneator,
+    /// also, there might be a more complex `AnyDataSchemaDiscoveryMethod` that
+    /// chains the internal MySQL schema analyzer and enhances the endpoint generation.
+    #[serde(default, skip_serializing_if = "should_skip_option")]
+    schema_discovery: Option<DataSchemaDiscoveryConfig>,
+
+    /// Defines the minimum number of simultaneous connections, by default this will be half the `pool_max_size`.
+    #[serde(default, skip_serializing_if = "should_skip_option")]
+    pool_min_size: Option<usize>,
+
+    /// Defines the maximum number of simultaneous connections, by default this will be twice the number of available cores.
+    #[serde(default, skip_serializing_if = "should_skip_option")]
+    pool_max_size: Option<usize>,
+}
+
+impl PartialEq for DatabaseConfig {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Default for DatabaseConfig {
+    fn default() -> Self {
+        Self {
+            id: "main".to_compact_string(),
+            is_primary: true,
+            connection: Arc::new(databases::mysql::MySQLDBConnectionConfig::new(
+                SocketAddr::new("127.0.0.1".parse().unwrap(), 3306),
+                "example_user".to_compact_string(),
+                "example_password".to_compact_string(),
+                "example_db".to_compact_string(),
+            )),
+            schema_discovery: Some(Default::default()),
+            pool_min_size: Some(std::thread::available_parallelism().unwrap().get() * 2),
+            pool_max_size: Some(std::thread::available_parallelism().unwrap().get() * 2),
+        }
+    }
+}
+
+/// TODO: add documentation.
+#[typetag::serde]
+#[async_trait]
+pub trait AnyDatabaseConnectionConfig: Any + BoxedAny + DynClone + Send + Sync + Debug {
+    async fn new_conn(
+        &self,
+        id: CompactString,
+        pool_min_size: Option<usize>,
+        pool_max_size: Option<usize>,
+    ) -> Result<(Arc<dyn AnyDatabaseConnection>, Box<dyn Any>)>;
+}
+
+/// TODO: load custom database drivers.
+#[derive(Clone, Serialize, Deserialize, Display, Debug)]
+#[display("{:?}: {}", id, connection)]
+pub struct ExternalDBConnectionConfig {
+    id: ExternalDriverId,
+    connection: CompactString,
+}
+
+boxed_any!(ExternalDBConnectionConfig);
+
+impl PartialEq for ExternalDBConnectionConfig {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+#[typetag::serde]
+#[async_trait]
+impl AnyDatabaseConnectionConfig for ExternalDBConnectionConfig {
+    async fn new_conn(
+        &self,
+        _id: CompactString,
+        _pool_min_size: Option<usize>,
+        _pool_max_size: Option<usize>,
+    ) -> Result<(Arc<dyn AnyDatabaseConnection>, Box<dyn Any>)> {
+        todo!("Not yet implemented.");
+    }
+}
+
 /// Defines parameters to be used by the data schema discovery
 #[derive(Clone, Constructor, Serialize, Deserialize, Getters, Debug)]
 #[getset(get = "pub")]
 pub struct DataSchemaDiscoveryConfig {
-    /// Identifier of the database to analyze.
-    /// If it is set to `None` the primary database will be used.
-    #[serde(default, skip_serializing_if = "should_skip_option")]
-    database_id: Option<DatabaseId>,
-
     /// Strategy to discover endpoints.
     method: Arc<dyn AnyDataSchemaDiscoveryMethod>,
 
@@ -158,16 +246,9 @@ pub struct DataSchemaDiscoveryConfig {
     checksum: bool,
 }
 
-impl PartialEq for DataSchemaDiscoveryConfig {
-    fn eq(&self, other: &Self) -> bool {
-        self.database_id == other.database_id
-    }
-}
-
 impl Default for DataSchemaDiscoveryConfig {
     fn default() -> Self {
         Self {
-            database_id: Some("main".to_compact_string()),
             method: Arc::new(schema::mysql::MySQLSchemaDiscoveryMethod::new(
                 CheapVec::from_vec(vec!["_private_table".to_compact_string()]),
             )),
@@ -190,7 +271,7 @@ pub trait AnyDataSchemaDiscoveryMethod: Any + BoxedAny + DynClone + Send + Sync 
 
 /// The external module will use the project's hooks tp establish a database connection.
 /// TODO: load custom schema discovery drivers.
-#[derive(Clone, PartialEq, Serialize, Deserialize, Display, Debug)]
+#[derive(Clone, Serialize, Deserialize, Display, Debug)]
 #[display("{:?}: {:?}", id, config)]
 pub struct ExternalSchemaDiscoveryMethod {
     id: DataSchemaDiscoveryMethodId,
@@ -198,6 +279,12 @@ pub struct ExternalSchemaDiscoveryMethod {
 }
 
 boxed_any!(ExternalSchemaDiscoveryMethod);
+
+impl PartialEq for ExternalSchemaDiscoveryMethod {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
 
 #[typetag::serde]
 #[async_trait]
@@ -208,89 +295,6 @@ impl AnyDataSchemaDiscoveryMethod for ExternalSchemaDiscoveryMethod {
         _db_conn_config: Arc<dyn AnyDatabaseConnectionConfig>,
     ) -> Result<(Box<dyn Any>, DatabaseChecksum)> {
         todo!("Not yet implemented.")
-    }
-}
-
-/// Defines a database to be used by Waveless
-#[derive(Clone, Constructor, Serialize, Deserialize, Getters, Debug)]
-#[getset(get = "pub")]
-pub struct DatabaseConfig {
-    /// Unique identifier of the database.
-    id: DatabaseId,
-
-    /// Indicates whether this database is primary (no need to set database id on auth, session and role storage).
-    is_primary: bool,
-
-    /// Defines credentials for all database backends
-    connection: Arc<dyn AnyDatabaseConnectionConfig>,
-
-    /// Defines the minimum number of simultaneous connections, by default this will be half the `pool_max_size`.
-    #[serde(default, skip_serializing_if = "should_skip_option")]
-    pool_min_size: Option<usize>,
-
-    /// Defines the maximum number of simultaneous connections, by default this will be twice the number of available cores.
-    #[serde(default, skip_serializing_if = "should_skip_option")]
-    pool_max_size: Option<usize>,
-}
-
-impl PartialEq for DatabaseConfig {
-    fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
-            && self.is_primary == other.is_primary
-            && self.pool_min_size == other.pool_min_size
-            && self.pool_max_size == other.pool_max_size
-    }
-}
-
-impl Default for DatabaseConfig {
-    fn default() -> Self {
-        Self {
-            id: "main".to_compact_string(),
-            is_primary: true,
-            connection: Arc::new(databases::mysql::MySQLDBConnectionConfig::new(
-                SocketAddr::new("127.0.0.1".parse().unwrap(), 3306),
-                "example_user".to_compact_string(),
-                "example_password".to_compact_string(),
-                "example_db".to_compact_string(),
-            )),
-            pool_min_size: Some(std::thread::available_parallelism().unwrap().get() * 2),
-            pool_max_size: Some(std::thread::available_parallelism().unwrap().get() * 2),
-        }
-    }
-}
-
-/// TODO: add documentation.
-#[typetag::serde]
-#[async_trait]
-pub trait AnyDatabaseConnectionConfig: Any + BoxedAny + DynClone + Send + Sync + Debug {
-    async fn new_conn(
-        &self,
-        id: CompactString,
-        pool_min_size: Option<usize>,
-        pool_max_size: Option<usize>,
-    ) -> Result<(Arc<dyn AnyDatabaseConnection>, Box<dyn Any>)>;
-}
-
-/// TODO: load custom database drivers.
-#[derive(Clone, PartialEq, Serialize, Deserialize, Display, Debug)]
-#[display("{:?}: {}", id, connection)]
-pub struct ExternalDBConnectionConfig {
-    id: ExternalDriverId,
-    connection: CompactString,
-}
-
-boxed_any!(ExternalDBConnectionConfig);
-
-#[typetag::serde]
-#[async_trait]
-impl AnyDatabaseConnectionConfig for ExternalDBConnectionConfig {
-    async fn new_conn(
-        &self,
-        _id: CompactString,
-        _pool_min_size: Option<usize>,
-        _pool_max_size: Option<usize>,
-    ) -> Result<(Arc<dyn AnyDatabaseConnection>, Box<dyn Any>)> {
-        todo!("Not yet implemented.");
     }
 }
 
