@@ -69,6 +69,13 @@ pub async fn serve(addr: Option<SocketAddr>) -> Result<ResultContext> {
 
     let compression = CompressionLayer::new().compress_when(predicate::SizeAbove::new(2048));
 
+    let endpoint_svc = ServiceBuilder::new()
+        .layer(ExecuteWrapperLayer)
+        .layer(RequestParamsExtractorLayer)
+        .service(ExecuteHandler);
+
+    let router = services::RouterService::new(endpoint_svc.to_owned(), endpoint_svc.to_owned());
+
     let svc = ServiceBuilder::new()
         .layer(cache)
         .layer(compression)
@@ -78,7 +85,7 @@ pub async fn serve(addr: Option<SocketAddr>) -> Result<ResultContext> {
             Duration::from_secs(10),
         ))
         .layer(governor) // Rate limiting does not apply for cached requests.
-        .service_fn(request::handle_endpoint);
+        .service(router);
 
     let svc = TowerToHyperService::new(svc);
 

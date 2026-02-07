@@ -6,6 +6,7 @@ edition = "2024"
 waveless_commons.workspace = true
 rustyrosetta = { workspace = true, features = ["all"] }
 tokio = { workspace = true, features = ["full"] }
+futures.workspace = true
 hyper.workspace = true
 hyper-util.workspace = true
 http-body-util.workspace = true
