@@ -7,10 +7,10 @@
 //!
 //! TODO: maybe implement default variants
 //!
-use std::fmt::Debug;
 
 use crate::*;
 
+use auth::{mysql::*, *};
 use build::*;
 use databases::*;
 
@@ -46,7 +46,8 @@ pub struct Config {
     databases: CheapVec<DatabaseConfig, 0>,
 
     /// Contains authentication settings.
-    authentication: Authentication,
+    #[serde(default, skip_serializing_if = "should_skip_option")]
+    authentication: Option<Authentication>,
 
     /// Contains admin settings.
     admin: Admin,
@@ -299,40 +300,43 @@ impl AnyDataSchemaDiscoveryMethod for ExternalSchemaDiscoveryMethod {
 }
 
 /// Defines how the server executor can handle authentication
-#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
+#[derive(Clone, Constructor, Serialize, Deserialize, Getters, Debug)]
 #[getset(get = "pub")]
 pub struct Authentication {
-    /// Whether authentication is enabled.
-    enabled: bool,
-
     /// All the available methods to authenticate.
     #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
-    methods: CheapVec<AuthenticationMethod, 0>,
+    backends: CheapVec<Arc<dyn AnyAuthenticationMethod>, 0>,
 
-    /// Session token config.
-    session: Session,
+    /// The method for manage sessions.
+    session: Arc<dyn AnySessionMethod>,
 
-    /// Users' role config.
-    roles: Roles,
+    /// The method for manage roles.
+    role: Option<Arc<dyn AnyRoleMethod>>,
 
-    /// Whether to allow user registration.
-    allow_registration: bool,
+    /// Default role when users sign up.
+    #[serde(default, skip_serializing_if = "should_skip_option")]
+    default_role: Option<CompactString>,
+
+    /// Whether to allow user signup.
+    allow_signup: bool,
+}
+
+impl PartialEq for Authentication {
+    fn eq(&self, other: &Self) -> bool {
+        self.default_role == other.default_role && self.allow_signup == other.allow_signup
+    }
 }
 
 impl Default for Authentication {
     fn default() -> Self {
         Self {
-            enabled: true,
-            methods: CheapVec::from_vec(vec![
-                Default::default(),
-                AuthenticationMethod::ExternalModule {
-                    id: "ldap_example_server".to_compact_string(),
-                    config: "...".to_compact_string(),
-                },
+            backends: CheapVec::from_vec(vec![
+                Arc::new(MySQLSimpleAuthenticationMethod::default()),
             ]),
-            session: Default::default(),
-            roles: Default::default(),
-            allow_registration: true,
+            session: Arc::new(MySQLToken::default()),
+            role: Some(Arc::new(MySQLRole::default())),
+            default_role: None,
+            allow_signup: true,
         }
     }
 }
@@ -358,149 +362,6 @@ impl Default for Admin {
             enable_panel: true,
             allowed_roles: CheapVec::from_vec(vec!["admin".to_compact_string()]),
             statistics: false,
-        }
-    }
-}
-
-/// Defines all the available user authentication mechanisms.
-/// Note that the auth data does not have to live in a SQL database...
-#[derive(Clone, PartialEq, Serialize, Deserialize, Display, Debug)]
-pub enum AuthenticationMethod {
-    #[display("Name & password authentication on SQL using table {}", table_name)]
-    SqlNamePassword {
-        /// Will use the primary database by default.
-        #[serde(default, skip_serializing_if = "should_skip_option")]
-        database_id: Option<DatabaseId>,
-        table_name: CompactString,
-        /// This field references to the user table in order to model a relationship and implement login with name, emails, IDs... Must not be primary key.
-        user_field: CompactString,
-        password_field: CompactString,
-        totp_field: Option<CompactString>,
-    },
-    // TODO - Passkey authentication
-    #[display("{:?}: {}", id, config)]
-    ExternalModule {
-        id: ExternalDriverId,
-        config: CompactString,
-    },
-}
-
-impl Default for AuthenticationMethod {
-    fn default() -> Self {
-        Self::SqlNamePassword {
-            database_id: None,
-            table_name: "users_auth".to_compact_string(),
-            user_field: "user_id".to_compact_string(),
-            password_field: "password_id".to_compact_string(),
-            totp_field: None,
-        }
-    }
-}
-
-/// Session token configuration
-#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
-#[getset(get = "pub")]
-pub struct Session {
-    /// Defines how the sessions' token will be stored.
-    storage: SessionStorage,
-
-    /// Max age of sessions.
-    max_age: usize,
-}
-
-impl Default for Session {
-    fn default() -> Self {
-        Self {
-            storage: Default::default(),
-            max_age: 86400,
-        }
-    }
-}
-
-/// Role configuration
-#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
-#[getset(get = "pub")]
-pub struct Roles {
-    /// Defines how the roles will be stored.
-    storage: RoleStorage,
-
-    /// Default role when users sign up.
-    #[serde(default, skip_serializing_if = "should_skip_option")]
-    default_role: Option<CompactString>,
-}
-
-impl Default for Roles {
-    fn default() -> Self {
-        Self {
-            storage: Default::default(),
-            default_role: None,
-        }
-    }
-}
-
-/// Defines the backing storage of the session token
-#[derive(Clone, PartialEq, Serialize, Deserialize, Display, Debug)]
-pub enum SessionStorage {
-    /// Note that a single user may have many tokens
-    #[display("SQL backed token on table {}", table_name)]
-    SqlToken {
-        /// Will use the primary database by default.
-        #[serde(default, skip_serializing_if = "should_skip_option")]
-        database_id: Option<DatabaseId>,
-        table_name: CompactString,
-        /// Must not be primary key.
-        user_field: CompactString,
-        token_field: CompactString,
-        created_field: CompactString,
-    },
-    #[display("{:?}: {}", id, config)]
-    ExternalModule {
-        id: ExternalDriverId,
-        config: CompactString,
-    },
-}
-
-impl Default for SessionStorage {
-    fn default() -> Self {
-        Self::SqlToken {
-            database_id: None,
-            table_name: "sesions".to_compact_string(),
-            user_field: "user_id".to_compact_string(),
-            token_field: "token".to_compact_string(),
-            created_field: "created_at".to_compact_string(),
-        }
-    }
-}
-
-/// Defines all the availables ways of checking users' roles
-#[derive(Clone, PartialEq, Serialize, Deserialize, Display, Debug)]
-pub enum RoleStorage {
-    /// Note that a single user may have multiple roles
-    #[display("SQL backed users' roles check on {}", table_name)]
-    SqlUser {
-        /// Will use the primary database by default.
-        #[serde(default, skip_serializing_if = "should_skip_option")]
-        database_id: Option<DatabaseId>,
-        table_name: CompactString,
-        /// Must not be primary key.
-        user_field: CompactString,
-        role_field: CompactString,
-    },
-
-    #[display("{:?}: {}", id, config)]
-    ExternalModule {
-        id: ExternalDriverId,
-        config: CompactString,
-    },
-}
-
-impl Default for RoleStorage {
-    fn default() -> Self {
-        Self::SqlUser {
-            database_id: None,
-            table_name: "sesions".to_compact_string(),
-            user_field: "user_id".to_compact_string(),
-            role_field: "role".to_compact_string(),
         }
     }
 }

@@ -135,6 +135,7 @@ pub async fn discover() -> Result<(
                                     .body_params(CheapVec::new())
                                     .require_auth(false)
                                     .allowed_roles(CheapVec::new())
+                                    .capture_all_params(false)
                                     .deprecated(false)
                                     .auto_generated(true);
 
@@ -160,6 +161,7 @@ pub async fn discover() -> Result<(
                                     .body_params(CheapVec::new())
                                     .require_auth(false)
                                     .allowed_roles(CheapVec::new())
+                                    .capture_all_params(false)
                                     .deprecated(false)
                                     .auto_generated(true);
 
@@ -213,6 +215,7 @@ pub async fn discover() -> Result<(
                                     .body_params(columns_names.to_owned())
                                     .require_auth(false)
                                     .allowed_roles(CheapVec::new())
+                                    .capture_all_params(false)
                                     .deprecated(false)
                                     .auto_generated(true);
 
@@ -261,6 +264,7 @@ pub async fn discover() -> Result<(
                                     .body_params(columns_names.to_owned())
                                     .require_auth(false)
                                     .allowed_roles(CheapVec::new())
+                                    .capture_all_params(false)
                                     .deprecated(false)
                                     .auto_generated(true);
 
@@ -298,6 +302,7 @@ pub async fn discover() -> Result<(
                                     .body_params(CheapVec::new())
                                     .require_auth(false)
                                     .allowed_roles(CheapVec::new())
+                                    .capture_all_params(false)
                                     .deprecated(false)
                                     .auto_generated(true);
 

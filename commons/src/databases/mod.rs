@@ -18,13 +18,8 @@ pub struct DatabasesConnections {
     inner: ArrayVec<(DatabaseId, Arc<dyn AnyDatabaseConnection>), { DATABASE_LIMIT - 1 }>,
 }
 
-// #[derive(Clone, Debug)]
-// pub enum AnyDatabaseConnection {
-//     MySQL(SqlxMySqlPoolConnection),
-// }
-
 #[async_trait]
-pub trait AnyDatabaseConnection: Any + DynClone + Send + Sync + Debug {
+pub trait AnyDatabaseConnection: Any + BoxedAny + DynClone + Send + Sync + Debug {
     fn name(&self) -> &str;
 
     async fn execute(&self, input: DatabaseInput) -> Result<DatabaseOutput>;

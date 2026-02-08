@@ -68,7 +68,35 @@ impl RuntimeCx {
 
         let prefix = build.read().await.executor().api_prefix().to_owned();
 
-        for endpoint in build.read().await.endpoints().inner() {
+        let mut endpoints = build.read().await.endpoints().inner().to_owned();
+
+        // Adds authentication endpoints if enabled.
+        let auth_config = build.read().await.config().authentication().to_owned();
+
+        if let Some(_) = auth_config {
+            // Adds the login endpoint at /{api_prefix}/internal/login
+            let login_endpoint = Endpoint::new(
+                LOGIN_ENDPOINT_ID.to_compact_string(),
+                "login".to_compact_string(),
+                Some("internal".to_compact_string()),
+                HttpMethod::Post,
+                None,
+                None,
+                Some("Login a user capturing all parameters and forwading them to the underlying authentication method.".to_compact_string()),
+                CheapVec::new(),
+                CheapVec::new(),
+                CheapVec::new(),
+                false,
+                CheapVec::new(),
+                true,
+                false,
+                true,
+            );
+
+            endpoints.push(login_endpoint);
+        }
+
+        for endpoint in endpoints {
             let mut full_route = PathBuf::new();
             full_route.push(prefix.trim_matches('/'));
             if let Some(prefix) = endpoint.version() {

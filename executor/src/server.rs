@@ -72,12 +72,14 @@ pub async fn serve(addr: Option<SocketAddr>) -> Result<ResultContext> {
     let endpoint_svc = ServiceBuilder::new()
         .layer(ExecuteWrapperLayer)
         .layer(RequestParamsExtractorLayer)
+        .layer(AuthCaptureLayer)
+        .layer(SessionWatchdogLayer)
         .service(ExecuteHandler);
 
     let router = services::RouterService::new(endpoint_svc.to_owned(), endpoint_svc.to_owned());
 
     let svc = ServiceBuilder::new()
-        .layer(cache)
+        // .layer(cache) // TODO: Make a custom cache layer.
         .layer(compression)
         .layer(CorsLayer::permissive())
         .layer(TimeoutLayer::with_status_code(

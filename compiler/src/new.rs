@@ -88,6 +88,7 @@ pub fn new_project(name: CompactString) -> Result<ResultContext> {
                 Default::default(),
                 false,
                 false,
+                false,
             ),
             Endpoint::new(
                 "ListPosts".to_compact_string(),
@@ -104,6 +105,7 @@ pub fn new_project(name: CompactString) -> Result<ResultContext> {
                 Default::default(),
                 false,
                 Default::default(),
+                false,
                 false,
                 false,
             ),

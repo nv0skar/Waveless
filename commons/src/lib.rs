@@ -1,6 +1,7 @@
 // Waveless
 // Copyright (C) 2026 Oscar Alvarez Gonzalez
 
+pub mod auth;
 pub mod build;
 pub mod databases;
 pub mod endpoint;
@@ -23,12 +24,14 @@ use std::fmt::Debug;
 use std::mem::MaybeUninit;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::time::Duration;
 
 use rustyrosetta::{codec::*, *};
 
 use anyhow::{Context, Result, anyhow, bail};
 use arrayvec::ArrayVec;
 use async_trait::*;
+use chrono::{NaiveDateTime, Utc};
 use compact_str::*;
 use derive_builder::*;
 use derive_more::{Constructor, Display};
@@ -36,6 +39,7 @@ use dyn_clone::*;
 use getset::*;
 use http::StatusCode;
 use iocraft::prelude::*;
+use rand::distr::{Alphanumeric, SampleString};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use thiserror::*;
@@ -47,6 +51,8 @@ pub type ResultContext = CompactString; // TODO: Replace this with custom error 
 pub type DatabaseId = CompactString;
 pub type DataSchemaDiscoveryMethodId = CompactString;
 pub type ExternalDriverId = CompactString;
+
+pub type UserId = usize;
 
 /// The binary's prefix.
 pub const BINARY_MAGIC: &'static [u8] = b"waveless_binary";

@@ -18,6 +18,7 @@ arrayvec.workspace = true
 compact_str.workspace = true
 smallbox.workspace = true
 rclite.workspace = true
+rand.workspace = true
 typetag.workspace = true
 async-trait.workspace = true
 dyn-clone.workspace = true

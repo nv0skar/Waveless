@@ -118,8 +118,13 @@ pub struct Endpoint {
     #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
     allowed_roles: CheapVec<CompactString, 0>,
 
+    /// Whether to capture all the request's params.
+    /// Useful for internal executors and generic trait implementations.
+    #[serde(default, skip_serializing_if = "should_skip")]
+    capture_all_params: bool,
+
     /// Whether this endpoint es deprecated.
-    #[serde(skip_serializing_if = "should_skip")]
+    #[serde(default, skip_serializing_if = "should_skip")]
     deprecated: bool,
 
     /// Whether this endpoint has been automatically generated.
@@ -178,6 +183,7 @@ impl Default for Endpoint {
             body_params: Default::default(),
             require_auth: false,
             allowed_roles: Default::default(),
+            capture_all_params: false,
             deprecated: false,
             auto_generated: false,
         }
