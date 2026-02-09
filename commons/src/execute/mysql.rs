@@ -136,6 +136,6 @@ impl AnyExecute for MySQLExecute {
             );
         }
 
-        return Ok(ExecuteOutput::Json(json!(&rows)));
+        return Ok(ExecuteOutput::Json(None, json!(&rows)));
     }
 }

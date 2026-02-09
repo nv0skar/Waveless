@@ -193,6 +193,10 @@ impl AnySessionMethod for MySQLToken {
         self.database_id.to_owned()
     }
 
+    fn max_age(&self) -> Option<usize> {
+        Some(self.max_age)
+    }
+
     async fn check(
         &self,
         db_conn: Arc<dyn AnyDatabaseConnection>,

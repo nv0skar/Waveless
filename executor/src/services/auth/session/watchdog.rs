@@ -47,10 +47,10 @@ where
 
     #[instrument(skip_all)]
     fn call(&mut self, cx: RequestParamsExtractorRequest) -> Self::Future {
-        let fut = self.inner.call(cx.to_owned());
+        let mut inner = self.inner.to_owned();
 
         Box::pin(async move {
-            let (headers, endpoint, _) = cx;
+            let (headers, endpoint, mut request_params) = cx;
 
             // Checks whether the current endpoint requires auth.
             if *endpoint.require_auth() {
@@ -113,8 +113,15 @@ where
 
                 match session_check {
                     Some(user_id) => {
+                        // Inject user id if required.
+                        if *endpoint.inject_user_id() {
+                            request_params.insert(
+                                "user_id".to_compact_string(),
+                                Some(user_id.to_compact_string()),
+                            );
+                        }
                         if endpoint.allowed_roles().is_empty() {
-                            fut.await
+                            inner.call((headers, endpoint, request_params)).await
                         } else {
                             let Some(role_method) = role_method else {
                                 // TODO: the compiler should fail when including endpoints
@@ -147,7 +154,7 @@ where
                             };
 
                             if endpoint.allowed_roles().contains(&role.to_lowercase()) {
-                                fut.await
+                                inner.call((headers, endpoint, request_params)).await
                             } else {
                                 return Err(RequestError::Expected(
                                     StatusCode::UNAUTHORIZED,
@@ -163,7 +170,7 @@ where
                     )),
                 }
             } else {
-                fut.await
+                inner.call((headers, endpoint, request_params)).await
             }
         })
     }

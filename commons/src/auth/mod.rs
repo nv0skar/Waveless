@@ -40,6 +40,10 @@ pub trait AnySessionMethod: Any + BoxedAny + DynClone + Send + Sync + Debug {
     fn name(&self) -> &str;
     fn db_id(&self) -> Option<CompactString>;
 
+    fn max_age(&self) -> Option<usize> {
+        None
+    }
+
     /// Get whether a user is authenticated by the given session token.
     async fn check(
         &self,

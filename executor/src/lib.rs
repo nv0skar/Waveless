@@ -22,6 +22,7 @@ use std::convert::Infallible;
 use std::fs::read;
 use std::net::SocketAddr;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::task::Poll;
 use std::time::Duration;
 
@@ -32,7 +33,7 @@ use dashmap::DashMap;
 use derive_more::Constructor;
 use futures::future::BoxFuture;
 use getset::*;
-use http::StatusCode;
+use http::{HeaderName, HeaderValue, StatusCode};
 use http_body_util::{BodyExt, Full};
 use hyper::{
     body::Incoming,

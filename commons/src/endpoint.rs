@@ -114,6 +114,10 @@ pub struct Endpoint {
     /// Whether to require auth.
     require_auth: bool,
 
+    /// Whether to inject {user_id} as a request param
+    #[serde(default, skip_serializing_if = "should_skip")]
+    inject_user_id: bool,
+
     /// All allowed roles to query the endpoint.
     #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
     allowed_roles: CheapVec<CompactString, 0>,
@@ -182,6 +186,7 @@ impl Default for Endpoint {
             query_params: Default::default(),
             body_params: Default::default(),
             require_auth: false,
+            inject_user_id: false,
             allowed_roles: Default::default(),
             capture_all_params: false,
             deprecated: false,

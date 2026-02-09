@@ -65,7 +65,7 @@ where
         let fut = self.inner.call((req, params));
 
         Box::pin(async move {
-            let response = Response::builder()
+            let mut response = Response::builder()
                 .header("Content-Type", "application/json; charset=utf-8")
                 .header(
                     "Cache-Control",
@@ -81,15 +81,30 @@ where
                 );
 
             match fut.await {
-                Ok(output) => Ok(response
-                    .status(200)
-                    .body(match output {
-                        ExecuteOutput::Json(val) => serde_json::to_string_pretty(&val).unwrap(),
-                        ExecuteOutput::Any(val) => serde_json::to_string_pretty(&json!({
-                            "data": val.encode().unwrap()
-                        })).unwrap(),
-                    }).unwrap()
-                ),
+                Ok(output) => {
+                    match output {
+                        ExecuteOutput::Json(new_headers, value) => {
+                            if let Some(new_headers) = new_headers {
+                                let headers = response.headers_mut().unwrap();
+
+                                for (key, value) in new_headers {
+                                    headers.insert(HeaderName::from_bytes(key.as_bytes()).unwrap(), HeaderValue::from_bytes(value.as_bytes()).unwrap());
+                                }
+                            }
+                        Ok(response
+                            .status(200)
+                            .body(serde_json::to_string_pretty(&value).unwrap()).unwrap()
+                        )
+                    },
+                    ExecuteOutput::Any(encode) => {
+                            Ok(response
+                        .status(200)
+                        .body(serde_json::to_string_pretty(&json!({
+                                "data": encode.encode().unwrap()
+                            })).unwrap()).unwrap())
+                        },
+                    }
+                },
                 Err(err) => Ok(response
                     .status({
                         match err {

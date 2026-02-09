@@ -108,9 +108,28 @@ impl Service<RequestParamsExtractorRequest> for LoginCaptured {
                                 ))
                             })?;
 
-                    Ok(ExecuteOutput::Json(json!({
-                        "token": session_token
-                    })))
+                    let mut headers = HashMap::new();
+
+                    // TODO: should add the secure param to `Set-Cookie`.
+                    headers.insert(
+                        "Set-Cookie".to_compact_string(),
+                        format!(
+                            "Authorization={}; SameSite=Lax; {}",
+                            session_token,
+                            session_method
+                                .max_age()
+                                .map(|max_age| format!("Max-Age={}", max_age))
+                                .unwrap_or_default()
+                        )
+                        .to_compact_string(),
+                    );
+
+                    Ok(ExecuteOutput::Json(
+                        Some(headers),
+                        json!({
+                            "token": session_token
+                        }),
+                    ))
                 }
                 Ok(None) => Err(RequestError::Expected(
                     StatusCode::FORBIDDEN,

@@ -28,6 +28,9 @@ pub enum ExecuteParams {
 }
 
 pub enum ExecuteOutput {
-    Json(serde_json::Value),
+    Json(
+        Option<HashMap<CompactString, CompactString>>,
+        serde_json::Value,
+    ),
     Any(Box<dyn Encode<Output = Bytes> + Send + Sync>),
 }
