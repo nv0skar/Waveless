@@ -1,13 +1,13 @@
 [workspace]
-members = ["commons", "compiler", "executor", "frontend"]
-default-members = ["frontend"]
+members = ["commons", "compiler", "executor"]
+default-members = ["compiler"]
 resolver = "3"
 
 [workspace.dependencies]
 waveless_commons = { path = "./commons" }
 waveless_compiler = { path = "./compiler" }
 waveless_executor = { path = "./executor" }
-waveless_frontend = { path = "./frontend" }
+# waveless_frontend = { path = "./frontend" }
 
 rustyrosetta = { git = "https://github.com/nv0skar/RustyRosetta.git", tag = "rustyrosetta_0.0.3", features = [
     "all",

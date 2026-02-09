@@ -1,5 +1,5 @@
 [alias]
-run-frontend = "run --package waveless_frontend --bin waveless_frontend --all-features"
+run-frontend = "run --package waveless_compiler --bin waveless_compiler --all-features"
 run-executor = "run --package waveless_executor --bin waveless_executor --all-features"
 test-all = "test --all-features -- --nocapture"
 doc-all = "doc --workspace --no-deps"
