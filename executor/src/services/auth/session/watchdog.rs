@@ -117,7 +117,7 @@ where
                         if *endpoint.inject_user_id() {
                             request_params.insert(
                                 "user_id".to_compact_string(),
-                                Some(user_id.to_compact_string()),
+                                ExecuteParamValue::Internal(user_id.to_compact_string()),
                             );
                         }
                         if endpoint.allowed_roles().is_empty() {

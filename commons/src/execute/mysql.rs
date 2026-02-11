@@ -27,16 +27,9 @@ impl AnyExecute for MySQLExecute {
         &self,
         method: HttpMethod,
         db_conn: Arc<dyn AnyDatabaseConnection>,
-        params: ExecuteParams,
+        input: ExecuteInput,
     ) -> Result<ExecuteOutput, RequestError> {
-        let ExecuteParams::StringMap(params) = params else {
-            return Err(RequestError::Expected(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Unexpected param type for MySQL executor.".to_compact_string(),
-            ));
-        };
-
-        // Replaces Waveless' query's parameters placeholders with MySQL's ones.
+        // Replaces Waveless' client's query's parameters placeholders with MySQL's ones.
         let params_order = self
             .query()
             .trim_start_matches(|c| c != '{')
@@ -57,13 +50,48 @@ impl AnyExecute for MySQLExecute {
             })
             .collect::<CompactString>();
 
+        //  Replaces Waveless' runtime injected query's parameters placeholders with the value.
+        // NOTE: the value will be replaced directly in the MySQL query,
+        // be aware that a malformed runtime parameter might cause a SQL
+        // injection attack (the attack vector could be in malicious
+        // authentications, sessions, roles methods implementations).
+        mysql_query = mysql_query
+            .split('|')
+            .enumerate()
+            .map(|(i, sub)| {
+                if i % 2 != 0 {
+                    if let Some(ExecuteParamValue::Internal(value)) = input.params.get(sub.trim()) {
+                        Ok(value.to_compact_string())
+                    } else {
+                        Err(RequestError::Expected(
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            format!(
+                                "Expected the runtime parameter `{}`, but it was not injected.",
+                                sub
+                            )
+                            .to_compact_string(),
+                        ))
+                    }
+                } else {
+                    Ok(sub.to_compact_string())
+                }
+            })
+            .collect::<Result<CompactString, RequestError>>()?;
+
         // Gets parameter values in the order they appear.
         let mut ordered_values = CheapVec::<_, 8>::new();
 
         for param_id in params_order.iter() {
-            match params
+            match input
+                .params()
                 .get(&param_id.to_compact_string())
-                .map(|opt| opt.to_owned())
+                .map(|opt| {
+                    if let ExecuteParamValue::Client(param) = opt {
+                        param.to_owned()
+                    } else {
+                        None
+                    }
+                })
                 .flatten()
             {
                 Some(value) => ordered_values.push(sea_orm::Value::from(value.to_string())),

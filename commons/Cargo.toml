@@ -27,6 +27,7 @@ chrono.workspace = true
 garde.workspace = true
 half.workspace = true
 regex.workspace = true
+itertools.workspace = true
 struct-patch.workspace = true
 getset.workspace = true
 either.workspace = true

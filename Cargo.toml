@@ -1,5 +1,5 @@
 [workspace]
-members = ["commons", "compiler", "executor"]
+members = ["commons", "compiler", "executor", "frontend"]
 default-members = ["compiler"]
 resolver = "3"
 
@@ -7,7 +7,7 @@ resolver = "3"
 waveless_commons = { path = "./commons" }
 waveless_compiler = { path = "./compiler" }
 waveless_executor = { path = "./executor" }
-# waveless_frontend = { path = "./frontend" }
+waveless_frontend = { path = "./frontend" }
 
 rustyrosetta = { git = "https://github.com/nv0skar/RustyRosetta.git", tag = "rustyrosetta_0.0.3", features = [
     "all",
@@ -56,13 +56,13 @@ chrono = { version = "0.4.42", default-features = false, features = [
 
 ### Dependencies to implement the admin panel
 
-# leptos = { version = "0.8.15", default-features = false }
-# leptos_meta = { version = "0.8.15", default-features = false }
-# leptos_router = { version = "0.8.15", default-features = false }
-# leptos_dom = { version = "0.8.15", default-features = false }
-# leptos_actix = { version = "0.8.15", default-features = false }
+leptos = { version = "0.8.15", default-features = false }
+leptos_meta = { version = "0.8.5", default-features = false }
+leptos_router = { version = "0.8.11", default-features = false }
+leptos_dom = { version = "0.8.7", default-features = false }
+leptos_axum = { version = "0.8.7", default-features = false }
 
-# gloo-net = { version = "0.6.0", features = ["http"] }
+gloo-net = { version = "0.6.0", features = ["http"] }
 
 typetag = "0.2"
 async-trait = "0.1.89"
@@ -128,23 +128,23 @@ derive_more = { version = "2.0", features = ["constructor", "display"] }
 
 ### Leptos' setup
 
-# [dependencies.getrandom]
-# version = "*"
-# features = ["wasm_js"]
+[workspace.dependencies.getrandom]
+version = "*"
+features = ["wasm_js"]
 
 # [package.metadata.wasm-pack.profile.profiling]
 # wasm-opt = false
 
-# [[workspace.metadata.leptos]]
-# name = "Waveless"
-# bin-package = "waveless_server"
-# lib-package = "waveless_client"
-# bin-features = ["ssr", "cargo_leptos"]
-# lib-features = ["hydrate"]
-# site-addr = "0.0.0.0:3000"
-# assets-dir = "target/bundled"
-# style-file = "style/main.scss"
-# tailwind-input-file = "style/tailwind.css"
+[[workspace.metadata.leptos]]
+name = "Waveless"
+bin-package = "waveless_compiler"
+lib-package = "waveless_frontend"
+bin-features = ["ssr", "cargo_leptos"]
+lib-features = ["hydrate"]
+site-addr = "0.0.0.0:3000"
+assets-dir = "target/bundled"
+style-file = "style/main.scss"
+tailwind-input-file = "style/tailwind.css"
 
 [profile.dev.package."*"]
 debug = false

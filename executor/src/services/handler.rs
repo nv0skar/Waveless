@@ -45,7 +45,7 @@ impl Service<RequestParamsExtractorRequest> for ExecuteHandler {
                 .execute(
                     *endpoint.method(),
                     db_conn,
-                    ExecuteParams::StringMap(request_params),
+                    ExecuteInput::new(request_params, None),
                 )
                 .await
         })

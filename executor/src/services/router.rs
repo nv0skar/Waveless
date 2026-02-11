@@ -5,7 +5,7 @@ use crate::*;
 
 pub type RouterRequest = (
     Request<Incoming>,
-    Option<(HashMap<CompactString, Option<CompactString>>, Endpoint)>,
+    Option<(HashMap<CompactString, ExecuteParamValue>, Endpoint)>,
 );
 
 /// TODO: add documentation.
@@ -71,10 +71,13 @@ where
         };
 
         // Extracts the path's params.
-        let mut path_params = HashMap::<CompactString, Option<CompactString>>::new();
+        let mut path_params = HashMap::<CompactString, ExecuteParamValue>::new();
 
         for (key, value) in matched.params.iter() {
-            path_params.insert(key.to_compact_string(), Some(value.to_compact_string()));
+            path_params.insert(
+                key.to_compact_string(),
+                ExecuteParamValue::Client(Some(value.to_compact_string())),
+            );
         }
 
         self.endpoints

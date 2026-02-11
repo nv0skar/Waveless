@@ -8,7 +8,7 @@ use super::*;
 pub type RequestParamsExtractorRequest = (
     HeaderMap,
     Endpoint,
-    HashMap<CompactString, Option<CompactString>>,
+    HashMap<CompactString, ExecuteParamValue>,
 );
 
 /// TODO: add documentation.
@@ -72,16 +72,21 @@ where
                 });
                 if *endpoint.capture_all_params() {
                     for (key, value) in queries {
-                        request_params
-                            .insert(key.to_compact_string(), Some(value.to_compact_string()));
+                        request_params.insert(
+                            key.to_compact_string(),
+                            ExecuteParamValue::Client(Some(value.to_compact_string())),
+                        );
                     }
                 } else {
                     for key in endpoint.query_params() {
                         let mut owned_iterator = queries.to_owned();
                         match owned_iterator.find(|elem| elem.0 == key) {
-                            Some((key, value)) => request_params
-                                .insert(key.to_compact_string(), Some(value.to_compact_string())),
-                            None => request_params.insert(key.to_compact_string(), None),
+                            Some((key, value)) => request_params.insert(
+                                key.to_compact_string(),
+                                ExecuteParamValue::Client(Some(value.to_compact_string())),
+                            ),
+                            None => request_params
+                                .insert(key.to_compact_string(), ExecuteParamValue::Client(None)),
                         };
                     }
                 }
@@ -120,13 +125,13 @@ where
                     for (key, value) in json_body.as_object().unwrap() {
                         request_params.insert(
                             key.to_compact_string(),
-                            Some(
+                            ExecuteParamValue::Client(Some(
                                 value
                                     .as_str()
                                     .map(|s| s.to_string())
                                     .unwrap_or(value.to_string())
                                     .to_compact_string(),
-                            ),
+                            )),
                         );
                     }
                 } else {
@@ -143,7 +148,7 @@ where
                             }
                         };
 
-                        request_params.insert(key.to_owned(), value);
+                        request_params.insert(key.to_owned(), ExecuteParamValue::Client(value));
                     }
                 }
             }

@@ -26,7 +26,7 @@ impl Service<RequestParamsExtractorRequest> for LoginCaptured {
             let request_params = request_params
                 .iter()
                 .filter_map(|entry| {
-                    if let (key, Some(value)) = entry {
+                    if let (key, ExecuteParamValue::Client(Some(value))) = entry {
                         Some((key.to_owned(), value.to_owned()))
                     } else {
                         None
