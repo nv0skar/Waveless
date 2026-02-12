@@ -331,10 +331,54 @@ impl AnyRoleMethod for MySQLRole {
 
     async fn get(
         &self,
-        _db_conn: Arc<dyn AnyDatabaseConnection>,
-        _user_id: UserId,
+        db_conn: Arc<dyn AnyDatabaseConnection>,
+        user_id: UserId,
     ) -> Result<Option<CompactString>> {
-        todo!()
+        let Ok(db_conn) = db_conn
+            .to_owned()
+            .into_arc_any()
+            .downcast::<MySQLConnection>()
+        else {
+            bail!(
+                "Database connection for `MySQLRole` role method should be of type {:?} but it's of type {:?}.",
+                TypeId::of::<MySQLDBConnectionConfig>(),
+                db_conn.inner_type_id()
+            )
+        };
+
+        let res = db_conn
+            .execute(DatabaseInput::QueryValues(
+                format!(
+                    "SELECT {} FROM {} WHERE {} = ?",
+                    self.role_field, self.table_name, self.user_field
+                )
+                .to_compact_string(),
+                CheapVec::from_vec(vec![sea_orm::Value::from(user_id as u32)]),
+            ))
+            .await
+            .map_err(|err| anyhow!("Query execution error: {}", err))?;
+
+        let DatabaseOutput::Any(res) = res else {
+            bail!("Unexpected database's executor's output.");
+        };
+
+        let res = res.downcast::<Vec<QueryResult>>().map_err(|err| {
+            RequestError::Other(anyhow!("Cannot downcast to MySQL query result. {:?}", err))
+        })?;
+
+        let Some(entry) = res.first() else {
+            return Ok(None);
+        };
+
+        let Ok(role) = entry.try_get::<String>("", &self.role_field) else {
+            bail!(
+                "Field '{}' expected but not returned in '{}' table. Maybe it exists but the associated data type is not `VARCHAR`.",
+                self.user_field,
+                self.table_name
+            )
+        };
+
+        Ok(Some(role.to_compact_string()))
     }
 
     async fn set(
