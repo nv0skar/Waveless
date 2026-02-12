@@ -5,16 +5,14 @@
 //! The Waveless' executor frontend.
 //!
 
+use compact_str::ToCompactString;
 use waveless_commons::{databases::*, logger::*, runtime::handle_main, *};
 use waveless_executor::{frontend_options::*, server::*, *};
 
-use std::sync::Arc;
-
 use anyhow::{Result, anyhow};
 use clap::Parser;
-use compact_str::*;
 use mimalloc::MiMalloc;
-use tokio::sync::RwLock;
+use tower::{service_fn, util::BoxCloneService};
 
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
@@ -68,7 +66,15 @@ async fn try_main() -> Result<ResultContext> {
             DatabasesConnections::load(_build_lock.read().await.config().databases().to_owned())
                 .await?;
 
-            serve(addr).await
+            serve(
+                addr,
+                BoxCloneService::new(service_fn(|_| async {
+                    todo!("Frontend not implemented yet.")
+                })),
+            )
+            .await?;
+
+            Ok("".to_compact_string())
         }
         None => Err(anyhow!("No subcommand provided!")),
     }

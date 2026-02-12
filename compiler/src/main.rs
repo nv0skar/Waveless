@@ -21,6 +21,7 @@ use clap::{Parser, Subcommand};
 use compact_str::*;
 use mimalloc::MiMalloc;
 use nestify::nest;
+use tower::{service_fn, util::BoxCloneService};
 use tracing::*;
 
 #[global_allocator]
@@ -119,7 +120,15 @@ async fn try_main() -> Result<ResultContext> {
             DatabasesConnections::load(_build_lock.read().await.config().databases().to_owned())
                 .await?;
 
-            serve(addr).await
+            serve(
+                addr,
+                BoxCloneService::new(service_fn(|_| async {
+                    todo!("Frontend not implemented yet.")
+                })),
+            )
+            .await?;
+
+            return Ok("".to_compact_string());
         }
         Some(Subcommands::Build) => {
             CompilerCx::set_cx(CompilerCx::from_workspace().await?);
@@ -147,7 +156,15 @@ async fn try_main() -> Result<ResultContext> {
                 )
                 .await?;
 
-                serve(addr).await
+                serve(
+                    addr,
+                    BoxCloneService::new(service_fn(|_| async {
+                        todo!("Frontend not implemented yet.")
+                    })),
+                )
+                .await?;
+
+                Ok("".to_compact_string())
             }
         },
         None => Err(anyhow!("No subcommdand provided!")),

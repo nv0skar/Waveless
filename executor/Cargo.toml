@@ -24,6 +24,7 @@ serde_json.workspace = true
 arrayvec.workspace = true
 compact_str.workspace = true
 dashmap.workspace = true
+dyn-clone.workspace = true
 rclite.workspace = true
 mimalloc.workspace = true
 clap.workspace = true

@@ -9,6 +9,7 @@ waveless_commons.workspace = true
 waveless_executor.workspace = true
 rustyrosetta = { workspace = true, features = ["all"] }
 tokio = { workspace = true, features = ["full"] }
+tower.workspace = true
 sqlx.workspace = true
 sea-orm.workspace = true
 sea-schema.workspace = true

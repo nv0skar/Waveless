@@ -229,7 +229,7 @@ impl AnyDatabaseConnectionConfig for ExternalDBConnectionConfig {
         _pool_min_size: Option<usize>,
         _pool_max_size: Option<usize>,
     ) -> Result<(Arc<dyn AnyDatabaseConnection>, Box<dyn Any>)> {
-        todo!("Not yet implemented.");
+        todo!("Not implemented yet.");
     }
 }
 
@@ -295,7 +295,7 @@ impl AnyDataSchemaDiscoveryMethod for ExternalSchemaDiscoveryMethod {
         _db_id: CompactString,
         _db_conn_config: Arc<dyn AnyDatabaseConnectionConfig>,
     ) -> Result<(Box<dyn Any>, DatabaseChecksum)> {
-        todo!("Not yet implemented.")
+        todo!("Not implemented yet.")
     }
 }
 

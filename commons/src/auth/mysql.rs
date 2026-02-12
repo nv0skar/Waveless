@@ -171,13 +171,17 @@ impl AnyAuthenticationMethod for MySQLSimpleAuthenticationMethod {
 
     async fn new(
         &self,
-        db_conn: Arc<dyn AnyDatabaseConnection>,
-        entries: HashMap<CompactString, CompactString>,
+        _db_conn: Arc<dyn AnyDatabaseConnection>,
+        _entries: HashMap<CompactString, CompactString>,
     ) -> Result<CompactString> {
         todo!()
     }
 
-    async fn delete(&self, db_conn: Arc<dyn AnyDatabaseConnection>, user_id: UserId) -> Result<()> {
+    async fn delete(
+        &self,
+        _db_conn: Arc<dyn AnyDatabaseConnection>,
+        _user_id: UserId,
+    ) -> Result<()> {
         todo!()
     }
 }
@@ -303,13 +307,13 @@ impl AnySessionMethod for MySQLToken {
 
     async fn invalidate(
         &self,
-        db_conn: Arc<dyn AnyDatabaseConnection>,
-        user_id: UserId,
+        _db_conn: Arc<dyn AnyDatabaseConnection>,
+        _user_id: UserId,
     ) -> Result<()> {
         todo!()
     }
 
-    async fn remove_expired(&self, db_conn: Arc<dyn AnyDatabaseConnection>) -> Result<()> {
+    async fn remove_expired(&self, _db_conn: Arc<dyn AnyDatabaseConnection>) -> Result<()> {
         todo!()
     }
 }
@@ -327,22 +331,26 @@ impl AnyRoleMethod for MySQLRole {
 
     async fn get(
         &self,
-        db_conn: Arc<dyn AnyDatabaseConnection>,
-        user_id: UserId,
+        _db_conn: Arc<dyn AnyDatabaseConnection>,
+        _user_id: UserId,
     ) -> Result<Option<CompactString>> {
         todo!()
     }
 
     async fn set(
         &self,
-        db_conn: Arc<dyn AnyDatabaseConnection>,
-        user_id: UserId,
-        role: CompactString,
+        _db_conn: Arc<dyn AnyDatabaseConnection>,
+        _user_id: UserId,
+        _role: CompactString,
     ) -> Result<()> {
         todo!()
     }
 
-    async fn remove(&self, db_conn: Arc<dyn AnyDatabaseConnection>, user_id: UserId) -> Result<()> {
+    async fn remove(
+        &self,
+        _db_conn: Arc<dyn AnyDatabaseConnection>,
+        _user_id: UserId,
+    ) -> Result<()> {
         todo!()
     }
 }

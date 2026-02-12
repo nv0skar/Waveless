@@ -4,7 +4,10 @@
 use crate::*;
 
 #[instrument(skip_all)]
-pub async fn serve(addr: Option<SocketAddr>) -> Result<ResultContext> {
+pub async fn serve(
+    addr: Option<SocketAddr>,
+    frontend: BoxCloneService<RouterRequest, Response<String>, Infallible>,
+) -> Result<ResultContext> {
     let _build_lock = RuntimeCx::acquire().build();
 
     let listener = tokio::net::TcpListener::bind(
@@ -38,7 +41,7 @@ pub async fn serve(addr: Option<SocketAddr>) -> Result<ResultContext> {
 
     // TODO: A POST request to an endpoint invalidates the caches of the GET endpoints with the same route.
     let cache = CacheLayer::builder(InMemoryBackend::new(4096))
-        .ttl(Duration::from_secs(5)) // TODO: Make this a parameter in the 'project.toml'.
+        .ttl(Duration::from_secs(1)) // TODO: Make this a parameter in the 'project.toml'.
         .stale_while_revalidate(Duration::from_secs(1))
         .build();
 
@@ -76,10 +79,10 @@ pub async fn serve(addr: Option<SocketAddr>) -> Result<ResultContext> {
         .layer(SessionWatchdogLayer)
         .service(ExecuteHandler);
 
-    let router = services::RouterService::new(endpoint_svc.to_owned(), endpoint_svc.to_owned());
+    let router = services::RouterService::new(endpoint_svc, Some(frontend));
 
     let svc = ServiceBuilder::new()
-        // .layer(cache) // TODO: Make a custom cache layer.
+        .layer(cache)
         .layer(compression)
         .layer(CorsLayer::permissive())
         .layer(TimeoutLayer::with_status_code(

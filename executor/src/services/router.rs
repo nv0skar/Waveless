@@ -8,31 +8,35 @@ pub type RouterRequest = (
     Option<(HashMap<CompactString, ExecuteParamValue>, Endpoint)>,
 );
 
+pub type RouterServiceInner = BoxCloneService<RouterRequest, Response<String>, Infallible>;
+
 /// TODO: add documentation.
-#[derive(Clone, Constructor, Debug)]
-pub struct RouterService<S>
-where
-    S: Service<RouterRequest, Error = Infallible>,
-{
+#[derive(Clone, Constructor)]
+pub struct RouterService<S> {
     endpoints: S,
-    frontend: S,
+    frontend: Option<RouterServiceInner>,
 }
 
 impl<S> Service<Request<Incoming>> for RouterService<S>
 where
-    S: Service<RouterRequest, Error = Infallible> + Send + 'static,
+    S: Service<RouterRequest, Response = Response<String>, Error = Infallible> + Send + 'static,
     S::Future: Send + 'static,
     S::Response: Send + 'static,
     S::Error: Send + 'static,
 {
-    type Response = S::Response;
+    type Response = Response<String>;
 
-    type Error = S::Error;
+    type Error = Infallible;
 
-    type Future = S::Future;
+    type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
 
     fn poll_ready(&mut self, cx: &mut std::task::Context<'_>) -> Poll<Result<(), Self::Error>> {
-        if self.endpoints.poll_ready(cx).is_ready() && self.frontend.poll_ready(cx).is_ready() {
+        let frontend_ready = match &mut self.frontend {
+            Some(frontend) => frontend.poll_ready(cx).is_ready(),
+            None => true,
+        };
+
+        if self.endpoints.poll_ready(cx).is_ready() && frontend_ready {
             Poll::Ready(Ok(()))
         } else {
             Poll::Pending
@@ -42,32 +46,90 @@ where
     fn call(&mut self, request: Request<Incoming>) -> Self::Future {
         let method = HttpMethod::from(request.method().as_str());
 
-        // Extracts the route from the method-aware router.
-        let Some(router) = RuntimeCx::acquire().router().get(&method) else {
-            // TODO: handle from here to the frontend.
-            // If a path isn't found in the frontend or if it'S
-            // disabled return the JSON INTERNAL_SERVER_ERROR error message:
-            // return Box::pin(async move {
-            //     Err(RequestError::Expected(
-            //         StatusCode::INTERNAL_SERVER_ERROR,
-            //         format!("There is no route that accepts {}.", method).to_compact_string(),
-            //     ))
-            // });
-            todo!("Frontend not implemented yet.");
-        };
-
         // Tries to match the route.
         let route = request.uri().path().trim_matches('/').to_owned();
 
+        // Extracts the route from the method-aware router.
+        let Some(router) = RuntimeCx::acquire().router().get(&method) else {
+            if let Some(mut frontend_inner) = self.frontend.to_owned() {
+                return Box::pin(async move {
+                    frontend_inner
+                        .call((request, None))
+                        .await
+                        .map_err(|_| unreachable!())
+                });
+            } else {
+                return Box::pin(async move {
+                    let response = Response::builder()
+                        .header("Content-Type", "application/json; charset=utf-8")
+                        .header(
+                            "Cache-Control",
+                            format!(
+                                "max-age={}",
+                                (*RuntimeCx::acquire()
+                                    .build()
+                                    .read()
+                                    .await
+                                    .executor()
+                                    .http_cache_time()) as u32
+                            ),
+                        );
+
+                    Ok(response
+                        .status(404)
+                        .body(
+                            serde_json::to_string_pretty(&json!({
+                                    "error": format!(
+                                        "There is no route that accepts {}.",
+                                        method
+                                    )
+                                }
+                            ))
+                            .unwrap(),
+                        )
+                        .unwrap())
+                });
+            }
+        };
+
         let Ok(matched) = router.at(&route) else {
-            // TODO: handle from here to the frontend.
-            // If a path isn't found in the frontend or if it'S
-            // disabled return the JSON NOT_FOUND error message:
-            // return Err(RequestError::Expected(
-            //     StatusCode::NOT_FOUND,
-            //     format!("Route '{}' is not defined. HINT: Go to your project's endpoints folder and check the endpoint's routes.", route).to_compact_string(),
-            // ));
-            todo!("Frontend not implemented yet.");
+            if let Some(mut frontend_inner) = self.frontend.to_owned() {
+                return Box::pin(async move {
+                    frontend_inner
+                        .call((request, None))
+                        .await
+                        .map_err(|_| unreachable!())
+                });
+            } else {
+                return Box::pin(async move {
+                    let response = Response::builder()
+                        .header("Content-Type", "application/json; charset=utf-8")
+                        .header(
+                            "Cache-Control",
+                            format!(
+                                "max-age={}",
+                                (*RuntimeCx::acquire()
+                                    .build()
+                                    .read()
+                                    .await
+                                    .executor()
+                                    .http_cache_time()) as u32
+                            ),
+                        );
+
+                    Ok(response
+                            .status(404)
+                            .body(serde_json::to_string_pretty(&json!({
+                                "error": format!(
+                                    "Route '{}' is not defined. HINT: Go to your project's endpoints folder and check the endpoint's routes.",
+                                    route
+                                )
+                            }
+                            )).unwrap()
+                        ).unwrap()
+                    )
+                });
+            }
         };
 
         // Extracts the path's params.
@@ -80,7 +142,11 @@ where
             );
         }
 
-        self.endpoints
-            .call((request, Some((path_params, matched.value.to_owned()))))
+        let endpoint_fut = self.endpoints.call((
+            request,
+            Some((path_params.to_owned(), matched.value.to_owned())),
+        ));
+
+        return Box::pin(async move { endpoint_fut.await.map_err(|_| unreachable!()) });
     }
 }
