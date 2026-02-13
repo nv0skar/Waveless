@@ -22,9 +22,10 @@ impl Endpoints {
     /// Adds a new endpoint. This will check that there is no endpoint with the same method, route and version.
     pub fn add(&mut self, new_endpoint: Endpoint) -> Result<()> {
         let search = self.inner.iter().find(|endpoint| {
-            endpoint.method == new_endpoint.method
-                && endpoint.route.trim_matches('/') == new_endpoint.route.trim_matches('/')
-                && endpoint.version == new_endpoint.version
+            endpoint.id == new_endpoint.id
+                || endpoint.method == new_endpoint.method
+                    && endpoint.route.trim_matches('/') == new_endpoint.route.trim_matches('/')
+                    && endpoint.version == new_endpoint.version
         });
 
         match search {
@@ -66,7 +67,7 @@ impl Default for Endpoints {
 /// The main endpoint definition that will be either created by the user or discovered by the compiler.
 /// This will be then included in the Waveless project's binary.
 #[derive(Clone, Serialize, Deserialize, Constructor, Builder, Getters, Display, Debug)]
-#[display("{} -> ({}, {:?}, {:?})", route, method, version, description)]
+#[display("({}) {} -> ({}, {:?}, {:?})", id, route, method, version, description)]
 #[builder(pattern = "mutable")]
 #[getset(get = "pub")]
 pub struct Endpoint {
