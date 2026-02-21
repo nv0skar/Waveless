@@ -317,6 +317,11 @@ pub struct Authentication {
     #[serde(default, skip_serializing_if = "should_skip_option")]
     default_role: Option<CompactString>,
 
+    /// Whether to read the session token from the cookie header.
+    /// NOTE: if set, the session token will be read from the Authorization header
+    /// and will fallback to the cookie header.
+    session_cookie: bool,
+
     /// Whether to allow user signup.
     allow_signup: bool,
 }
@@ -336,6 +341,7 @@ impl Default for Authentication {
             session: Arc::new(MySQLToken::default()),
             role: Some(Arc::new(MySQLRole::default())),
             default_role: None,
+            session_cookie: true,
             allow_signup: true,
         }
     }

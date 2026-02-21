@@ -88,19 +88,53 @@ where
                 };
 
                 // Check the session.
-                let Some(auth_header) = headers.get("Authorization") else {
+                let token = match (headers.get("Authorization"), headers.get("Cookie")) {
+                    (Some(auth_header), _) => {
+                        if let Ok(token) = auth_header.to_str() {
+                            Some(token)
+                        } else {
+                            // TODO: future connections from the same origin
+                            // may be throttled.
+                            return Err(RequestError::Expected(
+                                StatusCode::BAD_REQUEST,
+                                "Malformed auth header.".to_compact_string(),
+                            ));
+                        }
+                    }
+                    (_, Some(cookie_header)) => {
+                        if let Ok(cookies) = cookie_header.to_str() {
+                            let cookies = cookies
+                                .trim()
+                                .split(';')
+                                .map(|cookie| cookie.split_once('='));
+                            let authorization_cookie = cookies
+                                .filter(|opt| {
+                                    opt.map(|(name, _)| name.to_lowercase() == "authorization")
+                                        .unwrap_or(false)
+                                })
+                                .flatten()
+                                .next();
+                            if let Some((_, token)) = authorization_cookie {
+                                Some(token)
+                            } else {
+                                None
+                            }
+                        } else {
+                            // TODO: future connections from the same origin
+                            // may be throttled.
+                            return Err(RequestError::Expected(
+                                StatusCode::BAD_REQUEST,
+                                "Malformed cookie header.".to_compact_string(),
+                            ));
+                        }
+                    }
+                    _ => None,
+                };
+
+                let Some(token) = token else {
                     return Err(RequestError::Expected(
                         StatusCode::UNAUTHORIZED,
                         format!("'{}' requires authentication.", endpoint.id()).to_compact_string(),
-                    ));
-                };
-
-                let Ok(token) = auth_header.to_str() else {
-                    // TODO: future connections from the same origin
-                    // may be throttled.
-                    return Err(RequestError::Expected(
-                        StatusCode::BAD_REQUEST,
-                        "Malformed auth header.".to_compact_string(),
                     ));
                 };
 

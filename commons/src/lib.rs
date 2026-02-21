@@ -19,10 +19,11 @@ pub use serialize_utils::*;
 use std::any::{Any, TypeId};
 use std::cell::Cell;
 use std::collections::HashMap;
-use std::env::var;
+use std::env::{current_dir, var};
 use std::fmt::Debug;
 use std::mem::MaybeUninit;
 use std::net::SocketAddr;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -108,4 +109,21 @@ pub enum RequestError {
     Expected(StatusCode, CompactString),
     #[error(transparent)]
     Other(#[from] anyhow::Error),
+}
+
+/// Tries to find the project's workspace root path.
+pub fn get_workspace_root(project_file: &str) -> Result<PathBuf> {
+    let mut current_dir = current_dir().unwrap();
+    if current_dir.join(project_file).exists() {
+        return Ok(current_dir);
+    } else {
+        while current_dir.pop() {
+            if current_dir.join(project_file).exists() {
+                return Ok(current_dir);
+            }
+        }
+    };
+    Err(anyhow!(
+        "The project's worspace root path cannot be determined."
+    ))
 }
