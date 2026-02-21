@@ -68,7 +68,7 @@ impl Default for Endpoints {
 /// This will be then included in the Waveless project's binary.
 #[derive(Clone, Serialize, Deserialize, Constructor, Builder, Getters, Display, Debug)]
 #[display("({}) {} -> ({}, {:?}, {:?})", id, route, method, version, description)]
-#[builder(pattern = "mutable")]
+#[builder(default, pattern = "mutable", setter(strip_option))]
 #[getset(get = "pub")]
 pub struct Endpoint {
     /// Endpoint's unique identifier

@@ -110,23 +110,23 @@ pub async fn discover() -> Result<(
                                 endpoint_one
                                     .id(format!("{}_GetOne", table.info.name).to_compact_string())
                                     .method(*method)
-                                    .version(Some("v1".to_compact_string()))
+                                    .version("v1".to_compact_string())
                                     .route(route_one.to_owned())
-                                    .description(Some(
+                                    .description(
                                         format!(
                                             "Get row from {} by it's primary key.",
                                             table.info.name
                                         )
                                         .to_compact_string(),
-                                    ))
-                                    .target_database(Some(db_config.id().to_owned()))
-                                    .execute(Some(Arc::new(MySQLExecute::new(
+                                    )
+                                    .target_database(db_config.id().to_owned())
+                                    .execute(Arc::new(MySQLExecute::new(
                                         format!(
                                             "SELECT * FROM {} WHERE {} = {}",
                                             table.info.name, pk_id, "{id}"
                                         )
                                         .to_compact_string(),
-                                    ))))
+                                    )))
                                     .tags(CheapVec::from_vec(vec![
                                         table.info.name.to_compact_string(),
                                         "get_one".to_compact_string(),
@@ -143,17 +143,17 @@ pub async fn discover() -> Result<(
                                 endpoint_many
                                     .id(format!("{}_GetMany", table.info.name).to_compact_string())
                                     .method(*method)
-                                    .version(Some("v1".to_compact_string()))
+                                    .version("v1".to_compact_string())
                                     .route(route_many.to_owned())
-                                    .description(Some(
+                                    .description(
                                         format!("Get all rows from {}.", table.info.name)
                                             .to_compact_string(),
-                                    ))
-                                    .target_database(Some(db_config.id().to_owned()))
-                                    .execute(Some(Arc::new(MySQLExecute::new(
+                                    )
+                                    .target_database(db_config.id().to_owned())
+                                    .execute(Arc::new(MySQLExecute::new(
                                         format!("SELECT * FROM {}", table.info.name,)
                                             .to_compact_string(),
-                                    ))))
+                                    )))
                                     .tags(CheapVec::from_vec(vec![
                                         table.info.name.to_compact_string(),
                                         "get_all".to_compact_string(),
@@ -176,14 +176,14 @@ pub async fn discover() -> Result<(
                                 endpoint
                                     .id(format!("{}_Post", table.info.name).to_compact_string())
                                     .method(*method)
-                                    .version(Some("v1".to_compact_string()))
+                                    .version("v1".to_compact_string())
                                     .route(route_many.to_owned())
-                                    .description(Some(
+                                    .description(
                                         format!("Insert data into {}.", table.info.name)
                                             .to_compact_string(),
-                                    ))
-                                    .target_database(Some(db_config.id().to_owned()))
-                                    .execute(Some(Arc::new(MySQLExecute::new(
+                                    )
+                                    .target_database(db_config.id().to_owned())
+                                    .execute(Arc::new(MySQLExecute::new(
                                         format!(
                                             "INSERT INTO {} ({}) VALUES ({})",
                                             table.info.name,
@@ -207,7 +207,7 @@ pub async fn discover() -> Result<(
                                                 ),
                                         )
                                         .to_compact_string(),
-                                    ))))
+                                    )))
                                     .body_params(columns_names.to_owned())
                                     .tags(CheapVec::from_vec(vec![
                                         table.info.name.to_compact_string(),
@@ -230,17 +230,17 @@ pub async fn discover() -> Result<(
                                 endpoint
                                     .id(format!("{}_Put", table.info.name).to_compact_string())
                                     .method(*method)
-                                    .version(Some("v1".to_compact_string()))
+                                    .version("v1".to_compact_string())
                                     .route(route_one.to_owned())
-                                    .description(Some(
+                                    .description(
                                         format!(
                                             "Updates {} on row with the given primary key.",
                                             table.info.name
                                         )
                                         .to_compact_string(),
-                                    ))
-                                    .target_database(Some(db_config.id().to_owned()))
-                                    .execute(Some(Arc::new(MySQLExecute::new(
+                                    )
+                                    .target_database(db_config.id().to_owned())
+                                    .execute(Arc::new(MySQLExecute::new(
                                         format!(
                                             "UPDATE {} SET {} WHERE {} = {} ",
                                             table.info.name,
@@ -258,7 +258,7 @@ pub async fn discover() -> Result<(
                                             "{id}"
                                         )
                                         .to_compact_string(),
-                                    ))))
+                                    )))
                                     .tags(CheapVec::from_vec(vec![
                                         table.info.name.to_compact_string(),
                                         "put".to_compact_string(),
@@ -280,23 +280,23 @@ pub async fn discover() -> Result<(
                                 endpoint
                                     .id(format!("{}_Delete", table.info.name).to_compact_string())
                                     .method(*method)
-                                    .version(Some("v1".to_compact_string()))
+                                    .version("v1".to_compact_string())
                                     .route(route_one.to_owned())
-                                    .description(Some(
+                                    .description(
                                         format!(
                                             "Deletes data from {} with the given primary key.",
                                             table.info.name
                                         )
                                         .to_compact_string(),
-                                    ))
-                                    .target_database(Some(db_config.id().to_owned()))
-                                    .execute(Some(Arc::new(MySQLExecute::new(
+                                    )
+                                    .target_database(db_config.id().to_owned())
+                                    .execute(Arc::new(MySQLExecute::new(
                                         format!(
                                             "DELETE FROM {} WHERE {} = {} ",
                                             table.info.name, pk_id, "{id}"
                                         )
                                         .to_compact_string(),
-                                    ))))
+                                    )))
                                     .body_params(columns_names.to_owned())
                                     .tags(CheapVec::from_vec(vec![
                                         table.info.name.to_compact_string(),
