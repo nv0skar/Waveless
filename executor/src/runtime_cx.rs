@@ -63,7 +63,7 @@ impl RuntimeCx {
     }
 
     /// Builds the endpoint router from the given runtime's context.
-    async fn build_router(&mut self) -> Result<()> {
+    pub async fn build_router(&mut self) -> Result<()> {
         let Self { build, router, .. } = self;
 
         let prefix = build.read().await.executor().api_prefix().to_owned();
