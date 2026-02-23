@@ -178,7 +178,7 @@ impl Default for Endpoint {
         Self {
             id: "".to_compact_string(),
             route: "".to_compact_string(),
-            version: Some("v1".to_compact_string()),
+            version: None,
             method: HttpMethod::Get,
             target_database: Default::default(),
             execute: None,
