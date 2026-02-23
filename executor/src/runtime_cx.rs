@@ -32,7 +32,7 @@ impl RuntimeCx {
     /// Builds the runtime's context by loading the project's build
     /// from the given **build** and building the router.
     pub async fn from_build(build: ExecutorBuild) -> Result<Self> {
-        let mut cx = Self::new(RwLock::new(build), EndpointRouter::new(), None);
+        let cx = Self::new(RwLock::new(build), EndpointRouter::new(), None);
         cx.build_router().await?;
         Ok(cx)
     }
@@ -44,7 +44,7 @@ impl RuntimeCx {
             Ok(file_buffer) => match ExecutorBuild::decode_binary(&CheapVec::from_vec(file_buffer))
             {
                 Ok(build) => {
-                    let mut cx = Self::new(RwLock::new(build), EndpointRouter::new(), Some(path));
+                    let cx = Self::new(RwLock::new(build), EndpointRouter::new(), Some(path));
                     cx.build_router().await?;
                     Ok(cx)
                 }
@@ -63,7 +63,7 @@ impl RuntimeCx {
     }
 
     /// Builds the endpoint router from the given runtime's context.
-    pub async fn build_router(&mut self) -> Result<()> {
+    pub async fn build_router(&self) -> Result<()> {
         let Self { build, router, .. } = self;
 
         let prefix = build.read().await.executor().api_prefix().to_owned();
