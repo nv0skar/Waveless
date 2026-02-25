@@ -16,6 +16,7 @@ toml.workspace = true
 http.workspace = true
 arrayvec.workspace = true
 compact_str.workspace = true
+dashmap.workspace = true
 smallbox.workspace = true
 rclite.workspace = true
 rand.workspace = true

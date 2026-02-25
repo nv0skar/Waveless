@@ -14,8 +14,8 @@ use sqlx::{mysql::*, pool::*};
 /// The primary database won't be in the `ArrayVec` for efficiency.
 #[derive(Constructor, Debug)]
 pub struct DatabasesConnections {
-    primary: (DatabaseId, Arc<dyn AnyDatabaseConnection>),
-    inner: ArrayVec<(DatabaseId, Arc<dyn AnyDatabaseConnection>), { DATABASE_LIMIT - 1 }>,
+    inner: DashMap<DatabaseId, Arc<dyn AnyDatabaseConnection>>,
+    primary_name: CompactString,
 }
 
 #[async_trait]
@@ -47,12 +47,9 @@ impl DatabasesConnections {
             bail!("There is no database set as primary.")
         };
 
-        let mut primary: MaybeUninit<(DatabaseId, Arc<dyn AnyDatabaseConnection>)> =
-            MaybeUninit::zeroed();
-        let mut inner: ArrayVec<
-            (DatabaseId, Arc<dyn AnyDatabaseConnection>),
-            { DATABASE_LIMIT - 1 },
-        > = ArrayVec::new_const();
+        let mut primary_name: MaybeUninit<CompactString> = MaybeUninit::zeroed();
+
+        let inner = DashMap::new();
 
         for db_config in databases {
             info!("Creating {}'s pool.", db_config.id());
@@ -67,13 +64,14 @@ impl DatabasesConnections {
                 .await?;
 
             if *db_config.is_primary() {
-                primary.write((db_config.id().to_owned(), pool));
-            } else {
-                inner.push((db_config.id().to_owned(), pool));
+                primary_name.write(db_config.id().to_owned());
             }
+
+            inner.insert(db_config.id().to_owned(), pool);
         }
 
-        let database_pools = DatabasesConnections::new(unsafe { primary.assume_init() }, inner);
+        let database_pools =
+            DatabasesConnections::new(inner, unsafe { primary_name.assume_init() });
 
         DATABASES_CONNS.set(database_pools).unwrap();
 
@@ -83,17 +81,17 @@ impl DatabasesConnections {
     /// Search for the database given it's id.
     pub fn search(&self, id: Option<DatabaseId>) -> Result<Arc<dyn AnyDatabaseConnection>> {
         if let Some(id) = id {
-            if self.primary.0 == id {
-                Ok(self.primary.1.to_owned())
-            } else {
-                self.inner
-                    .iter()
-                    .find(|(_id, _)| id == _id)
-                    .map(|(_, pool)| pool.to_owned())
-                    .ok_or(anyhow!("Cannot find a database with the given id."))
-            }
+            self.inner
+                .get(&id)
+                .ok_or(anyhow!("Cannot find a database with the given id."))
+                .map(|entry| entry.value().to_owned())
         } else {
-            Ok(self.primary.1.to_owned())
+            Ok(self
+                .inner
+                .get(&self.primary_name)
+                .unwrap()
+                .value()
+                .to_owned())
         }
     }
 }
