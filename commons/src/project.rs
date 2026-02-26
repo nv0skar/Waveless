@@ -15,8 +15,8 @@ use build::*;
 use databases::*;
 
 /// Includes all the project's config
-#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
-#[getset(get = "pub")]
+#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, MutGetters, Debug)]
+#[getset(get = "pub", get_mut = "pub")]
 pub struct Project {
     #[serde(flatten)]
     config: Config,
@@ -34,8 +34,8 @@ impl Default for Project {
     }
 }
 
-#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
-#[getset(get = "pub")]
+#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, MutGetters, Debug)]
+#[getset(get = "pub", get_mut = "pub")]
 /// General settings that will be shared across Waveless's components
 pub struct Config {
     /// Project's name.
@@ -78,8 +78,8 @@ impl Default for Config {
 }
 
 /// Compiler settings: these parameters will be used by the API's compiler exclusively
-#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
-#[getset(get = "pub")]
+#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, MutGetters, Debug)]
+#[getset(get = "pub", get_mut = "pub")]
 pub struct Compiler {
     /// this is the directory where all the user defined endpoints will be located
     endpoints_dir: CompactString,
@@ -103,8 +103,8 @@ impl Default for Compiler {
 }
 
 /// Runtime settings: these parameters will be used by the server exclusively
-#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
-#[getset(get = "pub")]
+#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, MutGetters, Debug)]
+#[getset(get = "pub", get_mut = "pub")]
 pub struct Executor {
     /// can be set through cli parameters or env variables
     #[serde(default, skip_serializing_if = "should_skip_option")]
@@ -137,8 +137,8 @@ impl Default for Executor {
 }
 
 /// Defines a database to be used by Waveless
-#[derive(Clone, Constructor, Serialize, Deserialize, Getters, Debug)]
-#[getset(get = "pub")]
+#[derive(Clone, Constructor, Serialize, Deserialize, Getters, MutGetters, Debug)]
+#[getset(get = "pub", get_mut = "pub")]
 pub struct DatabaseConfig {
     /// Unique identifier of the database.
     id: DatabaseId,
@@ -300,8 +300,8 @@ impl AnyDataSchemaDiscoveryMethod for ExternalSchemaDiscoveryMethod {
 }
 
 /// Defines how the server executor can handle authentication
-#[derive(Clone, Constructor, Serialize, Deserialize, Getters, Debug)]
-#[getset(get = "pub")]
+#[derive(Clone, Constructor, Serialize, Deserialize, Getters, MutGetters, Debug)]
+#[getset(get = "pub", get_mut = "pub")]
 pub struct Authentication {
     /// All the available methods to authenticate.
     #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
@@ -348,8 +348,8 @@ impl Default for Authentication {
 }
 
 /// Defines admin settings and privileges on the server.
-#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
-#[getset(get = "pub")]
+#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, MutGetters, Debug)]
+#[getset(get = "pub", get_mut = "pub")]
 pub struct Admin {
     /// Whether to enable the admin panel.
     enable_panel: bool, // TODO

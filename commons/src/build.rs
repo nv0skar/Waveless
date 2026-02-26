@@ -15,8 +15,8 @@ use endpoint::*;
 use project::*;
 
 /// The project's build file
-#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
-#[getset(get = "pub")]
+#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, MutGetters, Debug)]
+#[getset(get = "pub", get_mut = "pub")]
 pub struct ExecutorBuild {
     /// Contains general settings shared with the frontend/compiler.
     // #[serde(flatten)]

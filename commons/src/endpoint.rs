@@ -6,8 +6,8 @@ use crate::*;
 use execute::*;
 
 /// Holds all the endpoints, is a wrapper of the `CheapVec<Endpoint>` type.
-#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
-#[getset(get = "pub")]
+#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, MutGetters, Debug)]
+#[getset(get = "pub", get_mut = "pub")]
 #[serde(default)]
 pub struct Endpoints {
     #[serde(
