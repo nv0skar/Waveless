@@ -23,7 +23,7 @@ impl Service<RequestParamsExtractorRequest> for ExecuteHandler {
     /// Handles endpoints requests.
     fn call(&mut self, cx: RequestParamsExtractorRequest) -> Self::Future {
         Box::pin(async move {
-            let (_, endpoint, request_params) = cx;
+            let (_, endpoint, request_params, request_body) = cx;
 
             // Retrieves the endpoint's target database.
             let database_id = endpoint.target_database();
@@ -45,7 +45,7 @@ impl Service<RequestParamsExtractorRequest> for ExecuteHandler {
                 .execute(
                     *endpoint.method(),
                     db_conn,
-                    ExecuteInput::new(request_params, None),
+                    ExecuteInput::new(request_params, request_body),
                 )
                 .await
         })

@@ -9,6 +9,7 @@ pub type RequestParamsExtractorRequest = (
     HeaderMap,
     Endpoint,
     HashMap<CompactString, ExecuteParamValue>,
+    Bytes,
 );
 
 /// TODO: add documentation.
@@ -61,6 +62,8 @@ where
                 panic!("Unexpected behaviour");
             };
 
+            let mut request_body = Bytes::new();
+
             let headers = request.headers().to_owned();
 
             // Searches for query params.
@@ -94,18 +97,21 @@ where
 
             // Searches for body params.
             if !endpoint.body_params().is_empty() || *endpoint.capture_all_params() {
-                let req_body = request
-                    .collect()
-                    .await
-                    .map_err(|err| {
-                        RequestError::Expected(
-                            StatusCode::INTERNAL_SERVER_ERROR,
-                            format!("Cannot get request's body. {}", err).to_compact_string(),
-                        )
-                    })?
-                    .to_bytes();
+                request_body = CheapVec::from_vec(
+                    request
+                        .collect()
+                        .await
+                        .map_err(|err| {
+                            RequestError::Expected(
+                                StatusCode::INTERNAL_SERVER_ERROR,
+                                format!("Cannot get request's body. {}", err).to_compact_string(),
+                            )
+                        })?
+                        .to_bytes()
+                        .to_vec(),
+                );
 
-                if req_body.is_empty() {
+                if request_body.is_empty() {
                     return Err(RequestError::Expected(
                         StatusCode::BAD_REQUEST,
                         "The request's body for this endpoint cannot be empty.".to_compact_string(),
@@ -113,7 +119,7 @@ where
                 }
 
                 let Ok(json_body) =
-                    serde_json::from_slice::<serde_json::Value>(req_body.iter().as_slice())
+                    serde_json::from_slice::<serde_json::Value>(request_body.iter().as_slice())
                 else {
                     return Err(RequestError::Expected(
                         StatusCode::BAD_REQUEST,
@@ -153,7 +159,9 @@ where
                 }
             }
 
-            inner.call((headers, endpoint, request_params)).await
+            inner
+                .call((headers, endpoint, request_params, request_body))
+                .await
         })
     }
 }

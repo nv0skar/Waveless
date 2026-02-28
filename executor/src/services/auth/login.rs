@@ -21,7 +21,7 @@ impl Service<RequestParamsExtractorRequest> for LoginCaptured {
     #[instrument(skip_all)]
     fn call(&mut self, cx: RequestParamsExtractorRequest) -> Self::Future {
         Box::pin(async move {
-            let (headers, _, request_params) = cx;
+            let (headers, _, request_params, _) = cx;
 
             let request_params = request_params
                 .iter()

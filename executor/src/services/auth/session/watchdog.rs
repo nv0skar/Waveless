@@ -50,7 +50,7 @@ where
         let mut inner = self.inner.to_owned();
 
         Box::pin(async move {
-            let (headers, endpoint, mut request_params) = cx;
+            let (headers, endpoint, mut request_params, request_body) = cx;
 
             // Checks whether the current endpoint requires auth.
             if *endpoint.require_auth() {
@@ -155,7 +155,9 @@ where
                             );
                         }
                         if endpoint.allowed_roles().is_empty() {
-                            inner.call((headers, endpoint, request_params)).await
+                            inner
+                                .call((headers, endpoint, request_params, request_body))
+                                .await
                         } else {
                             let Some(role_method) = role_method else {
                                 // TODO: the compiler should fail when including endpoints
@@ -188,7 +190,9 @@ where
                             };
 
                             if endpoint.allowed_roles().contains(&role.to_lowercase()) {
-                                inner.call((headers, endpoint, request_params)).await
+                                inner
+                                    .call((headers, endpoint, request_params, request_body))
+                                    .await
                             } else {
                                 return Err(RequestError::Expected(
                                     StatusCode::UNAUTHORIZED,
@@ -204,7 +208,9 @@ where
                     )),
                 }
             } else {
-                inner.call((headers, endpoint, request_params)).await
+                inner
+                    .call((headers, endpoint, request_params, request_body))
+                    .await
             }
         })
     }

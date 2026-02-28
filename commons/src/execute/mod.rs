@@ -22,13 +22,13 @@ pub trait AnyExecute: Any + BoxedAny + DynClone + Send + Sync + Debug {
 }
 
 /// TODO: add documentation.
-#[derive(Constructor, Getters, Debug)]
+#[derive(Clone, Constructor, Getters, Debug)]
 #[getset(get = "pub")]
 pub struct ExecuteInput {
     /// Note that by default, path params, query params, and JSON
     /// formatted bodies are serialized (by default) to this field.
     params: HashMap<CompactString, ExecuteParamValue>,
-    value: Option<Box<dyn Any + Send + Sync>>,
+    value: Bytes,
 }
 
 /// TODO: add documentation.

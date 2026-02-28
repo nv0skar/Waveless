@@ -53,15 +53,19 @@ where
         let mut inner = self.inner.to_owned();
 
         Box::pin(async move {
-            let (headers, endpoint, request_params) = cx;
+            let (headers, endpoint, request_params, request_body) = cx;
 
             match endpoint.id().as_str() {
                 LOGIN_ENDPOINT_ID => {
                     LoginCaptured
-                        .call((headers, endpoint, request_params))
+                        .call((headers, endpoint, request_params, request_body))
                         .await
                 }
-                _ => inner.call((headers, endpoint, request_params)).await,
+                _ => {
+                    inner
+                        .call((headers, endpoint, request_params, request_body))
+                        .await
+                }
             }
         })
     }
