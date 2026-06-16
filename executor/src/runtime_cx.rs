@@ -75,24 +75,15 @@ impl RuntimeCx {
 
         if let Some(_) = auth_config {
             // Adds the login endpoint at /{api_prefix}/internal/login
-            let login_endpoint = Endpoint::new(
-                LOGIN_ENDPOINT_ID.to_compact_string(),
-                "login".to_compact_string(),
-                Some("internal".to_compact_string()),
-                HttpMethod::Post,
-                None,
-                None,
-                Some("Login a user capturing all parameters and forwading them to the underlying authentication method.".to_compact_string()),
-                CheapVec::new(),
-                CheapVec::new(),
-                CheapVec::new(),
-                false,
-                false,
-                CheapVec::new(),
-                true,
-                false,
-                true,
-            );
+            let login_endpoint = EndpointBuilder::default()
+                .id(LOGIN_ENDPOINT_ID.to_compact_string())
+                .route("login".to_compact_string())
+                .version("internal".to_compact_string())
+                .description("Login a user capturing all parameters and forwading them to the underlying authentication method.".to_compact_string())
+                .capture_all_params(true)
+                .auto_generated(true)
+                .build()
+                .unwrap();
 
             endpoints.push(login_endpoint);
         }
@@ -106,7 +97,7 @@ impl RuntimeCx {
             full_route.push(endpoint.route().trim_matches('/'));
 
             if let Some(mut router) = router.get_mut(endpoint.method()) {
-                router.insert(full_route.display().to_string(), endpoint.to_owned())?;
+                let _ = router.insert(full_route.display().to_string(), endpoint.to_owned()); // the error here is ignored.
             } else {
                 let mut new_router = Router::new();
                 new_router.insert(full_route.display().to_string(), endpoint.to_owned())?;
