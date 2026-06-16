@@ -7,7 +7,7 @@ pub mod databases;
 pub mod endpoint;
 pub mod entry;
 pub mod execute;
-pub mod logger;
+pub mod logging;
 pub mod project;
 pub mod runtime;
 pub mod schema;

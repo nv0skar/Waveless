@@ -5,7 +5,7 @@
 //! The Waveless' frontend.
 //!
 
-use waveless_commons::{logger::*, runtime::handle_main, *};
+use waveless_commons::{logging::*, runtime::handle_main, *};
 use waveless_compiler::{build::*, compiler_cx::*, new::*};
 use waveless_executor::{frontend_options::*, server::serve, *};
 
@@ -94,7 +94,7 @@ async fn try_main() -> Result<ResultContext> {
     let cli = Frontend::parse();
 
     // Setup logging
-    subscribe_logger(cli.debug)?;
+    subscribe_logging(cli.debug)?;
 
     // Handle frontend subcommands
     match cli.subcommand {

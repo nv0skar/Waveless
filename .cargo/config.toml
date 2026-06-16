@@ -10,6 +10,8 @@ rustdocflags = ["-Zunstable-options", "--enable-index-page"]
 
 [target.aarch64-apple-darwin]
 rustflags = [
+    "--cfg",
+    "tokio_unstable",
     "-C",
     "link-arg=-fuse-ld=/Applications/Xcode-16.4.0.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld",
 ]

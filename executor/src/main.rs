@@ -6,7 +6,7 @@
 //!
 
 use compact_str::ToCompactString;
-use waveless_commons::{databases::*, logger::*, runtime::handle_main, *};
+use waveless_commons::{databases::*, logging::*, runtime::handle_main, *};
 use waveless_executor::{frontend_options::*, server::*, *};
 
 use anyhow::{Result, anyhow};
@@ -45,7 +45,7 @@ async fn try_main() -> Result<ResultContext> {
     let cli = ExecutorFrontend::parse();
 
     // Setup logging
-    subscribe_logger(cli.debug)?;
+    subscribe_logging(cli.debug)?;
 
     // Handle frontend subcommands
     match cli.subcommand {

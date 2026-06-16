@@ -1,0 +1,16 @@
+[
+    {
+        "text": "Guide",
+        "link": "/guide/start/introduction",
+        "activeMatch": "/guide/"
+    },
+    {
+        "text": "API",
+        "link": "/api/",
+        "activeMatch": "/api/"
+    },
+    {
+        "text": "Oscar AG",
+        "link": "https://nv0skar.eu.org"
+    }
+]

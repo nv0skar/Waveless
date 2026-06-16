@@ -3,7 +3,12 @@
 **/package-lock.json
 **/pnpm-lock.yaml
 **/*.rs.bk
+**/CHANGELOG.txt
 **/.env
+**/.local
+**/.log*
 **/node_modules
 **/target
+**/dist
+**/doc_build
 **/test

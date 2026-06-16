@@ -13,24 +13,24 @@ rustyrosetta = { git = "https://github.com/nv0skar/RustyRosetta.git", tag = "rus
     "all",
 ] }
 
-tokio = "1.48"
+tokio = "1.52"
 
-futures = "0.3.31"
+futures = "0.3.32"
 
 serde = { version = "1.0.228", features = ["derive", "rc"] }
-toml = "0.9.8"
-serde_json = "1.0.149"
-serde_with = { version = "3.16", features = ["chrono"] }
+toml = "1.1.2"
+serde_json = "1.0.150"
+serde_with = { version = "3.21", features = ["chrono"] }
 
 hyper = { version = "1", features = ["full"] }
 hyper-util = { version = "0.1", features = ["full"] }
 http-body-util = "0.1"
 tower = { version = "0.5.3", features = ["full"] }
-tower-http = "0.6.8"
-tower-http-cache = "0.4.3"
+tower-http = "0.7"
+tower-http-cache = "0.5.0"
 tower_governor = { git = "https://github.com/nv0skar/tower-governor-generic-result.git", default-features = false }
-http = "1.4.0"
-matchit = "0.9.1"
+http = "1.4.2"
+matchit = "0.9.2"
 
 sqlx = { version = "0.8.6", features = [
     "runtime-tokio",
@@ -38,31 +38,31 @@ sqlx = { version = "0.8.6", features = [
     "json",
     "mysql",
 ] }
-sea-orm = { version = "1.1.19", features = [
+sea-orm = { version = "1.1.20", features = [
     "runtime-tokio",
     "runtime-tokio-rustls",
     "sqlx-mysql",
 ] }
-sea-schema = { version = "0.16.2", features = [
+sea-schema = { version = "0.16.0", features = [
     "runtime-tokio",
     "runtime-tokio-rustls",
     "sqlx-all",
 ] }
 
-chrono = { version = "0.4.42", default-features = false, features = [
+chrono = { version = "0.4.45", default-features = false, features = [
     "clock",
     "serde",
 ] }
 
 ### Dependencies to implement the admin panel
 
-leptos = { version = "0.8.15", default-features = false }
-leptos_meta = { version = "0.8.5", default-features = false }
-leptos_router = { version = "0.8.11", default-features = false }
-leptos_dom = { version = "0.8.7", default-features = false }
-leptos_axum = { version = "0.8.7", default-features = false }
+leptos = { version = "0.8.19", default-features = false }
+leptos_meta = { version = "0.8.6", default-features = false }
+leptos_router = { version = "0.8.13", default-features = false }
+leptos_dom = { version = "0.8.8", default-features = false }
+leptos_axum = { version = "0.8.9", default-features = false }
 
-gloo-net = { version = "0.6.0", features = ["http"] }
+gloo-net = { version = "0.7.0", features = ["http"] }
 
 typetag = "0.2"
 async-trait = "0.1.89"
@@ -76,10 +76,10 @@ dyn-clone = "1.0.20"
 
 # lettre = { version = "0.11.19", features = ["tokio1", "tokio1-native-tls"] }
 
-struct-patch = "0.10"
-garde = { version = "0.22", features = ["full"] }
-half = { version = "2.6", features = ["serde"] }
-rust_decimal = "1.37"
+struct-patch = "0.12"
+garde = { version = "0.23", features = ["full"] }
+half = { version = "2.7", features = ["serde"] }
+rust_decimal = "1.42"
 email_address = "0.2"
 
 smallvec = { version = "1.15", features = ["serde", "write", "const_new"] }
@@ -88,23 +88,23 @@ stackalloc = "1"
 smallbox = "0.8"
 rclite = "0.4"
 flume = "0.12"
-dashmap = { version = "6.1", features = ["serde"] }
+dashmap = { version = "6.2", features = ["serde"] }
 compact_str = { version = "0.9", features = ["serde"] }
 
-mimalloc = { version = "0.1.48", features = ["secure"] }
+mimalloc = { version = "0.1.52", features = ["secure"] }
 
 rand = "0.10"
 
 blake3 = "1.8"
 argon2 = { version = "0.5", default-features = true }
-crc32fast = "1.4"
+crc32fast = "1.5"
 
-clap = { version = "4.5", features = ["derive"] }
+clap = { version = "4.6", features = ["derive"] }
 
-iocraft = "0.7"
-owo-colors = "4.2"
+iocraft = "0.8"
+owo-colors = "4.3"
 
-regex = "1.12.2"
+regex = "1.12.4"
 
 # wasm-bindgen = "0.2.100"
 
@@ -113,6 +113,7 @@ dotenvy_macro = "0.15"
 
 tracing = "0.1"
 tracing-subscriber = "0.3"
+console-subscriber = "0.5"
 tracing-appender = "0.2"
 
 hex = "0.4"
@@ -120,11 +121,14 @@ itertools = "0.14"
 
 getset = "0.1"
 nestify = "0.3"
-either = { version = "1.15", features = ["serde"] }
+either = { version = "1.16", features = ["serde"] }
 anyhow = "1.0"
 thiserror = "2.0.18"
 derive_builder = "0.20"
-derive_more = { version = "2.0", features = ["constructor", "display"] }
+derive_more = { version = "2.1", features = ["constructor", "display"] }
+
+[workspace.lints.rust]
+unexpected_cfgs = "deny"
 
 ### Leptos' setup
 
@@ -149,12 +153,11 @@ tailwind-input-file = "style/tailwind.css"
 [profile.dev.package."*"]
 debug = false
 codegen-units = 256
-opt-level = 'z'
+opt-level = 's'
 
 [profile.release]
+debug = false
+strip = true
 codegen-units = 256
 lto = true
-opt-level = 'z'
-
-[workspace.lints.rust]
-unexpected_cfgs = "deny"
+opt-level = 's'

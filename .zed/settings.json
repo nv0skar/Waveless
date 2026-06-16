@@ -1,0 +1,7 @@
+{
+    "languages": {
+        "Rust": {
+            "formatter": "language_server",
+        },
+    },
+}
