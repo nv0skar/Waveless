@@ -78,6 +78,7 @@ impl RuntimeCx {
             let login_endpoint = EndpointBuilder::default()
                 .id(LOGIN_ENDPOINT_ID.to_compact_string())
                 .route("login".to_compact_string())
+                .method(HttpMethod::Post)
                 .version("internal".to_compact_string())
                 .description("Login a user capturing all parameters and forwading them to the underlying authentication method.".to_compact_string())
                 .capture_all_params(true)
