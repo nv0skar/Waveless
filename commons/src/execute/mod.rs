@@ -22,8 +22,8 @@ pub trait AnyExecute: Any + BoxedAny + DynClone + Send + Sync + Debug {
 }
 
 /// TODO: add documentation.
-#[derive(Clone, Constructor, Getters, Debug)]
-#[getset(get = "pub")]
+#[derive(Clone, Constructor, Getters, MutGetters, Debug)]
+#[getset(get = "pub", get_mut = "pub")]
 pub struct ExecuteInput {
     /// Note that by default, path params, query params, and JSON
     /// formatted bodies are serialized (by default) to this field.
