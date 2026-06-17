@@ -90,7 +90,7 @@ impl RuntimeCx {
         }
 
         // Reset the router to prevent deleted endpoints to persist.
-        for method_router in router.iter() {
+        for method_router in router.to_owned().iter() {
             router.remove(method_router.key());
         }
 
