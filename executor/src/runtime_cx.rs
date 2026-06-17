@@ -89,6 +89,12 @@ impl RuntimeCx {
             endpoints.push(login_endpoint);
         }
 
+        // Reset the router to prevent deleted endpoints to persist.
+        for method_router in router.iter() {
+            router.remove(method_router.key());
+        }
+
+        // Add all endpoints to the router.
         for endpoint in endpoints {
             let mut full_route = PathBuf::new();
             full_route.push(prefix.trim_matches('/'));

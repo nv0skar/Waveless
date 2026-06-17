@@ -128,7 +128,11 @@ where
                     ));
                 };
                 if *endpoint.capture_all_params() {
-                    for (key, value) in json_body.as_object().unwrap() {
+                    for (key, value) in json_body.as_object().ok_or(RequestError::Expected(
+                        StatusCode::BAD_REQUEST,
+                        "Cannot extract the parameters from the request's body."
+                            .to_compact_string(),
+                    ))? {
                         request_params.insert(
                             key.to_compact_string(),
                             ExecuteParamValue::Client(Some(
@@ -143,7 +147,15 @@ where
                 } else {
                     for key in endpoint.body_params() {
                         let value = {
-                            match json_body.as_object().unwrap().get(key.as_str()) {
+                            match json_body
+                                .as_object()
+                                .ok_or(RequestError::Expected(
+                                    StatusCode::BAD_REQUEST,
+                                    "Cannot extract the parameters from the request's body."
+                                        .to_compact_string(),
+                                ))?
+                                .get(key.as_str())
+                            {
                                 Some(res) => Some(
                                     res.as_str()
                                         .map(|s| s.to_string())
