@@ -153,6 +153,11 @@ where
                                 "user_id".to_compact_string(),
                                 ExecuteParamValue::Internal(user_id.to_compact_string()),
                             );
+
+                            request_params.insert(
+                                "token".to_compact_string(),
+                                ExecuteParamValue::Internal(token.to_compact_string()),
+                            );
                         }
                         if endpoint.allowed_roles().is_empty() {
                             inner

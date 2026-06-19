@@ -75,8 +75,8 @@ pub async fn serve(
     let endpoint_svc = ServiceBuilder::new()
         .layer(ExecuteWrapperLayer)
         .layer(RequestParamsExtractorLayer)
-        .layer(AuthCaptureLayer)
         .layer(SessionWatchdogLayer)
+        .layer(AuthCaptureLayer)
         .service(ExecuteHandler);
 
     let router = services::RouterService::new(endpoint_svc, Some(frontend));

@@ -5,8 +5,6 @@ use crate::*;
 
 use super::*;
 
-pub const LOGIN_ENDPOINT_ID: &str = "Login";
-
 /// TODO: add documentation.
 #[derive(Clone, Constructor, Debug)]
 pub struct AuthCapture<S>
@@ -58,6 +56,21 @@ where
             match endpoint.id().as_str() {
                 LOGIN_ENDPOINT_ID => {
                     LoginCaptured
+                        .call((headers, endpoint, request_params, request_body))
+                        .await
+                }
+                SIGNUP_ENDPOINT_ID => {
+                    SignUpCaptured
+                        .call((headers, endpoint, request_params, request_body))
+                        .await
+                }
+                LOGOUT_ENDPOINT_ID => {
+                    LogoutCaptured
+                        .call((headers, endpoint, request_params, request_body))
+                        .await
+                }
+                LOGOUT_ALL_ENDPOINT_ID => {
+                    LogoutCaptured
                         .call((headers, endpoint, request_params, request_body))
                         .await
                 }

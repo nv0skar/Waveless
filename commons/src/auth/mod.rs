@@ -27,7 +27,7 @@ pub trait AnyAuthenticationMethod: Any + BoxedAny + DynClone + Send + Sync + Deb
         &self,
         db_conn: Arc<dyn AnyDatabaseConnection>,
         entries: HashMap<CompactString, CompactString>,
-    ) -> Result<CompactString>;
+    ) -> Result<UserId>;
 
     /// Deletes a user given it's id.
     async fn delete(&self, db_conn: Arc<dyn AnyDatabaseConnection>, user_id: UserId) -> Result<()>;
@@ -63,6 +63,7 @@ pub trait AnySessionMethod: Any + BoxedAny + DynClone + Send + Sync + Debug {
         &self,
         db_conn: Arc<dyn AnyDatabaseConnection>,
         user_id: UserId,
+        token: Option<CompactString>,
     ) -> Result<()>;
 
     /// Remove all the expired sessions.

@@ -70,24 +70,26 @@ impl RuntimeCx {
 
         let mut endpoints = build.read().await.endpoints().inner().to_owned();
 
-        // Adds authentication endpoints if enabled.
-        let auth_config = build.read().await.config().authentication().to_owned();
+        // Add authentication endpoints if enabled.
+        if let Some(auth_config) = build.read().await.config().authentication().to_owned() {
+            for (kind, endpoint) in INTERNAL_ENDPOINTS.iter() {
+                if let InternalEndpointKind::Authentication = kind {
+                    // Check whether we are trying to add the signup endpoint while being disabled.
+                    if !auth_config.allow_signup() && endpoint.id() == SIGNUP_ENDPOINT_ID {
+                        continue;
+                    }
 
-        if let Some(_) = auth_config {
-            // Adds the login endpoint at /{api_prefix}/internal/login
-            let login_endpoint = EndpointBuilder::default()
-                .id(LOGIN_ENDPOINT_ID.to_compact_string())
-                .route("login".to_compact_string())
-                .method(HttpMethod::Post)
-                .version("internal".to_compact_string())
-                .description("Login a user capturing all parameters and forwading them to the underlying authentication method.".to_compact_string())
-                .capture_all_params(true)
-                .auto_generated(true)
-                .build()
-                .unwrap();
-
-            endpoints.push(login_endpoint);
+                    endpoints.push(endpoint.to_owned());
+                }
+            }
         }
+
+        // Add all other internal endpoints.
+        INTERNAL_ENDPOINTS.iter().for_each(|(kind, endpoint)| {
+            if let InternalEndpointKind::Other = kind {
+                endpoints.push(endpoint.to_owned());
+            }
+        });
 
         // Reset the router to prevent deleted endpoints to persist.
         for method_router in router.to_owned().iter() {

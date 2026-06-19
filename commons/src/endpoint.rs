@@ -183,7 +183,7 @@ impl Default for Endpoint {
             target_database: Default::default(),
             execute: None,
             description: None,
-            tags: CheapVec::new(),
+            tags: CheapVec::new_const(),
             query_params: Default::default(),
             body_params: Default::default(),
             require_auth: false,

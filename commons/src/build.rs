@@ -63,7 +63,7 @@ impl Default for ExecutorBuild {
             config: Default::default(),
             executor: Default::default(),
             endpoints: Endpoints::new(CheapVec::from_vec(vec![Endpoint::default()])),
-            databases_checksums: CheapVec::new(),
+            databases_checksums: CheapVec::new_const(),
         }
     }
 }

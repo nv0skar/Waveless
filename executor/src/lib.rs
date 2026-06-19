@@ -2,10 +2,12 @@
 // Copyright (C) 2026 Oscar Alvarez Gonzalez
 
 pub mod frontend_options;
+pub mod internal_endpoints;
 pub mod runtime_cx;
 pub mod server;
 pub mod services;
 
+pub use internal_endpoints::*;
 pub use runtime_cx::*;
 pub use services::*;
 
@@ -17,11 +19,13 @@ use waveless_commons::execute::*;
 
 use rustyrosetta::*;
 
+use std::cell::LazyCell;
 use std::collections::HashMap;
 use std::convert::Infallible;
 use std::fs::read;
 use std::net::SocketAddr;
 use std::path::PathBuf;
+use std::pin::Pin;
 use std::task::Poll;
 use std::time::Duration;
 

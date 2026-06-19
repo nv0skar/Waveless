@@ -61,7 +61,7 @@ pub async fn discover() -> Result<(
                     bail!("Cannot downcast to MySQL schema.")
                 };
 
-                let mut discovered_endpoints = Endpoints::new(CheapVec::new());
+                let mut discovered_endpoints = Endpoints::new(CheapVec::new_const());
 
                 // For each table generate a GET, POST, UPDATE and DELETE endpoints.
                 for table in mysql_schema.tables {
@@ -131,11 +131,11 @@ pub async fn discover() -> Result<(
                                         table.info.name.to_compact_string(),
                                         "get_one".to_compact_string(),
                                     ]))
-                                    .query_params(CheapVec::new())
-                                    .body_params(CheapVec::new())
+                                    .query_params(CheapVec::new_const())
+                                    .body_params(CheapVec::new_const())
                                     .require_auth(false)
                                     .inject_user_id(false)
-                                    .allowed_roles(CheapVec::new())
+                                    .allowed_roles(CheapVec::new_const())
                                     .capture_all_params(false)
                                     .deprecated(false)
                                     .auto_generated(true);
@@ -158,11 +158,11 @@ pub async fn discover() -> Result<(
                                         table.info.name.to_compact_string(),
                                         "get_all".to_compact_string(),
                                     ]))
-                                    .query_params(CheapVec::new())
-                                    .body_params(CheapVec::new())
+                                    .query_params(CheapVec::new_const())
+                                    .body_params(CheapVec::new_const())
                                     .require_auth(false)
                                     .inject_user_id(false)
-                                    .allowed_roles(CheapVec::new())
+                                    .allowed_roles(CheapVec::new_const())
                                     .capture_all_params(false)
                                     .deprecated(false)
                                     .auto_generated(true);
@@ -213,11 +213,11 @@ pub async fn discover() -> Result<(
                                         table.info.name.to_compact_string(),
                                         "post".to_compact_string(),
                                     ]))
-                                    .query_params(CheapVec::new())
+                                    .query_params(CheapVec::new_const())
                                     .body_params(columns_names.to_owned())
                                     .require_auth(false)
                                     .inject_user_id(false)
-                                    .allowed_roles(CheapVec::new())
+                                    .allowed_roles(CheapVec::new_const())
                                     .capture_all_params(false)
                                     .deprecated(false)
                                     .auto_generated(true);
@@ -263,11 +263,11 @@ pub async fn discover() -> Result<(
                                         table.info.name.to_compact_string(),
                                         "put".to_compact_string(),
                                     ]))
-                                    .query_params(CheapVec::new())
+                                    .query_params(CheapVec::new_const())
                                     .body_params(columns_names.to_owned())
                                     .require_auth(false)
                                     .inject_user_id(false)
-                                    .allowed_roles(CheapVec::new())
+                                    .allowed_roles(CheapVec::new_const())
                                     .capture_all_params(false)
                                     .deprecated(false)
                                     .auto_generated(true);
@@ -302,11 +302,11 @@ pub async fn discover() -> Result<(
                                         table.info.name.to_compact_string(),
                                         "delete".to_compact_string(),
                                     ]))
-                                    .query_params(CheapVec::new())
-                                    .body_params(CheapVec::new())
+                                    .query_params(CheapVec::new_const())
+                                    .body_params(CheapVec::new_const())
                                     .require_auth(false)
                                     .inject_user_id(false)
-                                    .allowed_roles(CheapVec::new())
+                                    .allowed_roles(CheapVec::new_const())
                                     .capture_all_params(false)
                                     .deprecated(false)
                                     .auto_generated(true);

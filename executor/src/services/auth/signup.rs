@@ -5,9 +5,9 @@ use crate::*;
 
 /// TODO: add documentation.
 #[derive(Clone, Constructor, Debug)]
-pub struct LoginCaptured;
+pub struct SignUpCaptured;
 
-impl Service<RequestParamsExtractorRequest> for LoginCaptured {
+impl Service<RequestParamsExtractorRequest> for SignUpCaptured {
     type Response = ExecuteOutput;
 
     type Error = RequestError;
@@ -44,6 +44,11 @@ impl Service<RequestParamsExtractorRequest> for LoginCaptured {
                 .ok_or(RequestError::Other(anyhow!(
                     "Authentication is not set for the current build."
                 )))?;
+
+            // Check whether signup is enabled for the current build.
+            if !auth_config.allow_signup() {
+                Err(RequestError::Other(anyhow!("Signup is disabled for the current build.")))?;
+            }
 
             let databases = DATABASES_CONNS.get().unwrap();
 
@@ -85,8 +90,9 @@ impl Service<RequestParamsExtractorRequest> for LoginCaptured {
                 )));
             };
 
-            match auth_method.check(auth_db, request_params).await {
-                Ok(Some(user_id)) => {
+            // Create a new user.
+            match auth_method.new(auth_db, request_params).await {
+                Ok(user_id) => {
                     // Create a new session.
                     let session_method = auth_config.session();
 
@@ -107,6 +113,7 @@ impl Service<RequestParamsExtractorRequest> for LoginCaptured {
                                     err
                                 ))
                             })?;
+
 
                     let mut headers = HashMap::new();
 
@@ -130,12 +137,9 @@ impl Service<RequestParamsExtractorRequest> for LoginCaptured {
                             "token": session_token
                         }),
                     ))
-                }
-                Ok(None) => Err(RequestError::Expected(
-                    StatusCode::FORBIDDEN,
-                    format!("Login failed, invalid credentials.").to_compact_string(),
-                )),
-                Err(err) => Err(RequestError::Other(err)),
+                },
+
+                Err(err) => Err(RequestError::Other(err))
             }
         }).into();
 
