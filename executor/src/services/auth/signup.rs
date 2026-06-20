@@ -121,7 +121,7 @@ impl Service<RequestParamsExtractorRequest> for SignUpCaptured {
                     headers.insert(
                         "Set-Cookie".to_compact_string(),
                         format!(
-                            "Authorization={}; SameSite=Lax; {}",
+                            "Authorization={}; SameSite=Lax; Path=/; {}",
                             session_token,
                             session_method
                                 .max_age()
