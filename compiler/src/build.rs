@@ -27,7 +27,7 @@ pub async fn build<T: 'static>() -> Result<Either<ExecutorBuild, Bytes>> {
     );
 
     // Deserializes user's endpoints.
-    let mut endpoints = Endpoints::new(CheapVec::new_const());
+    let mut endpoints = Endpoints::new_unchecked(CheapVec::new_const());
     {
         let endpoints_dir = workspace_root.join(project.compiler().endpoints_dir());
 

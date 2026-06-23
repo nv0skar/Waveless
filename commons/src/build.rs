@@ -62,7 +62,7 @@ impl Default for ExecutorBuild {
         Self {
             config: Default::default(),
             executor: Default::default(),
-            endpoints: Endpoints::new(CheapVec::from_vec(vec![Endpoint::default()])),
+            endpoints: Endpoints::new_unchecked(CheapVec::from_vec(vec![Endpoint::default()])),
             databases_checksums: CheapVec::new_const(),
         }
     }

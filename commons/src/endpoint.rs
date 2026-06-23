@@ -6,7 +6,7 @@ use crate::*;
 use execute::*;
 
 /// Holds all the endpoints, is a wrapper of the `CheapVec<Endpoint>` type.
-#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, MutGetters, Debug)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Getters, MutGetters, Debug)]
 #[getset(get = "pub", get_mut = "pub")]
 #[serde(default)]
 pub struct Endpoints {
@@ -19,14 +19,25 @@ pub struct Endpoints {
 }
 
 impl Endpoints {
+    /// Constructor that checks whether the given endpoints are valid.
+    pub fn new(inner: CheapVec<Endpoint>) -> Result<Self> {
+        for i in 0..inner.len() {
+            for j in i..inner.len() {
+                ensure!(!(inner.get(i).unwrap() == inner.get(j).unwrap()));
+            }
+        }
+
+        Ok(Self { inner })
+    }
+
+    /// NOTE: this constructor variant won't check whether the given endpoints are valid whatsoever.
+    pub fn new_unchecked(inner: CheapVec<Endpoint>) -> Self {
+        Self { inner }
+    }
+
     /// Adds a new endpoint. This will check that there is no endpoint with the same method, route and version.
     pub fn add(&mut self, new_endpoint: Endpoint) -> Result<()> {
-        let search = self.inner.iter().find(|endpoint| {
-            endpoint.id == new_endpoint.id
-                || endpoint.method == new_endpoint.method
-                    && endpoint.route.trim_matches('/') == new_endpoint.route.trim_matches('/')
-                    && endpoint.version == new_endpoint.version
-        });
+        let search = self.inner.iter().find(|endpoint| new_endpoint.eq(endpoint));
 
         match search {
             Some(endpoint) => Err(anyhow!(
@@ -141,7 +152,7 @@ impl PartialEq for Endpoint {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
             || (self.method == other.method
-                && self.route == other.route
+                && self.route.trim_matches('/') == other.route.trim_matches('/')
                 && self.version == other.version)
     }
 }

@@ -61,7 +61,7 @@ pub async fn discover() -> Result<(
                     bail!("Cannot downcast to MySQL schema.")
                 };
 
-                let mut discovered_endpoints = Endpoints::new(CheapVec::new_const());
+                let mut discovered_endpoints = Endpoints::new_unchecked(CheapVec::new_const());
 
                 // For each table generate a GET, POST, UPDATE and DELETE endpoints.
                 for table in mysql_schema.tables {

@@ -70,7 +70,7 @@ pub fn new_project(name: CompactString) -> Result<ResultContext> {
 
     // Serialize the a sample endpoint.
     {
-        let endpoints = Endpoints::new(CheapVec::from_vec(vec![
+        let endpoints = Endpoints::new_unchecked(CheapVec::from_vec(vec![
             Endpoint::new(
                 "ListProducts".to_compact_string(),
                 "/products/{size}".to_compact_string(),
