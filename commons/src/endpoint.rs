@@ -22,7 +22,7 @@ impl Endpoints {
     /// Constructor that checks whether the given endpoints are valid.
     pub fn new(inner: CheapVec<Endpoint>) -> Result<Self> {
         for i in 0..inner.len() {
-            for j in i..inner.len() {
+            for j in (i + 1)..inner.len() {
                 if inner.get(i).unwrap() == inner.get(j).unwrap() {
                     bail!(
                         "An equivalent endpoint already exists: you were trying to add '{}', but '{}' is equivalent.",

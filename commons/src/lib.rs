@@ -29,7 +29,7 @@ use std::time::Duration;
 
 use rustyrosetta::{codec::*, *};
 
-use anyhow::{Context, Result, anyhow, bail, ensure};
+use anyhow::{Context, Result, anyhow, bail};
 use async_trait::*;
 use chrono::{NaiveDateTime, Utc};
 use compact_str::*;
