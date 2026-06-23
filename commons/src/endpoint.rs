@@ -23,7 +23,13 @@ impl Endpoints {
     pub fn new(inner: CheapVec<Endpoint>) -> Result<Self> {
         for i in 0..inner.len() {
             for j in i..inner.len() {
-                ensure!(!(inner.get(i).unwrap() == inner.get(j).unwrap()));
+                if inner.get(i).unwrap() == inner.get(j).unwrap() {
+                    bail!(
+                        "An equivalent endpoint already exists: you were trying to add '{}', but '{}' is equivalent.",
+                        inner.get(i).unwrap(),
+                        inner.get(j).unwrap()
+                    )
+                }
             }
         }
 
