@@ -94,6 +94,11 @@ where
 
         let Ok(matched) = router.at(&route) else {
             if let Some(mut frontend_inner) = self.frontend.to_owned() {
+                debug!(
+                    "Route `{}` is not defined, using the frontend service as a fallback.",
+                    route
+                );
+
                 return Box::pin(async move {
                     frontend_inner
                         .call((request, None))
@@ -121,7 +126,7 @@ where
                             .status(404)
                             .body(serde_json::to_string_pretty(&json!({
                                 "error": format!(
-                                    "Route '{}' is not defined. HINT: Go to your project's endpoints folder and check the endpoint's routes.",
+                                    "Route `{}` is not defined. HINT: Go to your project's endpoints folder and check the endpoint's routes.",
                                     route
                                 )
                             }

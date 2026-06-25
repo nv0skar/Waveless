@@ -97,19 +97,26 @@ impl RuntimeCx {
         }
 
         // Add all endpoints to the router.
+        let prefix = prefix.trim_matches('/');
+
         for endpoint in endpoints {
-            let mut full_route = PathBuf::new();
-            full_route.push(prefix.trim_matches('/'));
-            if let Some(prefix) = endpoint.version() {
-                full_route.push(prefix.trim_matches('/'));
-            }
-            full_route.push(endpoint.route().trim_matches('/'));
+            let route_parts: CheapVec<Option<CompactString>, 3> = CheapVec::from_buf([
+                Some(prefix.into()),
+                endpoint
+                    .version()
+                    .to_owned()
+                    .map(|version| version.trim_matches('/').into()),
+                Some(endpoint.route().trim_matches('/').into()),
+            ]);
+
+            let route = route_parts.into_iter().flatten().join_compact("/");
 
             if let Some(mut router) = router.get_mut(endpoint.method()) {
-                let _ = router.insert(full_route.display().to_string(), endpoint.to_owned()); // the error here is ignored.
+                let _ = router.insert(route, endpoint.to_owned()); // the error here is ignored.
             } else {
                 let mut new_router = Router::new();
-                new_router.insert(full_route.display().to_string(), endpoint.to_owned())?;
+                new_router.insert(route, endpoint.to_owned())?;
+
                 let _ = router.insert(endpoint.method().to_owned(), new_router);
             }
         }

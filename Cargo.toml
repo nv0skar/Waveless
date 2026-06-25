@@ -117,7 +117,7 @@ console-subscriber = "0.5"
 tracing-appender = "0.2"
 
 hex = "0.4"
-itertools = "0.14"
+itertools = "0.15"
 
 getset = "0.1"
 nestify = "0.3"
