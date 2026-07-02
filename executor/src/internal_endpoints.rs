@@ -6,7 +6,7 @@ use crate::*;
 pub const LOGIN_ENDPOINT_ID: &str = "Login";
 pub const SIGNUP_ENDPOINT_ID: &str = "SignUp";
 pub const LOGOUT_ENDPOINT_ID: &str = "Logout";
-pub const LOGOUT_ALL_ENDPOINT_ID: &str = "LogoutALl";
+pub const LOGOUT_ALL_ENDPOINT_ID: &str = "LogoutAll";
 
 /// Internal endpoints provided by the executor.
 pub const INTERNAL_ENDPOINTS: LazyCell<[(InternalEndpointKind, Endpoint); 4]> = LazyCell::new(

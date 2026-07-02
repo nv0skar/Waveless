@@ -4,7 +4,4 @@
 <br>
 
 ## TODO
-- [ ] Disable checksum check from an executor's arg.
-- [ ] Research the stack overflow on smaller stack sizes.
-- [ ] Clean unused dependencies.
-- [ ] Do proper error handling.
+- [ ] Add docs.

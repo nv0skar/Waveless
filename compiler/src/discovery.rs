@@ -63,7 +63,7 @@ pub async fn discover() -> Result<(
 
                 let mut discovered_endpoints = Endpoints::new_unchecked(CheapVec::new_const());
 
-                // For each table generate a GET, POST, UPDATE and DELETE endpoints.
+                // For each table generate a GET one, GET many, POST, UPDATE and DELETE endpoints.
                 for table in mysql_schema.tables {
                     if mysql_discovery
                         .skip_tables()
@@ -72,16 +72,22 @@ pub async fn discover() -> Result<(
                         continue;
                     }
 
+                    // Check whether the table is a view, only the GET many endpoint will be generated.
+                    let is_view = table.info.comment.to_lowercase().eq("view");
+
+                    // Get the table primary key. If it is not present only the GET one and POST endpoints will generated.
                     let pk_id = table
                         .columns
                         .iter()
                         .find(|column| column.key == sea_schema::mysql::def::ColumnKey::Primary)
-                        .ok_or(anyhow!(
-                            "Table {} doesn't have a primary key.",
+                        .map(|table| table.name.to_owned());
+
+                    if pk_id.is_none() {
+                        debug!(
+                            "Table {} doesn't have a primary key. Only GET many and POST endpoints will be generated.",
                             table.info.name
-                        ))?
-                        .to_owned()
-                        .name;
+                        )
+                    }
 
                     let columns_names = table
                         .columns
@@ -94,51 +100,58 @@ pub async fn discover() -> Result<(
                         .to_compact_string();
                     let route_many = table.info.name.to_lowercase().to_compact_string();
 
-                    const METHODS_TO_GENERATE: &[HttpMethod] = &[
+                    for method in &[
                         HttpMethod::Get,
                         HttpMethod::Post,
                         HttpMethod::Put,
                         HttpMethod::Delete,
-                    ];
+                    ] {
+                        match (method, &pk_id) {
+                            (HttpMethod::Get, _) => {
+                                match &pk_id {
+                                    Some(pk_id) if !is_view => {
+                                        let mut endpoint_one = EndpointBuilder::default();
 
-                    for method in METHODS_TO_GENERATE {
-                        match method {
-                            HttpMethod::Get => {
-                                let mut endpoint_one = EndpointBuilder::default();
+                                        endpoint_one
+                                            .id(format!("{}_GetOne", table.info.name)
+                                                .to_compact_string())
+                                            .method(*method)
+                                            .version("v1".to_compact_string())
+                                            .route(route_one.to_owned())
+                                            .description(
+                                                format!(
+                                                    "Get row from {} by it's primary key.",
+                                                    table.info.name
+                                                )
+                                                .to_compact_string(),
+                                            )
+                                            .target_database(db_config.id().to_owned())
+                                            .execute(Arc::new(MySQLExecute::new(
+                                                format!(
+                                                    "SELECT * FROM {} WHERE {} = {}",
+                                                    table.info.name, pk_id, "{id}"
+                                                )
+                                                .to_compact_string(),
+                                            )))
+                                            .tags(CheapVec::from_vec(vec![
+                                                table.info.name.to_compact_string(),
+                                                "get_one".to_compact_string(),
+                                            ]))
+                                            .query_params(CheapVec::new_const())
+                                            .body_params(CheapVec::new_const())
+                                            .require_auth(false)
+                                            .inject_user_id(false)
+                                            .allowed_roles(CheapVec::new_const())
+                                            .capture_all_params(false)
+                                            .deprecated(false)
+                                            .auto_generated(true);
+
+                                        discovered_endpoints.add(endpoint_one.build()?)?;
+                                    }
+                                    _ => (),
+                                }
+
                                 let mut endpoint_many = EndpointBuilder::default();
-
-                                endpoint_one
-                                    .id(format!("{}_GetOne", table.info.name).to_compact_string())
-                                    .method(*method)
-                                    .version("v1".to_compact_string())
-                                    .route(route_one.to_owned())
-                                    .description(
-                                        format!(
-                                            "Get row from {} by it's primary key.",
-                                            table.info.name
-                                        )
-                                        .to_compact_string(),
-                                    )
-                                    .target_database(db_config.id().to_owned())
-                                    .execute(Arc::new(MySQLExecute::new(
-                                        format!(
-                                            "SELECT * FROM {} WHERE {} = {}",
-                                            table.info.name, pk_id, "{id}"
-                                        )
-                                        .to_compact_string(),
-                                    )))
-                                    .tags(CheapVec::from_vec(vec![
-                                        table.info.name.to_compact_string(),
-                                        "get_one".to_compact_string(),
-                                    ]))
-                                    .query_params(CheapVec::new_const())
-                                    .body_params(CheapVec::new_const())
-                                    .require_auth(false)
-                                    .inject_user_id(false)
-                                    .allowed_roles(CheapVec::new_const())
-                                    .capture_all_params(false)
-                                    .deprecated(false)
-                                    .auto_generated(true);
 
                                 endpoint_many
                                     .id(format!("{}_GetMany", table.info.name).to_compact_string())
@@ -167,10 +180,9 @@ pub async fn discover() -> Result<(
                                     .deprecated(false)
                                     .auto_generated(true);
 
-                                discovered_endpoints.add(endpoint_one.build()?)?;
                                 discovered_endpoints.add(endpoint_many.build()?)?;
                             }
-                            HttpMethod::Post => {
+                            (HttpMethod::Post, _) if !is_view => {
                                 let mut endpoint = EndpointBuilder::default();
 
                                 endpoint
@@ -224,7 +236,7 @@ pub async fn discover() -> Result<(
 
                                 discovered_endpoints.add(endpoint.build()?)?;
                             }
-                            HttpMethod::Put => {
+                            (HttpMethod::Put, Some(pk_id)) if !is_view => {
                                 let mut endpoint = EndpointBuilder::default();
 
                                 endpoint
@@ -274,7 +286,7 @@ pub async fn discover() -> Result<(
 
                                 discovered_endpoints.add(endpoint.build()?)?;
                             }
-                            HttpMethod::Delete => {
+                            (HttpMethod::Delete, Some(pk_id)) if !is_view => {
                                 let mut endpoint = EndpointBuilder::default();
 
                                 endpoint
@@ -313,7 +325,7 @@ pub async fn discover() -> Result<(
 
                                 discovered_endpoints.add(endpoint.build()?)?;
                             }
-                            HttpMethod::Unknown => {}
+                            _ => {}
                         }
                     }
                 }
