@@ -193,7 +193,7 @@ impl AnyExecute for MySQLExecute {
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("Query result is not unique.").to_compact_string(),
             ))?,
-            true if rows.len() > 1 => Err(RequestError::Expected(
+            true if rows.is_empty() => Err(RequestError::Expected(
                 StatusCode::BAD_REQUEST,
                 format!("Resource does not exist.").to_compact_string(),
             ))?,
