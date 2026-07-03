@@ -126,7 +126,7 @@ pub async fn discover() -> Result<(
                                                 .to_compact_string(),
                                             )
                                             .target_database(db_config.id().to_owned())
-                                            .execute(Arc::new(MySQLExecute::new(
+                                            .execute(Arc::new(MySQLExecute::new_unique(
                                                 format!(
                                                     "SELECT * FROM {} WHERE {} = {}",
                                                     table.info.name, pk_id, "{id}"

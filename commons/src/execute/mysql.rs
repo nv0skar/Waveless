@@ -8,14 +8,38 @@ use super::*;
 use sea_orm::{FromQueryResult, QueryResult};
 
 /// TODO: add documentation.
-#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Display, Debug)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Getters, Display, Debug)]
 #[display("SQL query: {:?}", query)]
 #[getset(get = "pub")]
 pub struct MySQLExecute {
     query: CompactString,
+
+    /// Whether the response from the database is expected to be exactly one row (unique) or empty.
+    #[serde(default, skip_serializing_if = "non_unique_skip")]
+    unique: bool,
 }
 
 boxed_any!(MySQLExecute);
+
+fn non_unique_skip(value: &bool) -> bool {
+    should_skip(&(!*value))
+}
+
+impl MySQLExecute {
+    pub fn new(query: CompactString) -> Self {
+        Self {
+            query,
+            unique: false,
+        }
+    }
+
+    pub fn new_unique(query: CompactString) -> Self {
+        Self {
+            query,
+            unique: true,
+        }
+    }
+}
 
 #[typetag::serde(name = "MySQL")]
 #[async_trait]
@@ -50,7 +74,7 @@ impl AnyExecute for MySQLExecute {
             })
             .collect::<CompactString>();
 
-        //  Replaces Waveless' runtime injected query's parameters placeholders with the value.
+        // Replaces Waveless' runtime injected query's parameters placeholders with the value.
         // NOTE: the value will be replaced directly in the MySQL query,
         // be aware that a malformed runtime parameter might cause a SQL
         // injection attack (the attack vector could be in malicious
@@ -164,6 +188,24 @@ impl AnyExecute for MySQLExecute {
             );
         }
 
-        return Ok(ExecuteOutput::Json(None, json!(&rows)));
+        match self.unique {
+            true if rows.len() > 1 => Err(RequestError::Expected(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Query result is not unique.").to_compact_string(),
+            ))?,
+            true if rows.len() > 1 => Err(RequestError::Expected(
+                StatusCode::BAD_REQUEST,
+                format!("Resource does not exist.").to_compact_string(),
+            ))?,
+            _ => (),
+        }
+
+        return Ok(ExecuteOutput::Json(
+            None,
+            match self.unique {
+                true => json!(rows.first().unwrap()),
+                false => json!(&rows),
+            },
+        ));
     }
 }

@@ -145,7 +145,7 @@ pub struct Endpoint {
     #[serde(default, skip_serializing_if = "should_skip")]
     capture_all_params: bool,
 
-    /// Whether this endpoint es deprecated.
+    /// Whether this endpoint is deprecated.
     #[serde(default, skip_serializing_if = "should_skip")]
     deprecated: bool,
 
