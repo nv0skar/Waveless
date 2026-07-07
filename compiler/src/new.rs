@@ -68,49 +68,41 @@ pub fn new_project(name: CompactString) -> Result<ResultContext> {
         debug!("Created project directories.");
     }
 
-    // Serialize the a sample endpoint.
+    // Serialize a sample endpoint.
     {
         let endpoints = Endpoints::new_unchecked(CheapVec::from_vec(vec![
-            Endpoint::new(
-                "ListProducts".into(),
-                "/products/{size}".into(),
-                Some("v1".into()),
-                HttpMethod::Get,
-                Default::default(),
-                Some(Arc::new(MySQLExecute::from(MySQLQueryVariants::new_raw(
-                    "SELECT * FROM products WHERE size = {size}".into(),
-                )))),
-                Some("Get all the products by the given size.".into()),
-                CheapVec::from_vec(vec!["products".into()]),
-                Default::default(),
-                Default::default(),
-                false,
-                false,
-                Default::default(),
-                false,
-                false,
-                false,
-            ),
-            Endpoint::new(
-                "ListPosts".into(),
-                "posts".into(),
-                Some("v1".into()),
-                HttpMethod::Get,
-                None,
-                Some(Arc::new(MySQLExecute::from(MySQLQueryVariants::new_raw(
-                    "SELECT * FROM posts".into(),
-                )))),
-                Some("Get all posts.".into()),
-                CheapVec::from_vec(vec!["posts".into()]),
-                Default::default(),
-                Default::default(),
-                false,
-                false,
-                Default::default(),
-                false,
-                false,
-                false,
-            ),
+            EndpointBuilder::default()
+                .id("ListProducts".into())
+                .target(Targets::HttpTarget(
+                    HttpTargetBuilder::default()
+                        .route("/products/{size}".into())
+                        .version("v1".into())
+                        .method(HttpMethod::Get)
+                        .execute(Arc::new(MySQLExecute::from(MySQLQueryVariants::new_raw(
+                            "SELECT * FROM products WHERE size = {size}".into(),
+                        ))))
+                        .build()
+                        .unwrap(),
+                ))
+                .description("Get all the products by the given size.".into())
+                .build()
+                .unwrap(),
+            EndpointBuilder::default()
+                .id("ListPosts".into())
+                .target(Targets::HttpTarget(
+                    HttpTargetBuilder::default()
+                        .route("posts".into())
+                        .version("v1".into())
+                        .method(HttpMethod::Get)
+                        .execute(Arc::new(MySQLExecute::from(MySQLQueryVariants::new_raw(
+                            "SELECT * FROM posts".into(),
+                        ))))
+                        .build()
+                        .unwrap(),
+                ))
+                .description("Get all posts.".into())
+                .build()
+                .unwrap(),
         ]));
 
         let mut sample_endpoint_file = File::create_new(

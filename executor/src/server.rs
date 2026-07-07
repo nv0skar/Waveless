@@ -6,7 +6,8 @@ use crate::*;
 #[instrument(skip_all)]
 pub async fn serve(
     addr: Option<SocketAddr>,
-    frontend: BoxCloneService<RouterRequest, Response<String>, Infallible>,
+    tls_paths: Option<(PathBuf, PathBuf)>,
+    frontend: Option<BoxCloneService<RouterRequest, Response<String>, Infallible>>,
 ) -> Result<ResultContext> {
     let _build_lock = RuntimeCx::acquire().build();
 
@@ -22,6 +23,25 @@ pub async fn serve(
     )
     .await
     .unwrap();
+
+    let tls_acceptor = match tls_paths {
+        Some((cert_path, key_path))
+            if try_exists(cert_path.to_owned()).await?
+                && try_exists(key_path.to_owned()).await? =>
+        {
+            let cert = CertificateDer::pem_file_iter(cert_path)?.collect::<Result<Vec<_>, _>>()?;
+            let key = PrivateKeyDer::from_pem_file(key_path)?;
+
+            let mut tls_config = rustls::ServerConfig::builder()
+                .with_no_client_auth()
+                .with_single_cert(cert, key)?;
+
+            tls_config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
+
+            Some(TlsAcceptor::from(Arc::new(tls_config)))
+        }
+        _ => None,
+    };
 
     info!(
         "Executing '{}' on {} at {}",
@@ -79,7 +99,7 @@ pub async fn serve(
         .layer(AuthCaptureLayer)
         .service(ExecuteHandler);
 
-    let router = services::RouterService::new(endpoint_svc, Some(frontend));
+    let router = services::RouterService::new(endpoint_svc, frontend);
 
     let svc = ServiceBuilder::new()
         .layer(cache)
@@ -97,12 +117,26 @@ pub async fn serve(
     loop {
         let (stream, _) = listener.accept().await?;
 
-        let io = TokioIo::new(stream);
+        let tls_acceptor = tls_acceptor.clone();
+
+        let io = TokioIo::new(match tls_acceptor {
+            Some(tls_acceptor) => match tls_acceptor.accept(stream).await {
+                Ok(tls_stream) => tokio_util::either::Either::Left(tls_stream),
+                Err(err) => {
+                    error!("TLS handshake failed. {}", err);
+                    continue;
+                }
+            },
+            None => tokio_util::either::Either::Right(stream),
+        });
 
         let svc = svc.to_owned();
 
         tokio::task::spawn(async move {
-            if let Err(err) = http1::Builder::new().serve_connection(io, svc).await {
+            if let Err(err) = AutoHttpBuilder::new(ConnExecutor)
+                .serve_connection(io, svc)
+                .await
+            {
                 error!(
                     "Internal error occurred while building a new connection handler: {:?}",
                     err

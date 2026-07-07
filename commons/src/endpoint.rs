@@ -3,7 +3,7 @@
 
 use crate::*;
 
-use execute::*;
+use http_execute::*;
 
 /// Holds all the endpoints, is a wrapper of the `CheapVec<Endpoint>` type.
 #[derive(Clone, PartialEq, Serialize, Deserialize, Getters, MutGetters, Debug)]
@@ -81,32 +81,23 @@ impl Default for Endpoints {
     }
 }
 
-/// The main endpoint definition that will be either created by the user or discovered by the compiler.
+/// The main endpoint definition.
 /// This will be then included in the Waveless project's binary.
 #[derive(Clone, Serialize, Deserialize, Constructor, Builder, Getters, Display, Debug)]
-#[display("({}) {} -> ({}, {:?}, {:?})", id, route, method, version, description)]
+#[display("{} ({:?}))", id, description)]
 #[builder(default, pattern = "mutable", setter(strip_option))]
 #[getset(get = "pub")]
 pub struct Endpoint {
     /// Endpoint's unique identifier
     id: CompactString,
 
-    /// Route of the endpoint. Note that this will be prefixed with `{api_prefix}/{version}` (if version is set).
-    route: CompactString,
-
-    /// The version of the endpoint, if no version is set the endpoint will be accessible from `{api_prefix}/{route}`.
-    #[serde(default, skip_serializing_if = "should_skip_option")]
-    version: Option<CompactString>,
-
-    /// Method of the endpoint
-    method: HttpMethod,
-
     /// Sets the database that this endpoint will operate on. If `None` the primary database will be used.
-    target_database: Option<DatabaseId>,
+    /// TODO: make this a `CheapVec<DatabaseId>`.
+    database: Option<DatabaseId>,
 
-    /// Establishes the endpoint handler. Note that if no executor is set, the server will try to handle the request internally.
-    #[serde(default, skip_serializing_if = "should_skip_option")]
-    execute: Option<Arc<dyn AnyExecute>>,
+    /// Target variant.
+    #[serde(flatten)]
+    target: Targets,
 
     /// Sets the endpoint description.
     #[serde(default, skip_serializing_if = "should_skip_option")]
@@ -115,19 +106,6 @@ pub struct Endpoint {
     /// Sets the tags of this endpoint. By default the target table name will be adde as a tag.
     #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
     tags: CheapVec<CompactString, 0>,
-
-    /// DEPRECATED: Path parameters are indicated in the route.
-    /// Sets the accepted path parameters.
-    // #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
-    // path_params: CheapVec<CompactString>,
-
-    /// Sets the accepted query parameters.
-    #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
-    query_params: CheapVec<CompactString, 0>,
-
-    /// Sets the accepted body parameters.
-    #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
-    body_params: CheapVec<CompactString, 0>,
 
     /// Whether to require auth.
     require_auth: bool,
@@ -140,26 +118,84 @@ pub struct Endpoint {
     #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
     allowed_roles: CheapVec<CompactString, 0>,
 
+    /// Whether this endpoint is deprecated.
+    #[serde(default, skip_serializing_if = "should_skip")]
+    deprecated: bool,
+}
+
+impl PartialEq for Endpoint {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id || self.target == other.target
+    }
+}
+
+impl Default for Endpoint {
+    fn default() -> Self {
+        Self {
+            id: "".into(),
+            database: Default::default(),
+            target: Targets::HttpTarget(Default::default()),
+            description: None,
+            tags: CheapVec::new_const(),
+            require_auth: false,
+            inject_user_id: false,
+            allowed_roles: Default::default(),
+            deprecated: false,
+        }
+    }
+}
+
+/// TODO: add docs here.
+#[derive(Clone, PartialEq, Serialize, Deserialize, Display, Debug)]
+#[serde(untagged)]
+pub enum Targets {
+    HttpTarget(HttpTarget),
+    SocketTarget(SocketTarget),
+}
+
+/// The HTTP endpoint definition that will be either created by the user or discovered by the compiler.
+#[derive(Clone, Serialize, Deserialize, Constructor, Builder, Getters, Display, Debug)]
+#[display("{} -> ({}, {:?})", route, method, version)]
+#[builder(default, pattern = "mutable", setter(strip_option))]
+#[getset(get = "pub")]
+pub struct HttpTarget {
+    /// Route of the endpoint. Note that this will be prefixed with `{api_prefix}/{version}` (if version is set).
+    route: CompactString,
+
+    /// The version of the endpoint, if no version is set the endpoint will be accessible from `{api_prefix}/{route}`.
+    #[serde(default, skip_serializing_if = "should_skip_option")]
+    version: Option<CompactString>,
+
+    /// Method of the endpoint
+    method: HttpMethod,
+
+    /// Establishes the endpoint handler. Note that if no executor is set, the server will try to handle the request internally.
+    #[serde(default, skip_serializing_if = "should_skip_option")]
+    execute: Option<Arc<dyn AnyHttpExecute>>,
+
+    /// Sets the accepted query parameters.
+    #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
+    query_params: CheapVec<CompactString, 0>,
+
+    /// Sets the accepted body parameters.
+    #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
+    body_params: CheapVec<CompactString, 0>,
+
     /// Whether to capture all the request's params.
     /// Useful for internal executors and generic trait implementations.
     #[serde(default, skip_serializing_if = "should_skip")]
     capture_all_params: bool,
-
-    /// Whether this endpoint is deprecated.
-    #[serde(default, skip_serializing_if = "should_skip")]
-    deprecated: bool,
 
     /// Whether this endpoint has been automatically generated.
     #[serde(default, skip_serializing_if = "auto_generated_skip")]
     auto_generated: bool,
 }
 
-impl PartialEq for Endpoint {
+impl PartialEq for HttpTarget {
     fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
-            || (self.method == other.method
-                && self.route.trim_matches('/') == other.route.trim_matches('/')
-                && self.version == other.version)
+        self.method == other.method
+            && self.route.trim_matches('/') == other.route.trim_matches('/')
+            && self.version == other.version
     }
 }
 
@@ -190,25 +226,40 @@ fn auto_generated_skip(value: &bool) -> bool {
     should_skip(&(!*value))
 }
 
-impl Default for Endpoint {
+impl Default for HttpTarget {
     fn default() -> Self {
         Self {
-            id: "".into(),
             route: "".into(),
             version: None,
             method: HttpMethod::Get,
-            target_database: Default::default(),
             execute: None,
-            description: None,
-            tags: CheapVec::new_const(),
             query_params: Default::default(),
             body_params: Default::default(),
-            require_auth: false,
-            inject_user_id: false,
-            allowed_roles: Default::default(),
             capture_all_params: false,
-            deprecated: false,
             auto_generated: false,
         }
+    }
+}
+
+/// The socket endpoint definition.
+#[derive(Clone, Serialize, Deserialize, Constructor, Builder, Getters, Display, Debug)]
+#[display("(Socket) {:?}", execute)]
+#[builder(default, pattern = "mutable", setter(strip_option))]
+#[getset(get = "pub")]
+pub struct SocketTarget {
+    /// Establishes the endpoint handler.
+    #[serde(default, skip_serializing_if = "should_skip_option")]
+    execute: Option<Arc<dyn AnyHttpExecute>>, // TODO: this shouldn't be `AnyHttpExecute`.
+}
+
+impl PartialEq for SocketTarget {
+    fn eq(&self, _: &Self) -> bool {
+        false
+    }
+}
+
+impl Default for SocketTarget {
+    fn default() -> Self {
+        Self { execute: None }
     }
 }

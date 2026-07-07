@@ -9,7 +9,7 @@ use super::*;
 #[derive(Clone, Constructor, Debug)]
 pub struct AuthCapture<S>
 where
-    S: Service<RequestParamsExtractorRequest, Response = ExecuteResponse, Error = RequestError>,
+    S: Service<RequestParamsExtractorRequest, Response = HttpResponse, Error = RequestError>,
 {
     inner: S,
 }
@@ -18,7 +18,7 @@ pub struct AuthCaptureLayer;
 
 impl<S> Layer<S> for AuthCaptureLayer
 where
-    S: Service<RequestParamsExtractorRequest, Response = ExecuteResponse, Error = RequestError>,
+    S: Service<RequestParamsExtractorRequest, Response = HttpResponse, Error = RequestError>,
 {
     type Service = AuthCapture<S>;
 
@@ -29,7 +29,7 @@ where
 
 impl<S> Service<RequestParamsExtractorRequest> for AuthCapture<S>
 where
-    S: Service<RequestParamsExtractorRequest, Response = ExecuteResponse, Error = RequestError>
+    S: Service<RequestParamsExtractorRequest, Response = HttpResponse, Error = RequestError>
         + Clone
         + Send
         + 'static,

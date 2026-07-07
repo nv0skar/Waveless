@@ -7,7 +7,7 @@ use crate::*;
 #[derive(Clone, Constructor, Debug)]
 pub struct SessionWatchdog<S>
 where
-    S: Service<RequestParamsExtractorRequest, Response = ExecuteResponse, Error = RequestError>,
+    S: Service<RequestParamsExtractorRequest, Response = HttpResponse, Error = RequestError>,
 {
     inner: S,
 }
@@ -16,7 +16,7 @@ pub struct SessionWatchdogLayer;
 
 impl<S> Layer<S> for SessionWatchdogLayer
 where
-    S: Service<RequestParamsExtractorRequest, Response = ExecuteResponse, Error = RequestError>,
+    S: Service<RequestParamsExtractorRequest, Response = HttpResponse, Error = RequestError>,
 {
     type Service = SessionWatchdog<S>;
 
@@ -27,7 +27,7 @@ where
 
 impl<S> Service<RequestParamsExtractorRequest> for SessionWatchdog<S>
 where
-    S: Service<RequestParamsExtractorRequest, Response = ExecuteResponse, Error = RequestError>
+    S: Service<RequestParamsExtractorRequest, Response = HttpResponse, Error = RequestError>
         + Clone
         + Send
         + 'static,
@@ -49,7 +49,7 @@ where
     fn call(&mut self, cx: RequestParamsExtractorRequest) -> Self::Future {
         let mut inner = self.inner.to_owned();
 
-        Box::pin(async move {
+        let future: Pin<_> = Box::pin(async move {
             let (headers, endpoint, mut request_params, request_body) = cx;
 
             // Checks whether the current endpoint requires auth.
@@ -214,6 +214,8 @@ where
                     .call((headers, endpoint, request_params, request_body))
                     .await
             }
-        })
+        }).into();
+
+        future as Self::Future // `rust-analyzer` complains here.
     }
 }

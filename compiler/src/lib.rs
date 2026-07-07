@@ -12,7 +12,7 @@ pub use compiler_cx::*;
 use waveless_commons::*;
 
 use endpoint::*;
-use execute::mysql::*;
+use http_execute::mysql::*;
 use waveless_commons::build::*;
 
 use rustyrosetta::*;

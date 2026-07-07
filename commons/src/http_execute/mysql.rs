@@ -75,7 +75,7 @@ pub enum MySQLQueryVariants {
 
 #[typetag::serde(name = "MySQL")]
 #[async_trait]
-impl AnyExecute for MySQLExecute {
+impl AnyHttpExecute for MySQLExecute {
     /// Beware that the params are expected to be `ExecuteParams::StringMap`
     /// and the output will be a `serde_json::Value` that will be
     /// further serialized into JSON.
@@ -83,8 +83,8 @@ impl AnyExecute for MySQLExecute {
         &self,
         method: HttpMethod,
         db_conn: Arc<dyn AnyDatabaseConnection>,
-        input: ExecuteRequest,
-    ) -> Result<ExecuteResponse, RequestError> {
+        input: HttpRequest,
+    ) -> Result<HttpResponse, RequestError> {
         let mut queries = self.queries.iter();
 
         let mut res_buffer = CheapVec::<serde_json::Value>::new();
@@ -248,12 +248,12 @@ impl AnyExecute for MySQLExecute {
         }
 
         match res_buffer.len() {
-            0 => Ok(ExecuteResponse::new(None, None)),
-            1 => Ok(ExecuteResponse::new(
+            0 => Ok(HttpResponse::new(None, None)),
+            1 => Ok(HttpResponse::new(
                 None,
                 Some(BodyValue::Json(res_buffer.last().unwrap().to_owned())),
             )),
-            _ => Ok(ExecuteResponse::new(
+            _ => Ok(HttpResponse::new(
                 None,
                 Some(BodyValue::Json(json!(res_buffer))),
             )),

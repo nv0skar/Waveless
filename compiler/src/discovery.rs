@@ -115,9 +115,6 @@ pub async fn discover() -> Result<(
                                         endpoint_one
                                             .id(format!("{}_GetOne", table.info.name.to_owned())
                                                 .into())
-                                            .method(*method)
-                                            .version("v1".into())
-                                            .route(route_one.to_owned())
                                             .description(
                                                 format!(
                                                     "Get row from {} by it's primary key.",
@@ -125,32 +122,37 @@ pub async fn discover() -> Result<(
                                                 )
                                                 .into(),
                                             )
-                                            .target_database(db_config.id().to_owned())
-                                            .execute(Arc::new(MySQLExecute::from(
-                                                MySQLQueryVariants::SingleQuery {
-                                                    query: MySQLQuery::new(
-                                                        format!(
-                                                            "SELECT * FROM {} WHERE {} = {}",
-                                                            table.info.name, pk_id, "{id}"
-                                                        )
-                                                        .into(),
-                                                        true,
-                                                        MySQLBehaviour::Unique,
-                                                    ),
-                                                },
-                                            )))
+                                            .database(db_config.id().to_owned())
+                                            .target(Targets::HttpTarget(HttpTargetBuilder::default()
+                                                .method(*method)
+                                                .version("v1".into())
+                                                .route(route_one.to_owned())
+                                                .execute(Arc::new(MySQLExecute::from(
+                                                    MySQLQueryVariants::SingleQuery {
+                                                        query: MySQLQuery::new(
+                                                            format!(
+                                                                "SELECT * FROM {} WHERE {} = {}",
+                                                                table.info.name, pk_id, "{id}"
+                                                            )
+                                                            .into(),
+                                                            true,
+                                                            MySQLBehaviour::Unique,
+                                                        ),
+                                                    },
+                                                )))
+                                                .query_params(CheapVec::new_const())
+                                                .body_params(CheapVec::new_const())
+                                                .capture_all_params(false)
+                                                .auto_generated(true)
+                                                .build()?))
                                             .tags(CheapVec::from_vec(vec![
                                                 table.info.name.to_compact_string(),
                                                 "get_one".into(),
                                             ]))
-                                            .query_params(CheapVec::new_const())
-                                            .body_params(CheapVec::new_const())
                                             .require_auth(false)
                                             .inject_user_id(false)
                                             .allowed_roles(CheapVec::new_const())
-                                            .capture_all_params(false)
-                                            .deprecated(false)
-                                            .auto_generated(true);
+                                            .deprecated(false);
 
                                         discovered_endpoints.add(endpoint_one.build()?)?;
                                     }
@@ -161,30 +163,35 @@ pub async fn discover() -> Result<(
 
                                 endpoint_many
                                     .id(format!("{}_GetMany", table.info.name.to_owned()).into())
-                                    .method(*method)
-                                    .version("v1".into())
-                                    .route(route_many.to_owned())
+                                    .database(db_config.id().to_owned())
+                                    .target(Targets::HttpTarget(
+                                        HttpTargetBuilder::default()
+                                            .method(*method)
+                                            .version("v1".into())
+                                            .route(route_many.to_owned())
+                                            .execute(Arc::new(MySQLExecute::from(
+                                                MySQLQueryVariants::new_raw(
+                                                    format!("SELECT * FROM {}", table.info.name,)
+                                                        .into(),
+                                                ),
+                                            )))
+                                            .query_params(CheapVec::new_const())
+                                            .body_params(CheapVec::new_const())
+                                            .capture_all_params(false)
+                                            .auto_generated(true)
+                                            .build()?,
+                                    ))
                                     .description(
                                         format!("Get all rows from {}.", table.info.name).into(),
                                     )
-                                    .target_database(db_config.id().to_owned())
-                                    .execute(Arc::new(MySQLExecute::from(
-                                        MySQLQueryVariants::new_raw(
-                                            format!("SELECT * FROM {}", table.info.name,).into(),
-                                        ),
-                                    )))
                                     .tags(CheapVec::from_vec(vec![
                                         table.info.name.to_compact_string(),
                                         "get_all".into(),
                                     ]))
-                                    .query_params(CheapVec::new_const())
-                                    .body_params(CheapVec::new_const())
                                     .require_auth(false)
                                     .inject_user_id(false)
                                     .allowed_roles(CheapVec::new_const())
-                                    .capture_all_params(false)
-                                    .deprecated(false)
-                                    .auto_generated(true);
+                                    .deprecated(false);
 
                                 discovered_endpoints.add(endpoint_many.build()?)?;
                             }
@@ -193,53 +200,62 @@ pub async fn discover() -> Result<(
 
                                 endpoint
                                     .id(format!("{}_Post", table.info.name).into())
-                                    .method(*method)
-                                    .version("v1".into())
-                                    .route(route_many.to_owned())
+                                    .database(db_config.id().to_owned())
+                                    .target(Targets::HttpTarget(
+                                        HttpTargetBuilder::default()
+                                            .method(*method)
+                                            .version("v1".into())
+                                            .route(route_many.to_owned())
+                                            .execute(Arc::new(MySQLExecute::from(
+                                                MySQLQueryVariants::new_raw_with_not_include(
+                                                    format!(
+                                                        "INSERT INTO {} ({}) VALUES ({})",
+                                                        table.info.name,
+                                                        columns_names
+                                                            .iter()
+                                                            .fold(
+                                                                String::new(),
+                                                                |last, next| format!(
+                                                                    "{}, {}",
+                                                                    last, next
+                                                                )
+                                                            )
+                                                            .trim_matches(|c: char| c
+                                                                .is_whitespace()
+                                                                || c == ','),
+                                                        columns_names
+                                                            .iter()
+                                                            .fold(
+                                                                String::new(),
+                                                                |last, next| format!(
+                                                                    "{}, {{ {} }}",
+                                                                    last, next
+                                                                )
+                                                            )
+                                                            .trim_matches(|c: char| c
+                                                                .is_whitespace()
+                                                                || c == ','),
+                                                    )
+                                                    .into(),
+                                                ),
+                                            )))
+                                            .query_params(CheapVec::new_const())
+                                            .body_params(columns_names.to_owned())
+                                            .capture_all_params(false)
+                                            .auto_generated(true)
+                                            .build()?,
+                                    ))
                                     .description(
                                         format!("Insert data into {}.", table.info.name).into(),
                                     )
-                                    .target_database(db_config.id().to_owned())
-                                    .execute(Arc::new(MySQLExecute::from(
-                                        MySQLQueryVariants::new_raw_with_not_include(
-                                            format!(
-                                                "INSERT INTO {} ({}) VALUES ({})",
-                                                table.info.name,
-                                                columns_names
-                                                    .iter()
-                                                    .fold(String::new(), |last, next| format!(
-                                                        "{}, {}",
-                                                        last, next
-                                                    ))
-                                                    .trim_matches(
-                                                        |c: char| c.is_whitespace() || c == ','
-                                                    ),
-                                                columns_names
-                                                    .iter()
-                                                    .fold(String::new(), |last, next| format!(
-                                                        "{}, {{ {} }}",
-                                                        last, next
-                                                    ))
-                                                    .trim_matches(
-                                                        |c: char| c.is_whitespace() || c == ','
-                                                    ),
-                                            )
-                                            .into(),
-                                        ),
-                                    )))
-                                    .body_params(columns_names.to_owned())
                                     .tags(CheapVec::from_vec(vec![
                                         table.info.name.to_compact_string(),
                                         "post".into(),
                                     ]))
-                                    .query_params(CheapVec::new_const())
-                                    .body_params(columns_names.to_owned())
                                     .require_auth(false)
                                     .inject_user_id(false)
                                     .allowed_roles(CheapVec::new_const())
-                                    .capture_all_params(false)
-                                    .deprecated(false)
-                                    .auto_generated(true);
+                                    .deprecated(false);
 
                                 discovered_endpoints.add(endpoint.build()?)?;
                             }
@@ -248,9 +264,45 @@ pub async fn discover() -> Result<(
 
                                 endpoint
                                     .id(format!("{}_Put", table.info.name).into())
-                                    .method(*method)
-                                    .version("v1".into())
-                                    .route(route_one.to_owned())
+                                    .database(db_config.id().to_owned())
+                                    .target(Targets::HttpTarget(
+                                        HttpTargetBuilder::default()
+                                            .method(*method)
+                                            .version("v1".into())
+                                            .route(route_one.to_owned())
+                                            .execute(Arc::new(MySQLExecute::from(
+                                                MySQLQueryVariants::new_raw_with_not_include(
+                                                    format!(
+                                                        "UPDATE {} SET {} WHERE {} = {} ",
+                                                        table.info.name,
+                                                        columns_names
+                                                            .iter()
+                                                            .map(|name| format!(
+                                                                "{} = {{ {} }}",
+                                                                name, name
+                                                            ))
+                                                            .fold(
+                                                                String::new(),
+                                                                |last, next| format!(
+                                                                    "{}, {}",
+                                                                    last, next
+                                                                )
+                                                            )
+                                                            .trim_matches(|c: char| c
+                                                                .is_whitespace()
+                                                                || c == ','),
+                                                        pk_id,
+                                                        "{id}"
+                                                    )
+                                                    .into(),
+                                                ),
+                                            )))
+                                            .query_params(CheapVec::new_const())
+                                            .body_params(columns_names.to_owned())
+                                            .capture_all_params(false)
+                                            .auto_generated(true)
+                                            .build()?,
+                                    ))
                                     .description(
                                         format!(
                                             "Updates {} on row with the given primary key.",
@@ -258,43 +310,14 @@ pub async fn discover() -> Result<(
                                         )
                                         .into(),
                                     )
-                                    .target_database(db_config.id().to_owned())
-                                    .execute(Arc::new(MySQLExecute::from(
-                                        MySQLQueryVariants::new_raw_with_not_include(
-                                            format!(
-                                                "UPDATE {} SET {} WHERE {} = {} ",
-                                                table.info.name,
-                                                columns_names
-                                                    .iter()
-                                                    .map(|name| format!(
-                                                        "{} = {{ {} }}",
-                                                        name, name
-                                                    ))
-                                                    .fold(String::new(), |last, next| format!(
-                                                        "{}, {}",
-                                                        last, next
-                                                    ))
-                                                    .trim_matches(
-                                                        |c: char| c.is_whitespace() || c == ','
-                                                    ),
-                                                pk_id,
-                                                "{id}"
-                                            )
-                                            .into(),
-                                        ),
-                                    )))
                                     .tags(CheapVec::from_vec(vec![
                                         table.info.name.to_compact_string(),
                                         "put".into(),
                                     ]))
-                                    .query_params(CheapVec::new_const())
-                                    .body_params(columns_names.to_owned())
                                     .require_auth(false)
                                     .inject_user_id(false)
                                     .allowed_roles(CheapVec::new_const())
-                                    .capture_all_params(false)
-                                    .deprecated(false)
-                                    .auto_generated(true);
+                                    .deprecated(false);
 
                                 discovered_endpoints.add(endpoint.build()?)?;
                             }
@@ -303,9 +326,27 @@ pub async fn discover() -> Result<(
 
                                 endpoint
                                     .id(format!("{}_Delete", table.info.name).into())
-                                    .method(*method)
-                                    .version("v1".into())
-                                    .route(route_one.to_owned())
+                                    .database(db_config.id().to_owned())
+                                    .target(Targets::HttpTarget(
+                                        HttpTargetBuilder::default()
+                                            .method(*method)
+                                            .version("v1".into())
+                                            .route(route_one.to_owned())
+                                            .execute(Arc::new(MySQLExecute::from(
+                                                MySQLQueryVariants::new_raw_with_not_include(
+                                                    format!(
+                                                        "DELETE FROM {} WHERE {} = {} ",
+                                                        table.info.name, pk_id, "{id}"
+                                                    )
+                                                    .into(),
+                                                ),
+                                            )))
+                                            .query_params(CheapVec::new_const())
+                                            .body_params(CheapVec::new_const())
+                                            .capture_all_params(false)
+                                            .auto_generated(true)
+                                            .build()?,
+                                    ))
                                     .description(
                                         format!(
                                             "Deletes data from {} with the given primary key.",
@@ -313,29 +354,14 @@ pub async fn discover() -> Result<(
                                         )
                                         .into(),
                                     )
-                                    .target_database(db_config.id().to_owned())
-                                    .execute(Arc::new(MySQLExecute::from(
-                                        MySQLQueryVariants::new_raw_with_not_include(
-                                            format!(
-                                                "DELETE FROM {} WHERE {} = {} ",
-                                                table.info.name, pk_id, "{id}"
-                                            )
-                                            .into(),
-                                        ),
-                                    )))
-                                    .body_params(columns_names.to_owned())
                                     .tags(CheapVec::from_vec(vec![
                                         table.info.name.to_compact_string(),
                                         "delete".into(),
                                     ]))
-                                    .query_params(CheapVec::new_const())
-                                    .body_params(CheapVec::new_const())
                                     .require_auth(false)
                                     .inject_user_id(false)
                                     .allowed_roles(CheapVec::new_const())
-                                    .capture_all_params(false)
-                                    .deprecated(false)
-                                    .auto_generated(true);
+                                    .deprecated(false);
 
                                 discovered_endpoints.add(endpoint.build()?)?;
                             }

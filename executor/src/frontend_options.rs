@@ -14,5 +14,11 @@ pub enum ExecutorFrontendOptions {
 
         #[arg(help = "Listening address.")]
         addr: Option<SocketAddr>,
+
+        #[arg(long = "tls_cert", help = "TLS cert path.")]
+        tls_cert: Option<PathBuf>,
+
+        #[arg(long = "tls_cert_key", help = "TLS cert key path.")]
+        tls_cert_key: Option<PathBuf>,
     },
 }

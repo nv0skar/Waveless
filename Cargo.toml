@@ -15,6 +15,11 @@ rustyrosetta = { git = "https://github.com/nv0skar/RustyRosetta.git", tag = "rus
 
 tokio = "1.52"
 
+tokio-util = "0.7"
+
+tokio-rustls = { version = "0.26", default-features = false }
+rustls = { version = "0.23", default-features = false }
+
 futures = "0.3.32"
 
 serde = { version = "1.0.228", features = ["derive", "rc"] }

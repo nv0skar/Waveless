@@ -1,12 +1,14 @@
 // Waveless
 // Copyright (C) 2026 Oscar Alvarez Gonzalez
 
+pub mod conn_executor;
 pub mod frontend_options;
 pub mod internal_endpoints;
 pub mod runtime_cx;
 pub mod server;
 pub mod services;
 
+pub use conn_executor::*;
 pub use internal_endpoints::*;
 pub use runtime_cx::*;
 pub use services::*;
@@ -15,7 +17,7 @@ use waveless_commons::*;
 
 use waveless_commons::build::*;
 use waveless_commons::endpoint::*;
-use waveless_commons::execute::*;
+use waveless_commons::http_execute::*;
 
 use rustyrosetta::*;
 
@@ -26,6 +28,7 @@ use std::fs::read;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::pin::Pin;
+use std::sync::Arc;
 use std::task::Poll;
 use std::time::Duration;
 
@@ -38,11 +41,18 @@ use futures::future::BoxFuture;
 use getset::*;
 use http::{HeaderName, HeaderValue, StatusCode};
 use http_body_util::BodyExt;
-use hyper::{body::Incoming, server::conn::http1, *};
-use hyper_util::{rt::TokioIo, service::TowerToHyperService};
+use hyper::{body::Incoming, *};
+use hyper_util::{
+    rt::TokioIo, server::conn::auto::Builder as AutoHttpBuilder, service::TowerToHyperService,
+};
 use matchit::*;
+use rustls::pki_types::{CertificateDer, PrivateKeyDer, pem::PemObject};
 use serde_json::json;
-use tokio::sync::{OnceCell, RwLock};
+use tokio::{
+    fs::try_exists,
+    sync::{OnceCell, RwLock},
+};
+use tokio_rustls::*;
 use tower::{Layer, Service, ServiceBuilder, util::BoxCloneService};
 use tower_governor::{governor::*, key_extractor::*};
 use tower_http::{compression::*, cors::*, timeout::*};

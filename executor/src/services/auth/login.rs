@@ -8,7 +8,7 @@ use crate::*;
 pub struct LoginCaptured;
 
 impl Service<RequestParamsExtractorRequest> for LoginCaptured {
-    type Response = ExecuteResponse;
+    type Response = HttpResponse;
 
     type Error = RequestError;
 
@@ -124,7 +124,7 @@ impl Service<RequestParamsExtractorRequest> for LoginCaptured {
                         .into(),
                     );
 
-                    Ok(ExecuteResponse::new(Some(headers), Some(BodyValue::Json(
+                    Ok(HttpResponse::new(Some(headers), Some(BodyValue::Json(
                         json!({
                             "token": session_token
                         }),

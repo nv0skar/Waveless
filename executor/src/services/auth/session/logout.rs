@@ -8,7 +8,7 @@ use crate::*;
 pub struct LogoutCaptured;
 
 impl Service<RequestParamsExtractorRequest> for LogoutCaptured {
-    type Response = ExecuteResponse;
+    type Response = HttpResponse;
 
     type Error = RequestError;
 
@@ -23,6 +23,10 @@ impl Service<RequestParamsExtractorRequest> for LogoutCaptured {
         let future: Pin<_> = Box::pin(async move {
             let (_, endpoint, request_params, _) = cx;
 
+            let Targets::HttpTarget(http_target) = endpoint.target() else {
+                unreachable!()
+            };
+
             let auth_config = RuntimeCx::acquire()
                 .build()
                 .read()
@@ -34,7 +38,7 @@ impl Service<RequestParamsExtractorRequest> for LogoutCaptured {
                     "Authentication is not set for the current build."
                 )))?;
 
-            let all_sessions = endpoint.route().split("/").last().unwrap().to_lowercase() == "all";
+            let all_sessions = http_target.route().split("/").last().unwrap().to_lowercase() == "all";
 
             let user_id =
                 match request_params
@@ -75,7 +79,7 @@ impl Service<RequestParamsExtractorRequest> for LogoutCaptured {
 
             session_method.invalidate(session_db, user_id, token).await?;
 
-            Ok(ExecuteResponse::new(None, Some(BodyValue::Json(json!({})))))
+            Ok(HttpResponse::new(None, Some(BodyValue::Json(json!({})))))
         })
         .into();
 

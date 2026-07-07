@@ -11,7 +11,6 @@ use waveless_executor::{frontend_options::*, server::*, *};
 use anyhow::{Result, anyhow};
 use clap::Parser;
 use mimalloc::MiMalloc;
-use tower::{service_fn, util::BoxCloneService};
 
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
@@ -48,7 +47,12 @@ async fn try_main() -> Result<ResultContext> {
 
     // Handle frontend subcommands
     match cli.subcommand {
-        Some(ExecutorFrontendOptions::Run { path, addr }) => {
+        Some(ExecutorFrontendOptions::Run {
+            path,
+            addr,
+            tls_cert,
+            tls_cert_key,
+        }) => {
             RuntimeCx::set_cx(RuntimeCx::from_path(path).await?);
 
             let _build_lock = RuntimeCx::acquire().build();
@@ -65,13 +69,12 @@ async fn try_main() -> Result<ResultContext> {
             DatabasesConnections::load(_build_lock.read().await.config().databases().to_owned())
                 .await?;
 
-            serve(
-                addr,
-                BoxCloneService::new(service_fn(|_| async {
-                    todo!("Frontend not implemented yet.")
-                })),
-            )
-            .await?;
+            let tls_paths = match (tls_cert, tls_cert_key) {
+                (Some(tls_cert), Some(tls_cert_key)) => Some((tls_cert, tls_cert_key)),
+                _ => None,
+            };
+
+            serve(addr, tls_paths, None).await?;
 
             Ok("".into())
         }

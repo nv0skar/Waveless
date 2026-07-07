@@ -6,7 +6,7 @@ pub mod build;
 pub mod databases;
 pub mod endpoint;
 pub mod entry;
-pub mod execute;
+pub mod http_execute;
 pub mod logging;
 pub mod project;
 pub mod runtime;

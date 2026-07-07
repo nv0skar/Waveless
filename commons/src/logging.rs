@@ -12,7 +12,7 @@ pub fn subscribe_logging(debug: bool) -> Result<()> {
     let stdout_layer = fmt::layer()
         .with_writer(std::io::stdout)
         .without_time()
-        .with_target(false)
+        .with_target(true)
         .with_filter(if debug {
             LevelFilter::DEBUG
         } else {

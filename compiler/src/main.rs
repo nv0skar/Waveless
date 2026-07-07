@@ -15,13 +15,13 @@ use databases::*;
 use rustyrosetta::*;
 
 use std::net::SocketAddr;
+use std::path::PathBuf;
 
 use anyhow::{Result, anyhow};
 use clap::{Parser, Subcommand};
 use compact_str::*;
 use mimalloc::MiMalloc;
 use nestify::nest;
-use tower::{service_fn, util::BoxCloneService};
 use tracing::*;
 
 #[global_allocator]
@@ -68,6 +68,12 @@ nest! {
                 Run {
                     #[arg(help = "Listening address.")]
                     addr: Option<SocketAddr>,
+
+                    #[arg(long = "tls_cert", help = "TLS cert path.")]
+                    tls_cert: Option<PathBuf>,
+
+                    #[arg(long = "tls_cert_key", help = "TLS cert key path.")]
+                    tls_cert_key: Option<PathBuf>,
                 },
 
                 /// Builds the current project.
@@ -99,7 +105,11 @@ async fn try_main() -> Result<ResultContext> {
     // Handle frontend subcommands
     match cli.subcommand {
         Some(Subcommands::New { name }) => new_project(name),
-        Some(Subcommands::Run { addr }) => {
+        Some(Subcommands::Run {
+            addr,
+            tls_cert,
+            tls_cert_key,
+        }) => {
             CompilerCx::set_cx(CompilerCx::from_workspace().await?);
 
             let build = build::<ExecutorBuild>().await?.left().unwrap();
@@ -120,13 +130,12 @@ async fn try_main() -> Result<ResultContext> {
             DatabasesConnections::load(_build_lock.read().await.config().databases().to_owned())
                 .await?;
 
-            serve(
-                addr,
-                BoxCloneService::new(service_fn(|_| async {
-                    todo!("Frontend not implemented yet.")
-                })),
-            )
-            .await?;
+            let tls_paths = match (tls_cert, tls_cert_key) {
+                (Some(tls_cert), Some(tls_cert_key)) => Some((tls_cert, tls_cert_key)),
+                _ => None,
+            };
+
+            serve(addr, tls_paths, None).await?;
 
             return Ok("".into());
         }
@@ -137,7 +146,12 @@ async fn try_main() -> Result<ResultContext> {
         }
         Some(Subcommands::Bootstrap) => todo!(),
         Some(Subcommands::Executor(executor_options)) => match executor_options {
-            ExecutorFrontendOptions::Run { path, addr } => {
+            ExecutorFrontendOptions::Run {
+                path,
+                addr,
+                tls_cert,
+                tls_cert_key,
+            } => {
                 RuntimeCx::set_cx(RuntimeCx::from_path(path).await?);
 
                 let _build_lock = RuntimeCx::acquire().build();
@@ -156,13 +170,12 @@ async fn try_main() -> Result<ResultContext> {
                 )
                 .await?;
 
-                serve(
-                    addr,
-                    BoxCloneService::new(service_fn(|_| async {
-                        todo!("Frontend not implemented yet.")
-                    })),
-                )
-                .await?;
+                let tls_paths = match (tls_cert, tls_cert_key) {
+                    (Some(tls_cert), Some(tls_cert_key)) => Some((tls_cert, tls_cert_key)),
+                    _ => None,
+                };
+
+                serve(addr, tls_paths, None).await?;
 
                 Ok("".into())
             }

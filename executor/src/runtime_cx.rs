@@ -100,24 +100,26 @@ impl RuntimeCx {
         let prefix = prefix.trim_matches('/');
 
         for endpoint in endpoints {
-            let route_parts: CheapVec<Option<CompactString>, 3> = CheapVec::from_buf([
-                Some(prefix.into()),
-                endpoint
-                    .version()
-                    .to_owned()
-                    .map(|version| version.trim_matches('/').into()),
-                Some(endpoint.route().trim_matches('/').into()),
-            ]);
+            if let Targets::HttpTarget(http_target) = endpoint.target() {
+                let route_parts: CheapVec<Option<CompactString>, 3> = CheapVec::from_buf([
+                    Some(prefix.into()),
+                    http_target
+                        .version()
+                        .to_owned()
+                        .map(|version| version.trim_matches('/').into()),
+                    Some(http_target.route().trim_matches('/').into()),
+                ]);
 
-            let route = route_parts.into_iter().flatten().join_compact("/");
+                let route = route_parts.into_iter().flatten().join_compact("/");
 
-            if let Some(mut router) = router.get_mut(endpoint.method()) {
-                let _ = router.insert(route, endpoint.to_owned()); // the error here is ignored.
-            } else {
-                let mut new_router = Router::new();
-                new_router.insert(route, endpoint.to_owned())?;
+                if let Some(mut router) = router.get_mut(http_target.method()) {
+                    let _ = router.insert(route, endpoint.to_owned()); // the error here is ignored.
+                } else {
+                    let mut new_router = Router::new();
+                    new_router.insert(route, endpoint.to_owned())?;
 
-                let _ = router.insert(endpoint.method().to_owned(), new_router);
+                    let _ = router.insert(http_target.method().to_owned(), new_router);
+                }
             }
         }
 

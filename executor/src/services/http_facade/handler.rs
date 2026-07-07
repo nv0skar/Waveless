@@ -10,7 +10,7 @@ use super::*;
 pub struct ExecuteHandler;
 
 impl Service<RequestParamsExtractorRequest> for ExecuteHandler {
-    type Response = ExecuteResponse;
+    type Response = HttpResponse;
 
     type Error = RequestError;
 
@@ -22,19 +22,24 @@ impl Service<RequestParamsExtractorRequest> for ExecuteHandler {
 
     /// Handles endpoints requests.
     fn call(&mut self, cx: RequestParamsExtractorRequest) -> Self::Future {
-        Box::pin(async move {
+        let future: Pin<_> = Box::pin(async move {
             let (_, endpoint, request_params, request_body) = cx;
 
             // Retrieves the endpoint's target database.
-            let database_id = endpoint.target_database();
+            let database_id = endpoint.database();
 
             let db_conn = DATABASES_CONNS
                 .get()
                 .unwrap()
                 .search(database_id.to_owned())?;
 
+            // Force the endpoint to have the HTTP target.
+            let Targets::HttpTarget(http_target) = endpoint.target() else {
+                unreachable!()
+            };
+
             // Executes request.
-            let Some(execute_strategy) = endpoint.execute() else {
+            let Some(execute_strategy) = http_target.execute() else {
                 return Err(RequestError::Expected(
                     StatusCode::INTERNAL_SERVER_ERROR,
                     format!("The route doesn't have any executor defined. HINT: Go to your project's endpoints folder and check that '{}' has an executor set.", endpoint.id()).into(),
@@ -43,11 +48,13 @@ impl Service<RequestParamsExtractorRequest> for ExecuteHandler {
 
             execute_strategy
                 .execute(
-                    *endpoint.method(),
+                    *http_target.method(),
                     db_conn,
-                    ExecuteRequest::new(request_params, request_body),
+                    HttpRequest::new(request_params, request_body),
                 )
                 .await
-        })
+        }).into();
+
+        future as Self::Future // `rust-analyzer` complains here.
     }
 }

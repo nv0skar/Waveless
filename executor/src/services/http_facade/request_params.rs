@@ -3,8 +3,6 @@
 
 use crate::*;
 
-use super::*;
-
 pub type RequestParamsExtractorRequest = (
     HeaderMap,
     Endpoint,
@@ -16,7 +14,7 @@ pub type RequestParamsExtractorRequest = (
 #[derive(Clone, Constructor, Debug)]
 pub struct RequestParamsExtractor<S>
 where
-    S: Service<RequestParamsExtractorRequest, Response = ExecuteResponse, Error = RequestError>,
+    S: Service<RequestParamsExtractorRequest, Response = HttpResponse, Error = RequestError>,
 {
     inner: S,
 }
@@ -25,7 +23,7 @@ pub struct RequestParamsExtractorLayer;
 
 impl<S> Layer<S> for RequestParamsExtractorLayer
 where
-    S: Service<RequestParamsExtractorRequest, Response = ExecuteResponse, Error = RequestError>,
+    S: Service<RequestParamsExtractorRequest, Response = HttpResponse, Error = RequestError>,
 {
     type Service = RequestParamsExtractor<S>;
 
@@ -36,7 +34,7 @@ where
 
 impl<S> Service<RouterRequest> for RequestParamsExtractor<S>
 where
-    S: Service<RequestParamsExtractorRequest, Response = ExecuteResponse, Error = RequestError>
+    S: Service<RequestParamsExtractorRequest, Response = HttpResponse, Error = RequestError>
         + Clone
         + Send
         + 'static,
@@ -57,9 +55,13 @@ where
     fn call(&mut self, cx: RouterRequest) -> Self::Future {
         let mut inner = self.inner.to_owned();
 
-        Box::pin(async move {
+        let future: Pin<_> = Box::pin(async move {
             let (request, Some((mut request_params, endpoint))) = cx else {
                 panic!("Unexpected behaviour");
+            };
+
+            let Targets::HttpTarget(http_target) = endpoint.target() else {
+                unreachable!()
             };
 
             let mut request_body = Bytes::new();
@@ -73,12 +75,12 @@ where
                         .ok_or(anyhow!("Cannot parse request's query."))
                         .unwrap()
                 });
-                if *endpoint.capture_all_params() {
+                if *http_target.capture_all_params() {
                     for (key, value) in queries {
                         request_params.insert(key.into(), ParamValue::Client(Some(value.into())));
                     }
                 } else {
-                    for key in endpoint.query_params() {
+                    for key in http_target.query_params() {
                         let mut owned_iterator = queries.to_owned();
                         match owned_iterator.find(|elem| elem.0 == key) {
                             Some((key, value)) => request_params
@@ -91,7 +93,7 @@ where
             }
 
             // Searches for body params.
-            if !endpoint.body_params().is_empty() || *endpoint.capture_all_params() {
+            if !http_target.body_params().is_empty() || *http_target.capture_all_params() {
                 request_body = CheapVec::from_vec(
                     request
                         .collect()
@@ -120,7 +122,7 @@ where
                         ));
                     };
 
-                    if *endpoint.capture_all_params() {
+                    if *http_target.capture_all_params() {
                         for (key, value) in json_body.as_object().ok_or(RequestError::Expected(
                             StatusCode::BAD_REQUEST,
                             "Cannot extract the parameters from the request's body.".into(),
@@ -137,7 +139,7 @@ where
                             );
                         }
                     } else {
-                        for key in endpoint.body_params() {
+                        for key in http_target.body_params() {
                             let value = {
                                 match json_body
                                     .as_object()
@@ -161,7 +163,7 @@ where
                             request_params.insert(key.to_owned(), ParamValue::Client(value));
                         }
                     }
-                } else if !endpoint.body_params().is_empty() {
+                } else if !http_target.body_params().is_empty() {
                     return Err(RequestError::Expected(
                         StatusCode::BAD_REQUEST,
                         "The request's body for this endpoint cannot be empty.".into(),
@@ -173,5 +175,8 @@ where
                 .call((headers, endpoint, request_params, request_body))
                 .await
         })
+        .into();
+
+        future as Self::Future // `rust-analyzer` complains here.
     }
 }

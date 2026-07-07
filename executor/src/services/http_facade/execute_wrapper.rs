@@ -3,8 +3,6 @@
 
 use crate::*;
 
-use super::*;
-
 /// TODO: add documentation.
 #[derive(Clone, Constructor, Debug)]
 pub struct ExecuteWrapper<S>
@@ -18,7 +16,7 @@ pub struct ExecuteWrapperLayer;
 
 impl<S> Layer<S> for ExecuteWrapperLayer
 where
-    S: Service<RouterRequest, Response = ExecuteResponse, Error = RequestError>,
+    S: Service<RouterRequest, Response = HttpResponse, Error = RequestError>,
 {
     type Service = ExecuteWrapper<S>;
 
@@ -29,7 +27,7 @@ where
 
 impl<S> Service<RouterRequest> for ExecuteWrapper<S>
 where
-    S: Service<RouterRequest, Response = ExecuteResponse, Error = RequestError>
+    S: Service<RouterRequest, Response = HttpResponse, Error = RequestError>
         + Clone
         + Send
         + 'static,
@@ -53,12 +51,12 @@ where
         let (req, params) = cx;
 
         info!(
-            "{} request at {} from {}",
+            "{} request at {} {}",
             req.method(),
             req.uri().path(),
             req.headers()
                 .get("host")
-                .map(|val| val.to_str().unwrap_or_default())
+                .map(|val| format!("from {}", val.to_str().unwrap()))
                 .unwrap_or_default()
         );
 
