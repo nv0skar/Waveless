@@ -81,7 +81,7 @@ pub struct DatabaseChecksum {
 impl Default for DatabaseChecksum {
     fn default() -> Self {
         Self {
-            database_id: "None".to_compact_string(),
+            database_id: "None".into(),
             checksum: CheapVec::from_elem(0, 8),
         }
     }

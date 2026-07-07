@@ -144,5 +144,5 @@ pub fn binary_file_from_buff(buff: Bytes) -> Result<ResultContext> {
             .ok_or(anyhow!("No build file name."))?
             .display()
     )
-    .to_compact_string())
+    .into())
 }

@@ -8,7 +8,7 @@ use crate::*;
 pub struct LogoutCaptured;
 
 impl Service<RequestParamsExtractorRequest> for LogoutCaptured {
-    type Response = ExecuteOutput;
+    type Response = ExecuteResponse;
 
     type Error = RequestError;
 
@@ -42,10 +42,10 @@ impl Service<RequestParamsExtractorRequest> for LogoutCaptured {
                     .ok_or(RequestError::Other(anyhow!(
                         "Cannot logout as there is no session active.",
                     )))? {
-                    ExecuteParamValue::Internal(user_id) => Ok(user_id.to_owned()),
+                    ParamValue::Internal(user_id) => Ok(user_id.to_owned()),
                     _ => Err(RequestError::Expected(
                         StatusCode::FORBIDDEN,
-                        "User id injection from the client is forbidden. HINT: if you are debugging your app you can try creating a new session manually.".to_compact_string(),
+                        "User id injection from the client is forbidden. HINT: if you are debugging your app you can try creating a new session manually.".into(),
                     )),
                 }?.parse::<UserId>().map_err(|_| RequestError::Other(anyhow!("Cannot convert user id to it's internal representation.")))?;
 
@@ -54,11 +54,11 @@ impl Service<RequestParamsExtractorRequest> for LogoutCaptured {
                 match request_params
                     .get("token")
                     .unwrap() {
-                    ExecuteParamValue::Internal(token) if !all_sessions => Ok(Some(token.to_owned())),
-                    ExecuteParamValue::Internal(_) if all_sessions => Ok(None),
+                    ParamValue::Internal(token) if !all_sessions => Ok(Some(token.to_owned())),
+                    ParamValue::Internal(_) if all_sessions => Ok(None),
                     _ => Err(RequestError::Expected(
                         StatusCode::FORBIDDEN,
-                        "Session token injection from the client is forbidden. HINT: if you are debugging your app you can try creating a new session manually.".to_compact_string(),
+                        "Session token injection from the client is forbidden. HINT: if you are debugging your app you can try creating a new session manually.".into(),
                     )),
                 }?;
 
@@ -69,13 +69,13 @@ impl Service<RequestParamsExtractorRequest> for LogoutCaptured {
             let Ok(session_db) = databases.search(session_method.db_id()) else {
                 return Err(RequestError::Other(anyhow!(
                     "Cannot get the database connection for '{}'.",
-                    session_method.db_id().unwrap_or("main".to_compact_string())
+                    session_method.db_id().unwrap_or("main".into())
                 )));
             };
 
             session_method.invalidate(session_db, user_id, token).await?;
 
-            Ok(ExecuteOutput::Json(None, json!({})))
+            Ok(ExecuteResponse::new(None, Some(BodyValue::Json(json!({})))))
         })
         .into();
 

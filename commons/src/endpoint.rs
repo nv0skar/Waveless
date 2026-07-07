@@ -193,8 +193,8 @@ fn auto_generated_skip(value: &bool) -> bool {
 impl Default for Endpoint {
     fn default() -> Self {
         Self {
-            id: "".to_compact_string(),
-            route: "".to_compact_string(),
+            id: "".into(),
+            route: "".into(),
             version: None,
             method: HttpMethod::Get,
             target_database: Default::default(),

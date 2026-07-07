@@ -45,7 +45,7 @@ pub fn new_project(name: CompactString) -> Result<ResultContext> {
                     .compiler()
                     .bootstrap_scripts_dir()
                     .to_owned()
-                    .unwrap_or("bootstrap".to_compact_string()),
+                    .unwrap_or("bootstrap".into()),
             ),
         )?;
 
@@ -57,7 +57,7 @@ pub fn new_project(name: CompactString) -> Result<ResultContext> {
                     .compiler()
                     .hooks_dir()
                     .to_owned()
-                    .unwrap_or("hooks".to_compact_string()),
+                    .unwrap_or("hooks".into()),
             ),
         )?;
 
@@ -72,16 +72,16 @@ pub fn new_project(name: CompactString) -> Result<ResultContext> {
     {
         let endpoints = Endpoints::new_unchecked(CheapVec::from_vec(vec![
             Endpoint::new(
-                "ListProducts".to_compact_string(),
-                "/products/{size}".to_compact_string(),
-                Some("v1".to_compact_string()),
+                "ListProducts".into(),
+                "/products/{size}".into(),
+                Some("v1".into()),
                 HttpMethod::Get,
                 Default::default(),
-                Some(Arc::new(MySQLExecute::new(
-                    "SELECT * FROM products WHERE size = {size}".to_compact_string(),
-                ))),
-                Some("Get all the products by the given size.".to_compact_string()),
-                CheapVec::from_vec(vec!["products".to_compact_string()]),
+                Some(Arc::new(MySQLExecute::from(MySQLQueryVariants::new_raw(
+                    "SELECT * FROM products WHERE size = {size}".into(),
+                )))),
+                Some("Get all the products by the given size.".into()),
+                CheapVec::from_vec(vec!["products".into()]),
                 Default::default(),
                 Default::default(),
                 false,
@@ -92,16 +92,16 @@ pub fn new_project(name: CompactString) -> Result<ResultContext> {
                 false,
             ),
             Endpoint::new(
-                "ListPosts".to_compact_string(),
-                "posts".to_compact_string(),
-                Some("v1".to_compact_string()),
+                "ListPosts".into(),
+                "posts".into(),
+                Some("v1".into()),
                 HttpMethod::Get,
                 None,
-                Some(Arc::new(MySQLExecute::new(
-                    "SELECT * FROM posts".to_compact_string(),
-                ))),
-                Some("Get all posts.".to_compact_string()),
-                CheapVec::from_vec(vec!["posts".to_compact_string()]),
+                Some(Arc::new(MySQLExecute::from(MySQLQueryVariants::new_raw(
+                    "SELECT * FROM posts".into(),
+                )))),
+                Some("Get all posts.".into()),
+                CheapVec::from_vec(vec!["posts".into()]),
                 Default::default(),
                 Default::default(),
                 false,
@@ -132,5 +132,5 @@ pub fn new_project(name: CompactString) -> Result<ResultContext> {
             .join("sample_endpoint.toml")
             .display()
     )
-    .to_compact_string())
+    .into())
 }

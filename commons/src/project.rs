@@ -56,15 +56,15 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            name: "Example".to_compact_string(),
+            name: "Example".into(),
             databases: CheapVec::from_vec(vec![
                 Default::default(),
                 DatabaseConfig {
-                    id: "secondary".to_compact_string(),
+                    id: "secondary".into(),
                     is_primary: false,
                     connection: Arc::new(ExternalDBConnectionConfig {
-                        id: "custom_database_driver".to_compact_string(),
-                        connection: "...".to_compact_string(),
+                        id: "custom_database_driver".into(),
+                        connection: "...".into(),
                     }),
                     schema_discovery: None,
                     pool_min_size: None,
@@ -95,9 +95,9 @@ pub struct Compiler {
 impl Default for Compiler {
     fn default() -> Self {
         Self {
-            endpoints_dir: "./endpoints/".to_compact_string(),
-            hooks_dir: Some("./hooks/".to_compact_string()),
-            bootstrap_scripts_dir: Some("./bootstrap/".to_compact_string()),
+            endpoints_dir: "./endpoints/".into(),
+            hooks_dir: Some("./hooks/".into()),
+            bootstrap_scripts_dir: Some("./bootstrap/".into()),
         }
     }
 }
@@ -128,8 +128,8 @@ impl Default for Executor {
     fn default() -> Self {
         Self {
             listening_addr: Some(SocketAddr::new("127.0.0.1".parse().unwrap(), 8080)),
-            static_files: Some("./static/".to_compact_string()),
-            api_prefix: "/api".to_compact_string(),
+            static_files: Some("./static/".into()),
+            api_prefix: "/api".into(),
             check_databases_cheksums: true,
             http_cache_time: 0,
         }
@@ -177,13 +177,13 @@ impl PartialEq for DatabaseConfig {
 impl Default for DatabaseConfig {
     fn default() -> Self {
         Self {
-            id: "main".to_compact_string(),
+            id: "main".into(),
             is_primary: true,
             connection: Arc::new(databases::mysql::MySQLDBConnectionConfig::new(
                 SocketAddr::new("127.0.0.1".parse().unwrap(), 3306),
-                "example_user".to_compact_string(),
-                "example_password".to_compact_string(),
-                "example_db".to_compact_string(),
+                "example_user".into(),
+                "example_password".into(),
+                "example_db".into(),
             )),
             schema_discovery: Some(Default::default()),
             pool_min_size: Some(std::thread::available_parallelism().unwrap().get() * 2),
@@ -251,7 +251,7 @@ impl Default for DataSchemaDiscoveryConfig {
     fn default() -> Self {
         Self {
             method: Arc::new(schema::mysql::MySQLSchemaDiscoveryMethod::new(
-                CheapVec::from_vec(vec!["_private_table".to_compact_string()]),
+                CheapVec::from_vec(vec!["_private_table".into()]),
             )),
             generate_endpoints: true,
             checksum: true,
@@ -366,7 +366,7 @@ impl Default for Admin {
     fn default() -> Self {
         Self {
             enable_panel: true,
-            allowed_roles: CheapVec::from_vec(vec!["admin".to_compact_string()]),
+            allowed_roles: CheapVec::from_vec(vec!["admin".into()]),
             statistics: false,
         }
     }

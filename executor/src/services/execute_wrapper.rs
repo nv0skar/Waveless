@@ -18,7 +18,7 @@ pub struct ExecuteWrapperLayer;
 
 impl<S> Layer<S> for ExecuteWrapperLayer
 where
-    S: Service<RouterRequest, Response = ExecuteOutput, Error = RequestError>,
+    S: Service<RouterRequest, Response = ExecuteResponse, Error = RequestError>,
 {
     type Service = ExecuteWrapper<S>;
 
@@ -29,7 +29,7 @@ where
 
 impl<S> Service<RouterRequest> for ExecuteWrapper<S>
 where
-    S: Service<RouterRequest, Response = ExecuteOutput, Error = RequestError>
+    S: Service<RouterRequest, Response = ExecuteResponse, Error = RequestError>
         + Clone
         + Send
         + 'static,
@@ -81,28 +81,31 @@ where
                 );
 
             match fut.await {
-                Ok(output) => {
-                    match output {
-                        ExecuteOutput::Json(new_headers, value) => {
-                            if let Some(new_headers) = new_headers {
-                                let headers = response.headers_mut().unwrap();
+                Ok(execute_response) => {
+                    if let Some(response_headers) = execute_response.headers() {
+                        let headers = response.headers_mut().unwrap();
 
-                                for (key, value) in new_headers {
-                                    headers.insert(HeaderName::from_bytes(key.as_bytes()).unwrap(), HeaderValue::from_bytes(value.as_bytes()).unwrap());
-                                }
-                            }
-                        Ok(response
-                            .status(200)
-                            .body(serde_json::to_string_pretty(&value).unwrap()).unwrap()
-                        )
-                    },
-                    ExecuteOutput::Any(encode) => {
+                        for (key, value) in response_headers {
+                            headers.insert(HeaderName::from_bytes(key.as_bytes()).unwrap(), HeaderValue::from_bytes(value.as_bytes()).unwrap());
+                        }
+                    }
+
+
+                    match execute_response.body() {
+                        Some(BodyValue::Json(value)) => {
                             Ok(response
-                        .status(200)
-                        .body(serde_json::to_string_pretty(&json!({
-                                "data": encode.encode().unwrap()
-                            })).unwrap()).unwrap())
-                        },
+                                .status(200)
+                                .body(serde_json::to_string_pretty(&value).unwrap()).unwrap()
+                            )
+                        }
+                        Some(BodyValue::Any(encode)) => {
+                                Ok(response
+                                    .status(200)
+                                    .body(serde_json::to_string_pretty(&json!({
+                                        "data": encode.encode().unwrap()
+                                    })).unwrap()).unwrap())
+                            },
+                        _ => Ok(response.status(200).body(String::new()).unwrap())
                     }
                 },
                 Err(err) => Ok(response
@@ -115,7 +118,7 @@ where
                     .body(serde_json::to_string_pretty(&json!({
                         "error": match err {
                             RequestError::Expected(_, err) => err,
-                            RequestError::Other(err) => format!("Unexpected error: {}", err).to_compact_string(),
+                            RequestError::Other(err) => format!("Unexpected error: {}", err).into(),
                         }
                     })).unwrap()).unwrap()
                 ),

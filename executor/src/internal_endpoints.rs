@@ -15,11 +15,11 @@ pub const INTERNAL_ENDPOINTS: LazyCell<[(InternalEndpointKind, Endpoint); 4]> = 
             (
                 InternalEndpointKind::Authentication,
                 EndpointBuilder::default()
-                    .id(LOGIN_ENDPOINT_ID.to_compact_string())
-                    .route("login".to_compact_string())
+                    .id(LOGIN_ENDPOINT_ID.into())
+                    .route("login".into())
                     .method(HttpMethod::Post)
-                    .version("internal".to_compact_string())
-                    .description("Login a user capturing all parameters and forwarding them to the underlying authentication method.".to_compact_string())
+                    .version("internal".into())
+                    .description("Login a user capturing all parameters and forwarding them to the underlying authentication method.".into())
                     .capture_all_params(true)
                     .auto_generated(true)
                     .build()
@@ -28,11 +28,11 @@ pub const INTERNAL_ENDPOINTS: LazyCell<[(InternalEndpointKind, Endpoint); 4]> = 
             (
                 InternalEndpointKind::Authentication,
                 EndpointBuilder::default()
-                    .id(SIGNUP_ENDPOINT_ID.to_compact_string())
-                    .route("signup".to_compact_string())
+                    .id(SIGNUP_ENDPOINT_ID.into())
+                    .route("signup".into())
                     .method(HttpMethod::Post)
-                    .version("internal".to_compact_string())
-                    .description("Create a new user capturing all parameters and forwarding them to the underlying authentication method.".to_compact_string())
+                    .version("internal".into())
+                    .description("Create a new user capturing all parameters and forwarding them to the underlying authentication method.".into())
                     .capture_all_params(true)
                     .auto_generated(true)
                     .build()
@@ -41,11 +41,11 @@ pub const INTERNAL_ENDPOINTS: LazyCell<[(InternalEndpointKind, Endpoint); 4]> = 
             (
                 InternalEndpointKind::Authentication,
                 EndpointBuilder::default()
-                    .id(LOGOUT_ENDPOINT_ID.to_compact_string())
-                    .route("logout".to_compact_string())
+                    .id(LOGOUT_ENDPOINT_ID.into())
+                    .route("logout".into())
                     .method(HttpMethod::Get)
-                    .version("internal".to_compact_string())
-                    .description("Invalidate the current authorization token.".to_compact_string())
+                    .version("internal".into())
+                    .description("Invalidate the current authorization token.".into())
                     .require_auth(true)
                     .inject_user_id(true)
                     .auto_generated(true)
@@ -55,11 +55,11 @@ pub const INTERNAL_ENDPOINTS: LazyCell<[(InternalEndpointKind, Endpoint); 4]> = 
             (
                 InternalEndpointKind::Authentication,
                 EndpointBuilder::default()
-                    .id(LOGOUT_ALL_ENDPOINT_ID.to_compact_string())
-                    .route("logout/all".to_compact_string())
+                    .id(LOGOUT_ALL_ENDPOINT_ID.into())
+                    .route("logout/all".into())
                     .method(HttpMethod::Get)
-                    .version("internal".to_compact_string())
-                    .description("Invalidate all the authorization tokens of the current user.".to_compact_string())
+                    .version("internal".into())
+                    .description("Invalidate all the authorization tokens of the current user.".into())
                     .require_auth(true)
                     .inject_user_id(true)
                     .auto_generated(true)

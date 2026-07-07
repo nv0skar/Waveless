@@ -40,10 +40,10 @@ impl Default for MySQLSimpleAuthenticationMethod {
     fn default() -> Self {
         Self {
             database_id: None,
-            table_name: "users_auth".to_compact_string(),
-            user_id_field: "user_id".to_compact_string(),
-            name_field: "email".to_compact_string(),
-            password_field: "password".to_compact_string(),
+            table_name: "users_auth".into(),
+            user_id_field: "user_id".into(),
+            name_field: "email".into(),
+            password_field: "password".into(),
             extra_fields: CheapVec::new_const(),
             totp_field: None,
         }
@@ -78,10 +78,10 @@ impl Default for MySQLToken {
     fn default() -> Self {
         Self {
             database_id: None,
-            table_name: "sessions_auth".to_compact_string(),
-            token_field: "session_id".to_compact_string(),
-            user_id_field: "user_id".to_compact_string(),
-            created_field: "created_at".to_compact_string(),
+            table_name: "sessions_auth".into(),
+            token_field: "session_id".into(),
+            user_id_field: "user_id".into(),
+            created_field: "created_at".into(),
             max_age: 86400,
         }
     }
@@ -110,9 +110,9 @@ impl Default for MySQLRole {
     fn default() -> Self {
         Self {
             database_id: None,
-            table_name: "roles_auth".to_compact_string(),
-            user_id_field: "user_id".to_compact_string(),
-            role_field: "role".to_compact_string(),
+            table_name: "roles_auth".into(),
+            user_id_field: "user_id".into(),
+            role_field: "role".into(),
         }
     }
 }
@@ -158,7 +158,7 @@ impl AnyAuthenticationMethod for MySQLSimpleAuthenticationMethod {
                     "SELECT {} FROM {} WHERE {} = ? AND {} = ?",
                     self.user_id_field, self.table_name, self.name_field, self.password_field
                 )
-                .to_compact_string(),
+                .into(),
                 CheapVec::from_vec(vec![
                     sea_orm::Value::from(name_field.to_string()),
                     sea_orm::Value::from(password_field.to_string()),
@@ -243,7 +243,7 @@ impl AnyAuthenticationMethod for MySQLSimpleAuthenticationMethod {
                     .join(","),
                     CheapVec::<&str>::from_elem("?", self.extra_fields.len() + 2).join(", "), // +2 as we have count the name and password field.
                 )
-                .to_compact_string(),
+                .into(),
                 query_input,
             ))
             .await
@@ -267,7 +267,7 @@ impl AnyAuthenticationMethod for MySQLSimpleAuthenticationMethod {
                     "SELECT {} FROM {} WHERE {} = ?",
                     self.user_id_field, self.table_name, self.name_field
                 )
-                .to_compact_string(),
+                .into(),
                 CheapVec::from_vec(vec![sea_orm::Value::from(name_field.to_string())]),
             ))
             .await
@@ -343,7 +343,7 @@ impl AnySessionMethod for MySQLToken {
                     "SELECT {}, {} FROM {} WHERE {} = ?",
                     self.user_id_field, self.created_field, self.table_name, self.token_field
                 )
-                .to_compact_string(),
+                .into(),
                 CheapVec::from_vec(vec![sea_orm::Value::from(token.to_string())]),
             ))
             .await
@@ -405,13 +405,11 @@ impl AnySessionMethod for MySQLToken {
             )
         };
 
-        let token = Alphanumeric
-            .sample_string(&mut rand::rng(), 32)
-            .to_compact_string();
+        let token: CompactString = Alphanumeric.sample_string(&mut rand::rng(), 32).into();
 
         let _ = db_conn
             .execute(DatabaseInput::QueryValues(
-                format!("INSERT INTO {} VALUES (?, ?, ?)", self.table_name).to_compact_string(),
+                format!("INSERT INTO {} VALUES (?, ?, ?)", self.table_name).into(),
                 CheapVec::from_vec(vec![
                     sea_orm::Value::from(token.to_string()),
                     sea_orm::Value::from(user_id.to_string()),
@@ -451,7 +449,7 @@ impl AnySessionMethod for MySQLToken {
                             "DELETE FROM {} WHERE {} = ? AND {} = ?",
                             self.table_name, self.token_field, self.user_id_field
                         )
-                        .to_compact_string(),
+                        .into(),
                         CheapVec::from_vec(vec![
                             sea_orm::Value::from(token.to_string()),
                             sea_orm::Value::from(user_id.to_string()),
@@ -468,7 +466,7 @@ impl AnySessionMethod for MySQLToken {
                             "DELETE FROM {} WHERE {} = ?",
                             self.table_name, self.user_id_field
                         )
-                        .to_compact_string(),
+                        .into(),
                         CheapVec::from_vec(vec![sea_orm::Value::from(user_id.to_string())]),
                     ))
                     .await
@@ -518,7 +516,7 @@ impl AnyRoleMethod for MySQLRole {
                     "SELECT {} FROM {} WHERE {} = ?",
                     self.role_field, self.table_name, self.user_id_field
                 )
-                .to_compact_string(),
+                .into(),
                 CheapVec::from_vec(vec![sea_orm::Value::from(user_id as u32)]),
             ))
             .await
@@ -544,7 +542,7 @@ impl AnyRoleMethod for MySQLRole {
             )
         };
 
-        Ok(Some(role.to_compact_string()))
+        Ok(Some(role.into()))
     }
 
     async fn set(

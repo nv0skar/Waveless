@@ -5,7 +5,7 @@ use crate::*;
 
 pub type RouterRequest = (
     Request<Incoming>,
-    Option<(HashMap<CompactString, ExecuteParamValue>, Endpoint)>,
+    Option<(HashMap<CompactString, ParamValue>, Endpoint)>,
 );
 
 pub type RouterServiceInner = BoxCloneService<RouterRequest, Response<String>, Infallible>;
@@ -138,13 +138,10 @@ where
         };
 
         // Extracts the path's params.
-        let mut path_params = HashMap::<CompactString, ExecuteParamValue>::new();
+        let mut path_params = HashMap::<CompactString, ParamValue>::new();
 
         for (key, value) in matched.params.iter() {
-            path_params.insert(
-                key.to_compact_string(),
-                ExecuteParamValue::Client(Some(value.to_compact_string())),
-            );
+            path_params.insert(key.into(), ParamValue::Client(Some(value.into())));
         }
 
         let endpoint_fut = self.endpoints.call((

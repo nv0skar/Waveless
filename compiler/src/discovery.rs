@@ -85,7 +85,7 @@ pub async fn discover() -> Result<(
                     if pk_id.is_none() {
                         debug!(
                             "Table {} doesn't have a primary key. Only GET many and POST endpoints will be generated.",
-                            table.info.name
+                            table.info.name.to_owned()
                         )
                     }
 
@@ -96,9 +96,9 @@ pub async fn discover() -> Result<(
                         .map(|column| column.name.to_compact_string())
                         .collect::<CheapVec<CompactString>>();
 
-                    let route_one = format!("{}/{}", table.info.name.to_lowercase(), "{id}")
-                        .to_compact_string();
-                    let route_many = table.info.name.to_lowercase().to_compact_string();
+                    let route_one: CompactString =
+                        format!("{}/{}", table.info.name.to_lowercase(), "{id}").into();
+                    let route_many: CompactString = table.info.name.to_lowercase().into();
 
                     for method in &[
                         HttpMethod::Get,
@@ -113,29 +113,35 @@ pub async fn discover() -> Result<(
                                         let mut endpoint_one = EndpointBuilder::default();
 
                                         endpoint_one
-                                            .id(format!("{}_GetOne", table.info.name)
-                                                .to_compact_string())
+                                            .id(format!("{}_GetOne", table.info.name.to_owned())
+                                                .into())
                                             .method(*method)
-                                            .version("v1".to_compact_string())
+                                            .version("v1".into())
                                             .route(route_one.to_owned())
                                             .description(
                                                 format!(
                                                     "Get row from {} by it's primary key.",
                                                     table.info.name
                                                 )
-                                                .to_compact_string(),
+                                                .into(),
                                             )
                                             .target_database(db_config.id().to_owned())
-                                            .execute(Arc::new(MySQLExecute::new_unique(
-                                                format!(
-                                                    "SELECT * FROM {} WHERE {} = {}",
-                                                    table.info.name, pk_id, "{id}"
-                                                )
-                                                .to_compact_string(),
+                                            .execute(Arc::new(MySQLExecute::from(
+                                                MySQLQueryVariants::SingleQuery {
+                                                    query: MySQLQuery::new(
+                                                        format!(
+                                                            "SELECT * FROM {} WHERE {} = {}",
+                                                            table.info.name, pk_id, "{id}"
+                                                        )
+                                                        .into(),
+                                                        true,
+                                                        MySQLBehaviour::Unique,
+                                                    ),
+                                                },
                                             )))
                                             .tags(CheapVec::from_vec(vec![
                                                 table.info.name.to_compact_string(),
-                                                "get_one".to_compact_string(),
+                                                "get_one".into(),
                                             ]))
                                             .query_params(CheapVec::new_const())
                                             .body_params(CheapVec::new_const())
@@ -154,22 +160,22 @@ pub async fn discover() -> Result<(
                                 let mut endpoint_many = EndpointBuilder::default();
 
                                 endpoint_many
-                                    .id(format!("{}_GetMany", table.info.name).to_compact_string())
+                                    .id(format!("{}_GetMany", table.info.name.to_owned()).into())
                                     .method(*method)
-                                    .version("v1".to_compact_string())
+                                    .version("v1".into())
                                     .route(route_many.to_owned())
                                     .description(
-                                        format!("Get all rows from {}.", table.info.name)
-                                            .to_compact_string(),
+                                        format!("Get all rows from {}.", table.info.name).into(),
                                     )
                                     .target_database(db_config.id().to_owned())
-                                    .execute(Arc::new(MySQLExecute::new(
-                                        format!("SELECT * FROM {}", table.info.name,)
-                                            .to_compact_string(),
+                                    .execute(Arc::new(MySQLExecute::from(
+                                        MySQLQueryVariants::new_raw(
+                                            format!("SELECT * FROM {}", table.info.name,).into(),
+                                        ),
                                     )))
                                     .tags(CheapVec::from_vec(vec![
                                         table.info.name.to_compact_string(),
-                                        "get_all".to_compact_string(),
+                                        "get_all".into(),
                                     ]))
                                     .query_params(CheapVec::new_const())
                                     .body_params(CheapVec::new_const())
@@ -186,44 +192,45 @@ pub async fn discover() -> Result<(
                                 let mut endpoint = EndpointBuilder::default();
 
                                 endpoint
-                                    .id(format!("{}_Post", table.info.name).to_compact_string())
+                                    .id(format!("{}_Post", table.info.name).into())
                                     .method(*method)
-                                    .version("v1".to_compact_string())
+                                    .version("v1".into())
                                     .route(route_many.to_owned())
                                     .description(
-                                        format!("Insert data into {}.", table.info.name)
-                                            .to_compact_string(),
+                                        format!("Insert data into {}.", table.info.name).into(),
                                     )
                                     .target_database(db_config.id().to_owned())
-                                    .execute(Arc::new(MySQLExecute::new(
-                                        format!(
-                                            "INSERT INTO {} ({}) VALUES ({})",
-                                            table.info.name,
-                                            columns_names
-                                                .iter()
-                                                .fold(String::new(), |last, next| format!(
-                                                    "{}, {}",
-                                                    last, next
-                                                ))
-                                                .trim_matches(
-                                                    |c: char| c.is_whitespace() || c == ','
-                                                ),
-                                            columns_names
-                                                .iter()
-                                                .fold(String::new(), |last, next| format!(
-                                                    "{}, {{ {} }}",
-                                                    last, next
-                                                ))
-                                                .trim_matches(
-                                                    |c: char| c.is_whitespace() || c == ','
-                                                ),
-                                        )
-                                        .to_compact_string(),
+                                    .execute(Arc::new(MySQLExecute::from(
+                                        MySQLQueryVariants::new_raw_with_not_include(
+                                            format!(
+                                                "INSERT INTO {} ({}) VALUES ({})",
+                                                table.info.name,
+                                                columns_names
+                                                    .iter()
+                                                    .fold(String::new(), |last, next| format!(
+                                                        "{}, {}",
+                                                        last, next
+                                                    ))
+                                                    .trim_matches(
+                                                        |c: char| c.is_whitespace() || c == ','
+                                                    ),
+                                                columns_names
+                                                    .iter()
+                                                    .fold(String::new(), |last, next| format!(
+                                                        "{}, {{ {} }}",
+                                                        last, next
+                                                    ))
+                                                    .trim_matches(
+                                                        |c: char| c.is_whitespace() || c == ','
+                                                    ),
+                                            )
+                                            .into(),
+                                        ),
                                     )))
                                     .body_params(columns_names.to_owned())
                                     .tags(CheapVec::from_vec(vec![
                                         table.info.name.to_compact_string(),
-                                        "post".to_compact_string(),
+                                        "post".into(),
                                     ]))
                                     .query_params(CheapVec::new_const())
                                     .body_params(columns_names.to_owned())
@@ -240,40 +247,45 @@ pub async fn discover() -> Result<(
                                 let mut endpoint = EndpointBuilder::default();
 
                                 endpoint
-                                    .id(format!("{}_Put", table.info.name).to_compact_string())
+                                    .id(format!("{}_Put", table.info.name).into())
                                     .method(*method)
-                                    .version("v1".to_compact_string())
+                                    .version("v1".into())
                                     .route(route_one.to_owned())
                                     .description(
                                         format!(
                                             "Updates {} on row with the given primary key.",
                                             table.info.name
                                         )
-                                        .to_compact_string(),
+                                        .into(),
                                     )
                                     .target_database(db_config.id().to_owned())
-                                    .execute(Arc::new(MySQLExecute::new(
-                                        format!(
-                                            "UPDATE {} SET {} WHERE {} = {} ",
-                                            table.info.name,
-                                            columns_names
-                                                .iter()
-                                                .map(|name| format!("{} = {{ {} }}", name, name))
-                                                .fold(String::new(), |last, next| format!(
-                                                    "{}, {}",
-                                                    last, next
-                                                ))
-                                                .trim_matches(
-                                                    |c: char| c.is_whitespace() || c == ','
-                                                ),
-                                            pk_id,
-                                            "{id}"
-                                        )
-                                        .to_compact_string(),
+                                    .execute(Arc::new(MySQLExecute::from(
+                                        MySQLQueryVariants::new_raw_with_not_include(
+                                            format!(
+                                                "UPDATE {} SET {} WHERE {} = {} ",
+                                                table.info.name,
+                                                columns_names
+                                                    .iter()
+                                                    .map(|name| format!(
+                                                        "{} = {{ {} }}",
+                                                        name, name
+                                                    ))
+                                                    .fold(String::new(), |last, next| format!(
+                                                        "{}, {}",
+                                                        last, next
+                                                    ))
+                                                    .trim_matches(
+                                                        |c: char| c.is_whitespace() || c == ','
+                                                    ),
+                                                pk_id,
+                                                "{id}"
+                                            )
+                                            .into(),
+                                        ),
                                     )))
                                     .tags(CheapVec::from_vec(vec![
                                         table.info.name.to_compact_string(),
-                                        "put".to_compact_string(),
+                                        "put".into(),
                                     ]))
                                     .query_params(CheapVec::new_const())
                                     .body_params(columns_names.to_owned())
@@ -290,29 +302,31 @@ pub async fn discover() -> Result<(
                                 let mut endpoint = EndpointBuilder::default();
 
                                 endpoint
-                                    .id(format!("{}_Delete", table.info.name).to_compact_string())
+                                    .id(format!("{}_Delete", table.info.name).into())
                                     .method(*method)
-                                    .version("v1".to_compact_string())
+                                    .version("v1".into())
                                     .route(route_one.to_owned())
                                     .description(
                                         format!(
                                             "Deletes data from {} with the given primary key.",
                                             table.info.name
                                         )
-                                        .to_compact_string(),
+                                        .into(),
                                     )
                                     .target_database(db_config.id().to_owned())
-                                    .execute(Arc::new(MySQLExecute::new(
-                                        format!(
-                                            "DELETE FROM {} WHERE {} = {} ",
-                                            table.info.name, pk_id, "{id}"
-                                        )
-                                        .to_compact_string(),
+                                    .execute(Arc::new(MySQLExecute::from(
+                                        MySQLQueryVariants::new_raw_with_not_include(
+                                            format!(
+                                                "DELETE FROM {} WHERE {} = {} ",
+                                                table.info.name, pk_id, "{id}"
+                                            )
+                                            .into(),
+                                        ),
                                     )))
                                     .body_params(columns_names.to_owned())
                                     .tags(CheapVec::from_vec(vec![
                                         table.info.name.to_compact_string(),
-                                        "delete".to_compact_string(),
+                                        "delete".into(),
                                     ]))
                                     .query_params(CheapVec::new_const())
                                     .body_params(CheapVec::new_const())

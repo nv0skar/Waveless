@@ -8,7 +8,7 @@ use crate::*;
 pub struct SignUpCaptured;
 
 impl Service<RequestParamsExtractorRequest> for SignUpCaptured {
-    type Response = ExecuteOutput;
+    type Response = ExecuteResponse;
 
     type Error = RequestError;
 
@@ -26,7 +26,7 @@ impl Service<RequestParamsExtractorRequest> for SignUpCaptured {
             let request_params = request_params
                 .iter()
                 .filter_map(|entry| {
-                    if let (key, ExecuteParamValue::Client(Some(value))) = entry {
+                    if let (key, ParamValue::Client(Some(value))) = entry {
                         Some((key.to_owned(), value.to_owned()))
                     } else {
                         None
@@ -65,20 +65,20 @@ impl Service<RequestParamsExtractorRequest> for SignUpCaptured {
                             .ok_or(RequestError::Expected(
                                 StatusCode::BAD_REQUEST,
                                 "Cannot find the requested authentication method."
-                                    .to_compact_string(),
+                                    .into(),
                             ))?
                     } else {
                         return Err(RequestError::Expected(
                             StatusCode::BAD_REQUEST,
                             "Cannot deserialize the `AuthenticationMethod` header."
-                                .to_compact_string(),
+                                .into(),
                         ));
                     }
                 } else {
                     return Err(RequestError::Expected(
                         StatusCode::BAD_REQUEST,
                         "No authentication method has been set. HINT: set one using the `AuthenticationMethod` header."
-                            .to_compact_string(),
+                            .into(),
                     ));
                 }
             };
@@ -86,7 +86,7 @@ impl Service<RequestParamsExtractorRequest> for SignUpCaptured {
             let Ok(auth_db) = databases.search(auth_method.db_id()) else {
                 return Err(RequestError::Other(anyhow!(
                     "Cannot get the database connection for '{}'.",
-                    auth_method.db_id().unwrap_or("main".to_compact_string())
+                    auth_method.db_id().unwrap_or("main".into())
                 )));
             };
 
@@ -99,7 +99,7 @@ impl Service<RequestParamsExtractorRequest> for SignUpCaptured {
                     let Ok(session_db) = databases.search(session_method.db_id()) else {
                         return Err(RequestError::Other(anyhow!(
                             "Cannot get the database connection for '{}'.",
-                            session_method.db_id().unwrap_or("main".to_compact_string())
+                            session_method.db_id().unwrap_or("main".into())
                         )));
                     };
 
@@ -115,11 +115,11 @@ impl Service<RequestParamsExtractorRequest> for SignUpCaptured {
                             })?;
 
 
-                    let mut headers = HashMap::new();
+                    let mut headers = HashMap::<CompactString, CompactString>::new();
 
                     // TODO: should add the secure param to `Set-Cookie`.
                     headers.insert(
-                        "Set-Cookie".to_compact_string(),
+                        "Set-Cookie".into(),
                         format!(
                             "Authorization={}; SameSite=Lax; Path=/; {}",
                             session_token,
@@ -128,15 +128,14 @@ impl Service<RequestParamsExtractorRequest> for SignUpCaptured {
                                 .map(|max_age| format!("Max-Age={}", max_age))
                                 .unwrap_or_default()
                         )
-                        .to_compact_string(),
+                        .into(),
                     );
 
-                    Ok(ExecuteOutput::Json(
-                        Some(headers),
+                    Ok(ExecuteResponse::new(None, Some(BodyValue::Json(
                         json!({
                             "token": session_token
                         }),
-                    ))
+                    ))))
                 },
 
                 Err(err) => Err(RequestError::Other(err))

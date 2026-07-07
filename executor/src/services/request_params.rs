@@ -8,7 +8,7 @@ use super::*;
 pub type RequestParamsExtractorRequest = (
     HeaderMap,
     Endpoint,
-    HashMap<CompactString, ExecuteParamValue>,
+    HashMap<CompactString, ParamValue>,
     Bytes,
 );
 
@@ -16,7 +16,7 @@ pub type RequestParamsExtractorRequest = (
 #[derive(Clone, Constructor, Debug)]
 pub struct RequestParamsExtractor<S>
 where
-    S: Service<RequestParamsExtractorRequest, Response = ExecuteOutput, Error = RequestError>,
+    S: Service<RequestParamsExtractorRequest, Response = ExecuteResponse, Error = RequestError>,
 {
     inner: S,
 }
@@ -25,7 +25,7 @@ pub struct RequestParamsExtractorLayer;
 
 impl<S> Layer<S> for RequestParamsExtractorLayer
 where
-    S: Service<RequestParamsExtractorRequest, Response = ExecuteOutput, Error = RequestError>,
+    S: Service<RequestParamsExtractorRequest, Response = ExecuteResponse, Error = RequestError>,
 {
     type Service = RequestParamsExtractor<S>;
 
@@ -36,7 +36,7 @@ where
 
 impl<S> Service<RouterRequest> for RequestParamsExtractor<S>
 where
-    S: Service<RequestParamsExtractorRequest, Response = ExecuteOutput, Error = RequestError>
+    S: Service<RequestParamsExtractorRequest, Response = ExecuteResponse, Error = RequestError>
         + Clone
         + Send
         + 'static,
@@ -75,21 +75,16 @@ where
                 });
                 if *endpoint.capture_all_params() {
                     for (key, value) in queries {
-                        request_params.insert(
-                            key.to_compact_string(),
-                            ExecuteParamValue::Client(Some(value.to_compact_string())),
-                        );
+                        request_params.insert(key.into(), ParamValue::Client(Some(value.into())));
                     }
                 } else {
                     for key in endpoint.query_params() {
                         let mut owned_iterator = queries.to_owned();
                         match owned_iterator.find(|elem| elem.0 == key) {
-                            Some((key, value)) => request_params.insert(
-                                key.to_compact_string(),
-                                ExecuteParamValue::Client(Some(value.to_compact_string())),
-                            ),
+                            Some((key, value)) => request_params
+                                .insert(key.into(), ParamValue::Client(Some(value.into()))),
                             None => request_params
-                                .insert(key.to_compact_string(), ExecuteParamValue::Client(None)),
+                                .insert(key.to_compact_string(), ParamValue::Client(None)),
                         };
                     }
                 }
@@ -104,70 +99,73 @@ where
                         .map_err(|err| {
                             RequestError::Expected(
                                 StatusCode::INTERNAL_SERVER_ERROR,
-                                format!("Cannot get request's body. {}", err).to_compact_string(),
+                                format!("Cannot get request's body. {}", err).into(),
                             )
                         })?
                         .to_bytes()
                         .to_vec(),
                 );
 
-                if request_body.is_empty() {
-                    return Err(RequestError::Expected(
-                        StatusCode::BAD_REQUEST,
-                        "The request's body for this endpoint cannot be empty.".to_compact_string(),
-                    ));
-                }
+                if !request_body.is_empty() {
+                    let Ok(json_body) = (match request_body.is_empty() {
+                        true => Ok(serde_json::Value::Array(vec![])),
+                        false => serde_json::from_slice::<serde_json::Value>(
+                            request_body.iter().as_slice(),
+                        ),
+                    }) else {
+                        return Err(RequestError::Expected(
+                            StatusCode::BAD_REQUEST,
+                            "Invalid request's body. The provided JSON's format is unsupported."
+                                .into(),
+                        ));
+                    };
 
-                let Ok(json_body) =
-                    serde_json::from_slice::<serde_json::Value>(request_body.iter().as_slice())
-                else {
-                    return Err(RequestError::Expected(
-                        StatusCode::BAD_REQUEST,
-                        "Invalid request's body. The provided JSON's format is unsupported."
-                            .to_compact_string(),
-                    ));
-                };
-                if *endpoint.capture_all_params() {
-                    for (key, value) in json_body.as_object().ok_or(RequestError::Expected(
-                        StatusCode::BAD_REQUEST,
-                        "Cannot extract the parameters from the request's body."
-                            .to_compact_string(),
-                    ))? {
-                        request_params.insert(
-                            key.to_compact_string(),
-                            ExecuteParamValue::Client(Some(
-                                value
-                                    .as_str()
-                                    .map(|s| s.to_string())
-                                    .unwrap_or(value.to_string())
-                                    .to_compact_string(),
-                            )),
-                        );
-                    }
-                } else {
-                    for key in endpoint.body_params() {
-                        let value = {
-                            match json_body
-                                .as_object()
-                                .ok_or(RequestError::Expected(
-                                    StatusCode::BAD_REQUEST,
-                                    "Cannot extract the parameters from the request's body."
-                                        .to_compact_string(),
-                                ))?
-                                .get(key.as_str())
-                            {
-                                Some(res) => Some(
-                                    res.as_str()
+                    if *endpoint.capture_all_params() {
+                        for (key, value) in json_body.as_object().ok_or(RequestError::Expected(
+                            StatusCode::BAD_REQUEST,
+                            "Cannot extract the parameters from the request's body.".into(),
+                        ))? {
+                            request_params.insert(
+                                key.into(),
+                                ParamValue::Client(Some(
+                                    value
+                                        .as_str()
                                         .map(|s| s.to_string())
-                                        .unwrap_or(res.to_string())
-                                        .to_compact_string(),
-                                ),
-                                None => None,
-                            }
-                        };
+                                        .unwrap_or(value.to_string())
+                                        .into(),
+                                )),
+                            );
+                        }
+                    } else {
+                        for key in endpoint.body_params() {
+                            let value = {
+                                match json_body
+                                    .as_object()
+                                    .ok_or(RequestError::Expected(
+                                        StatusCode::BAD_REQUEST,
+                                        "Cannot extract the parameters from the request's body."
+                                            .into(),
+                                    ))?
+                                    .get(key.as_str())
+                                {
+                                    Some(res) => Some(
+                                        res.as_str()
+                                            .map(|s| s.to_string())
+                                            .unwrap_or(res.to_string())
+                                            .into(),
+                                    ),
+                                    None => None,
+                                }
+                            };
 
-                        request_params.insert(key.to_owned(), ExecuteParamValue::Client(value));
+                            request_params.insert(key.to_owned(), ParamValue::Client(value));
+                        }
                     }
+                } else if !endpoint.body_params().is_empty() {
+                    return Err(RequestError::Expected(
+                        StatusCode::BAD_REQUEST,
+                        "The request's body for this endpoint cannot be empty.".into(),
+                    ));
                 }
             }
 

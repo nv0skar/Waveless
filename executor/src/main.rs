@@ -5,7 +5,6 @@
 //! The Waveless' executor frontend.
 //!
 
-use compact_str::ToCompactString;
 use waveless_commons::{databases::*, logging::*, runtime::handle_main, *};
 use waveless_executor::{frontend_options::*, server::*, *};
 
@@ -74,7 +73,7 @@ async fn try_main() -> Result<ResultContext> {
             )
             .await?;
 
-            Ok("".to_compact_string())
+            Ok("".into())
         }
         None => Err(anyhow!("No subcommand provided!")),
     }

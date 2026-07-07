@@ -7,7 +7,7 @@ use crate::*;
 #[derive(Clone, Constructor, Debug)]
 pub struct SessionWatchdog<S>
 where
-    S: Service<RequestParamsExtractorRequest, Response = ExecuteOutput, Error = RequestError>,
+    S: Service<RequestParamsExtractorRequest, Response = ExecuteResponse, Error = RequestError>,
 {
     inner: S,
 }
@@ -16,7 +16,7 @@ pub struct SessionWatchdogLayer;
 
 impl<S> Layer<S> for SessionWatchdogLayer
 where
-    S: Service<RequestParamsExtractorRequest, Response = ExecuteOutput, Error = RequestError>,
+    S: Service<RequestParamsExtractorRequest, Response = ExecuteResponse, Error = RequestError>,
 {
     type Service = SessionWatchdog<S>;
 
@@ -27,7 +27,7 @@ where
 
 impl<S> Service<RequestParamsExtractorRequest> for SessionWatchdog<S>
 where
-    S: Service<RequestParamsExtractorRequest, Response = ExecuteOutput, Error = RequestError>
+    S: Service<RequestParamsExtractorRequest, Response = ExecuteResponse, Error = RequestError>
         + Clone
         + Send
         + 'static,
@@ -83,7 +83,7 @@ where
                 let Ok(session_db) = databases.search(session_method.db_id()) else {
                     return Err(RequestError::Other(anyhow!(
                         "Cannot get the database connection for '{}'.",
-                        session_method.db_id().unwrap_or("main".to_compact_string())
+                        session_method.db_id().unwrap_or("main".into())
                     )));
                 };
 
@@ -97,7 +97,7 @@ where
                             // may be throttled.
                             return Err(RequestError::Expected(
                                 StatusCode::BAD_REQUEST,
-                                "Malformed auth header.".to_compact_string(),
+                                "Malformed auth header.".into(),
                             ));
                         }
                     }
@@ -124,7 +124,7 @@ where
                             // may be throttled.
                             return Err(RequestError::Expected(
                                 StatusCode::BAD_REQUEST,
-                                "Malformed cookie header.".to_compact_string(),
+                                "Malformed cookie header.".into(),
                             ));
                         }
                     }
@@ -134,12 +134,12 @@ where
                 let Some(token) = token else {
                     return Err(RequestError::Expected(
                         StatusCode::UNAUTHORIZED,
-                        format!("'{}' requires authentication.", endpoint.id()).to_compact_string(),
+                        format!("'{}' requires authentication.", endpoint.id()).into(),
                     ));
                 };
 
                 let session_check = session_method
-                    .check(session_db, token.to_compact_string())
+                    .check(session_db, token.into())
                     .await
                     .map_err(|err| {
                         RequestError::Other(anyhow!("Cannot check the session token. {}", err))
@@ -150,14 +150,12 @@ where
                         // Inject user id if required.
                         if *endpoint.inject_user_id() {
                             request_params.insert(
-                                "user_id".to_compact_string(),
-                                ExecuteParamValue::Internal(user_id.to_compact_string()),
+                                "user_id".into(),
+                                ParamValue::Internal(user_id.to_compact_string()),
                             );
 
-                            request_params.insert(
-                                "token".to_compact_string(),
-                                ExecuteParamValue::Internal(token.to_compact_string()),
-                            );
+                            request_params
+                                .insert("token".into(), ParamValue::Internal(token.into()));
                         }
                         if endpoint.allowed_roles().is_empty() {
                             inner
@@ -177,7 +175,7 @@ where
                             let Ok(role_db) = databases.search(role_method.db_id()) else {
                                 return Err(RequestError::Other(anyhow!(
                                     "Cannot get the database connection for '{}'.",
-                                    session_method.db_id().unwrap_or("main".to_compact_string())
+                                    session_method.db_id().unwrap_or("main".into())
                                 )));
                             };
 
@@ -190,7 +188,7 @@ where
                             let Some(role) = role_check else {
                                 return Err(RequestError::Expected(
                                     StatusCode::UNAUTHORIZED,
-                                    "Current user does not have any role.".to_compact_string(),
+                                    "Current user does not have any role.".into(),
                                 ));
                             };
 
@@ -201,15 +199,14 @@ where
                             } else {
                                 return Err(RequestError::Expected(
                                     StatusCode::UNAUTHORIZED,
-                                    "Current user does not have any of the allowed roles."
-                                        .to_compact_string(),
+                                    "Current user does not have any of the allowed roles.".into(),
                                 ));
                             }
                         }
                     }
                     None => Err(RequestError::Expected(
                         StatusCode::UNAUTHORIZED,
-                        "Invalid session.".to_compact_string(),
+                        "Invalid session.".into(),
                     )),
                 }
             } else {

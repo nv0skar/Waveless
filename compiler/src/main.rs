@@ -128,7 +128,7 @@ async fn try_main() -> Result<ResultContext> {
             )
             .await?;
 
-            return Ok("".to_compact_string());
+            return Ok("".into());
         }
         Some(Subcommands::Build) => {
             CompilerCx::set_cx(CompilerCx::from_workspace().await?);
@@ -164,7 +164,7 @@ async fn try_main() -> Result<ResultContext> {
                 )
                 .await?;
 
-                Ok("".to_compact_string())
+                Ok("".into())
             }
         },
         None => Err(anyhow!("No subcommdand provided!")),

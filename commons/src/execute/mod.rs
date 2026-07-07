@@ -17,31 +17,35 @@ pub trait AnyExecute: Any + BoxedAny + DynClone + Send + Sync + Debug {
         &self,
         method: HttpMethod,
         db_conn: Arc<dyn AnyDatabaseConnection>,
-        input: ExecuteInput,
-    ) -> Result<ExecuteOutput, RequestError>;
+        input: ExecuteRequest,
+    ) -> Result<ExecuteResponse, RequestError>;
 }
 
 /// TODO: add documentation.
 #[derive(Clone, Constructor, Getters, MutGetters, Debug)]
 #[getset(get = "pub", get_mut = "pub")]
-pub struct ExecuteInput {
+pub struct ExecuteRequest {
     /// Note that by default, path params, query params, and JSON
     /// formatted bodies are serialized (by default) to this field.
-    params: HashMap<CompactString, ExecuteParamValue>,
+    params: HashMap<CompactString, ParamValue>,
     value: Bytes,
 }
 
 /// TODO: add documentation.
 #[derive(Clone, Debug)]
-pub enum ExecuteParamValue {
+pub enum ParamValue {
     Internal(CompactString),
     Client(Option<CompactString>),
 }
 
-pub enum ExecuteOutput {
-    Json(
-        Option<HashMap<CompactString, CompactString>>,
-        serde_json::Value,
-    ),
+#[derive(Constructor, Getters, MutGetters)]
+#[getset(get = "pub", get_mut = "pub")]
+pub struct ExecuteResponse {
+    headers: Option<HashMap<CompactString, CompactString>>,
+    body: Option<BodyValue>,
+}
+
+pub enum BodyValue {
+    Json(serde_json::Value),
     Any(Box<dyn Encode<Output = Bytes> + Send + Sync>),
 }

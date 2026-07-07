@@ -40,11 +40,7 @@ impl AnyDataSchemaDiscoveryMethod for MySQLSchemaDiscoveryMethod {
         };
 
         let (_, raw_conn) = db_conn_config
-            .new_conn(
-                "mysql_discovery_connection".to_compact_string(),
-                Some(1),
-                Some(1),
-            )
+            .new_conn("mysql_discovery_connection".into(), Some(1), Some(1))
             .await?;
 
         let Ok(mysql_raw_pool) = raw_conn.downcast::<Pool<MySql>>() else {

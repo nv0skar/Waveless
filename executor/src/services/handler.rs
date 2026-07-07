@@ -10,7 +10,7 @@ use super::*;
 pub struct ExecuteHandler;
 
 impl Service<RequestParamsExtractorRequest> for ExecuteHandler {
-    type Response = ExecuteOutput;
+    type Response = ExecuteResponse;
 
     type Error = RequestError;
 
@@ -37,7 +37,7 @@ impl Service<RequestParamsExtractorRequest> for ExecuteHandler {
             let Some(execute_strategy) = endpoint.execute() else {
                 return Err(RequestError::Expected(
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("The route doesn't have any executor defined. HINT: Go to your project's endpoints folder and check that '{}' has an executor set.", endpoint.id()).to_compact_string(),
+                    format!("The route doesn't have any executor defined. HINT: Go to your project's endpoints folder and check that '{}' has an executor set.", endpoint.id()).into(),
                 ));
             };
 
@@ -45,7 +45,7 @@ impl Service<RequestParamsExtractorRequest> for ExecuteHandler {
                 .execute(
                     *endpoint.method(),
                     db_conn,
-                    ExecuteInput::new(request_params, request_body),
+                    ExecuteRequest::new(request_params, request_body),
                 )
                 .await
         })
