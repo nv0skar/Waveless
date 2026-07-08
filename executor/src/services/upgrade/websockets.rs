@@ -74,7 +74,7 @@ impl Service<RequestCx> for WebSocketsSvc {
             };
 
             // Enforce socket endpoint's authentication.
-            // TODO: maybe do this in the `SessionWatchdog`.
+            // TODO: maybe do this in the `SessionWatchdog` and enforce roles.
             if *endpoint.require_auth() && request_params.get("user_id").is_none() {
                 return Err(RequestError::Expected(
                     StatusCode::UNAUTHORIZED,

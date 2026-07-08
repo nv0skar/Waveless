@@ -78,8 +78,10 @@ pub fn new_project(name: CompactString) -> Result<ResultContext> {
                         .route("/products/{size}".into())
                         .version("v1".into())
                         .method(HttpMethod::Get)
-                        .execute(Arc::new(MySQLExecute::from(MySQLQueryVariants::new_raw(
-                            "SELECT * FROM products WHERE size = {size}".into(),
+                        .execute(ExecutePatch(Arc::new(MySQLExecute::from(
+                            MySQLQueryVariants::new_raw(
+                                "SELECT * FROM products WHERE size = {size}".into(),
+                            ),
                         ))))
                         .build()
                         .unwrap(),
@@ -94,8 +96,8 @@ pub fn new_project(name: CompactString) -> Result<ResultContext> {
                         .route("posts".into())
                         .version("v1".into())
                         .method(HttpMethod::Get)
-                        .execute(Arc::new(MySQLExecute::from(MySQLQueryVariants::new_raw(
-                            "SELECT * FROM posts".into(),
+                        .execute(ExecutePatch(Arc::new(MySQLExecute::from(
+                            MySQLQueryVariants::new_raw("SELECT * FROM posts".into()),
                         ))))
                         .build()
                         .unwrap(),

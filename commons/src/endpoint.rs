@@ -84,7 +84,8 @@ impl Default for Endpoints {
 
 /// The main endpoint definition.
 /// This will be then included in the Waveless project's binary.
-#[derive(Clone, Serialize, Deserialize, Constructor, Builder, Getters, Display, Debug)]
+#[derive(Clone, Serialize, Deserialize, Constructor, Builder, Patch, Getters, Display, Debug)]
+#[patch(attribute(derive(Clone, PartialEq, Constructor, Builder, Serialize, Deserialize, Debug)))]
 #[display("{} ({:?}))", id, description)]
 #[builder(default, pattern = "mutable", setter(strip_option))]
 #[getset(get = "pub")]
@@ -155,7 +156,8 @@ pub enum Targets {
 }
 
 /// The HTTP endpoint definition that will be either created by the user or discovered by the compiler.
-#[derive(Clone, Serialize, Deserialize, Constructor, Builder, Getters, Display, Debug)]
+#[derive(Clone, Serialize, Deserialize, Constructor, Builder, Patch, Getters, Display, Debug)]
+#[patch(attribute(derive(Clone, Constructor, Builder, Serialize, Deserialize, Debug)))]
 #[display("{} -> ({}, {:?})", route, method, version)]
 #[builder(default, pattern = "mutable", setter(strip_option))]
 #[getset(get = "pub")]
@@ -172,7 +174,7 @@ pub struct HttpTarget {
 
     /// Establishes the endpoint handler. Note that if no executor is set, the server will try to handle the request internally.
     #[serde(default, skip_serializing_if = "should_skip_option")]
-    execute: Option<Arc<dyn AnyHttpExecute>>,
+    execute: Option<ExecutePatch<Arc<dyn AnyHttpExecute>>>,
 
     /// Sets the accepted query parameters.
     #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
@@ -192,11 +194,55 @@ pub struct HttpTarget {
     auto_generated: bool,
 }
 
+#[derive(Clone, Serialize, Deserialize, Display, Debug)]
+#[repr(transparent)]
+#[serde(transparent)]
+pub struct ExecutePatch<T>(pub T);
+
 impl PartialEq for HttpTarget {
     fn eq(&self, other: &Self) -> bool {
         self.method == other.method
             && self.route.trim_matches('/') == other.route.trim_matches('/')
             && self.version == other.version
+    }
+}
+
+impl<T> ExecutePatch<T> {
+    #[inline]
+    pub fn into_inner(&self) -> &T {
+        let Self(value) = self;
+
+        value
+    }
+}
+
+impl<T> PartialEq for ExecutePatch<T> {
+    fn eq(&self, _: &Self) -> bool {
+        false
+    }
+}
+
+impl<T> From<T> for ExecutePatch<T> {
+    fn from(value: T) -> Self {
+        Self(value)
+    }
+}
+
+impl<T> DerefMut for ExecutePatch<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        let Self(value) = self;
+
+        value
+    }
+}
+
+impl<T> Deref for ExecutePatch<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        let Self(value) = self;
+
+        value
     }
 }
 
@@ -233,7 +279,7 @@ impl Default for HttpTarget {
             route: "".into(),
             version: None,
             method: HttpMethod::Get,
-            execute: None,
+            execute: None.into(),
             query_params: Default::default(),
             body_params: Default::default(),
             capture_all_params: false,
