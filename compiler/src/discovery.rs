@@ -150,7 +150,7 @@ pub async fn discover() -> Result<(
                                                 "get_one".into(),
                                             ]))
                                             .require_auth(false)
-                                            .inject_user_id(false)
+                                            .inject_auth_metadata(false)
                                             .allowed_roles(CheapVec::new_const())
                                             .deprecated(false);
 
@@ -189,7 +189,7 @@ pub async fn discover() -> Result<(
                                         "get_all".into(),
                                     ]))
                                     .require_auth(false)
-                                    .inject_user_id(false)
+                                    .inject_auth_metadata(false)
                                     .allowed_roles(CheapVec::new_const())
                                     .deprecated(false);
 
@@ -253,7 +253,7 @@ pub async fn discover() -> Result<(
                                         "post".into(),
                                     ]))
                                     .require_auth(false)
-                                    .inject_user_id(false)
+                                    .inject_auth_metadata(false)
                                     .allowed_roles(CheapVec::new_const())
                                     .deprecated(false);
 
@@ -315,7 +315,7 @@ pub async fn discover() -> Result<(
                                         "put".into(),
                                     ]))
                                     .require_auth(false)
-                                    .inject_user_id(false)
+                                    .inject_auth_metadata(false)
                                     .allowed_roles(CheapVec::new_const())
                                     .deprecated(false);
 
@@ -359,7 +359,7 @@ pub async fn discover() -> Result<(
                                         "delete".into(),
                                     ]))
                                     .require_auth(false)
-                                    .inject_user_id(false)
+                                    .inject_auth_metadata(false)
                                     .allowed_roles(CheapVec::new_const())
                                     .deprecated(false);
 

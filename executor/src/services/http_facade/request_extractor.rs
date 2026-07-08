@@ -3,41 +3,31 @@
 
 use crate::*;
 
-pub type RequestParamsExtractorRequest = (
-    HeaderMap,
-    Endpoint,
-    HashMap<CompactString, ParamValue>,
-    Bytes,
-);
-
 /// TODO: add documentation.
 #[derive(Clone, Constructor, Debug)]
-pub struct RequestParamsExtractor<S>
+pub struct RequestExtractor<S>
 where
-    S: Service<RequestParamsExtractorRequest, Response = HttpResponse, Error = RequestError>,
+    S: Service<RequestCx, Response = HttpResponse, Error = RequestError>,
 {
     inner: S,
 }
 
-pub struct RequestParamsExtractorLayer;
+pub struct RequestExtractorLayer;
 
-impl<S> Layer<S> for RequestParamsExtractorLayer
+impl<S> Layer<S> for RequestExtractorLayer
 where
-    S: Service<RequestParamsExtractorRequest, Response = HttpResponse, Error = RequestError>,
+    S: Service<RequestCx, Response = HttpResponse, Error = RequestError>,
 {
-    type Service = RequestParamsExtractor<S>;
+    type Service = RequestExtractor<S>;
 
     fn layer(&self, inner: S) -> Self::Service {
-        RequestParamsExtractor { inner }
+        RequestExtractor { inner }
     }
 }
 
-impl<S> Service<RouterRequest> for RequestParamsExtractor<S>
+impl<S> Service<RequestCx> for RequestExtractor<S>
 where
-    S: Service<RequestParamsExtractorRequest, Response = HttpResponse, Error = RequestError>
-        + Clone
-        + Send
-        + 'static,
+    S: Service<RequestCx, Response = HttpResponse, Error = RequestError> + Clone + Send + 'static,
     S::Future: Send + 'static,
     S::Response: Send + 'static,
     S::Error: Send + 'static,
@@ -52,21 +42,20 @@ where
         self.inner.poll_ready(cx)
     }
 
-    fn call(&mut self, cx: RouterRequest) -> Self::Future {
+    fn call(&mut self, mut cx: RequestCx) -> Self::Future {
         let mut inner = self.inner.to_owned();
 
         let future: Pin<_> = Box::pin(async move {
-            let (request, Some((mut request_params, endpoint))) = cx else {
-                panic!("Unexpected behaviour");
-            };
+            let RequestCx {
+                request,
+                request_params,
+                endpoint,
+                ..
+            } = &mut cx;
 
-            let Targets::HttpTarget(http_target) = endpoint.target() else {
+            let Targets::HttpTarget(http_target) = endpoint.target().to_owned() else {
                 unreachable!()
             };
-
-            let mut request_body = Bytes::new();
-
-            let headers = request.headers().to_owned();
 
             // Searches for query params.
             if let Some(queries) = request.uri().query() {
@@ -94,7 +83,7 @@ where
 
             // Searches for body params.
             if !http_target.body_params().is_empty() || *http_target.capture_all_params() {
-                request_body = CheapVec::from_vec(
+                let request_body = Bytes::from_vec(
                     request
                         .collect()
                         .await
@@ -171,9 +160,7 @@ where
                 }
             }
 
-            inner
-                .call((headers, endpoint, request_params, request_body))
-                .await
+            inner.call(cx).await
         })
         .into();
 

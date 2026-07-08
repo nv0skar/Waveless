@@ -17,7 +17,8 @@ use waveless_commons::*;
 
 use waveless_commons::build::*;
 use waveless_commons::endpoint::*;
-use waveless_commons::http_execute::*;
+use waveless_commons::http_execute::{request_cx::*, *};
+use waveless_commons::socket_execute::{handshake_cx::*, *};
 
 use rustyrosetta::*;
 
@@ -37,11 +38,12 @@ use clap::Subcommand;
 use compact_str::*;
 use dashmap::DashMap;
 use derive_more::Constructor;
-use futures::future::BoxFuture;
+use futures::{SinkExt, StreamExt, future::BoxFuture};
 use getset::*;
 use http::{HeaderName, HeaderValue, StatusCode};
 use http_body_util::BodyExt;
 use hyper::{body::Incoming, *};
+use hyper_tungstenite::tungstenite;
 use hyper_util::{
     rt::TokioIo, server::conn::auto::Builder as AutoHttpBuilder, service::TowerToHyperService,
 };
@@ -58,6 +60,7 @@ use tower_governor::{governor::*, key_extractor::*};
 use tower_http::{compression::*, cors::*, timeout::*};
 use tower_http_cache::prelude::*;
 use tracing::*;
+use tungstenite::Message;
 
 pub type EndpointRouter = DashMap<HttpMethod, Router<Endpoint>>;
 

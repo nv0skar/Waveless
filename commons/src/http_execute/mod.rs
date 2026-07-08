@@ -2,6 +2,9 @@
 // Copyright (C) 2026 Oscar Alvarez Gonzalez
 
 pub mod mysql;
+pub mod request_cx;
+
+use request_cx::*;
 
 use crate::*;
 
@@ -15,20 +18,9 @@ pub trait AnyHttpExecute: Any + BoxedAny + DynClone + Send + Sync + Debug {
     /// Executes a query using the given executor and database connection.
     async fn execute(
         &self,
-        method: HttpMethod,
+        cx: RequestCx,
         db_conn: Arc<dyn AnyDatabaseConnection>,
-        input: HttpRequest,
     ) -> Result<HttpResponse, RequestError>;
-}
-
-/// TODO: add documentation.
-#[derive(Clone, Constructor, Getters, MutGetters, Debug)]
-#[getset(get = "pub", get_mut = "pub")]
-pub struct HttpRequest {
-    /// Note that by default, path params, query params, and JSON
-    /// formatted bodies are serialized (by default) to this field.
-    params: HashMap<CompactString, ParamValue>,
-    value: Bytes,
 }
 
 /// TODO: add documentation.
@@ -38,11 +30,38 @@ pub enum ParamValue {
     Client(Option<CompactString>),
 }
 
-#[derive(Constructor, Getters, MutGetters)]
+#[derive(Getters, MutGetters)]
 #[getset(get = "pub", get_mut = "pub")]
 pub struct HttpResponse {
+    status: StatusCode,
     headers: Option<HashMap<CompactString, CompactString>>,
     body: Option<BodyValue>,
+}
+
+impl HttpResponse {
+    pub fn new(
+        headers: Option<HashMap<CompactString, CompactString>>,
+        body: Option<BodyValue>,
+    ) -> Self {
+        Self {
+            status: StatusCode::OK,
+            headers,
+            body,
+        }
+    }
+
+    // Cannot change the default name of `Constructor`.
+    pub fn new_with_status(
+        status: StatusCode,
+        headers: Option<HashMap<CompactString, CompactString>>,
+        body: Option<BodyValue>,
+    ) -> Self {
+        Self {
+            status,
+            headers,
+            body,
+        }
+    }
 }
 
 pub enum BodyValue {

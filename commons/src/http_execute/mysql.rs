@@ -81,10 +81,15 @@ impl AnyHttpExecute for MySQLExecute {
     /// further serialized into JSON.
     async fn execute(
         &self,
-        method: HttpMethod,
+        cx: RequestCx,
         db_conn: Arc<dyn AnyDatabaseConnection>,
-        input: HttpRequest,
     ) -> Result<HttpResponse, RequestError> {
+        let RequestCx {
+            method,
+            request_params: params,
+            ..
+        } = cx;
+
         let mut queries = self.queries.iter();
 
         let mut res_buffer = CheapVec::<serde_json::Value>::new();
@@ -121,7 +126,7 @@ impl AnyHttpExecute for MySQLExecute {
                 .enumerate()
                 .map(|(i, sub)| {
                     if i % 2 != 0 {
-                        if let Some(ParamValue::Internal(value)) = input.params.get(sub.trim()) {
+                        if let Some(ParamValue::Internal(value)) = params.get(sub.trim()) {
                             Ok(value.to_compact_string())
                         } else {
                             Err(RequestError::Expected(
@@ -143,8 +148,7 @@ impl AnyHttpExecute for MySQLExecute {
             let mut ordered_values = CheapVec::<_, 8>::new();
 
             for param_id in params_order.iter() {
-                match input
-                    .params()
+                match params
                     .get(&param_id.to_compact_string())
                     .map(|opt| {
                         if let ParamValue::Client(param) = opt {

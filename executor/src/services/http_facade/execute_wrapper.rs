@@ -7,7 +7,7 @@ use crate::*;
 #[derive(Clone, Constructor, Debug)]
 pub struct ExecuteWrapper<S>
 where
-    S: Service<RouterRequest, Error = RequestError>,
+    S: Service<RequestCx, Error = RequestError>,
 {
     inner: S,
 }
@@ -16,7 +16,7 @@ pub struct ExecuteWrapperLayer;
 
 impl<S> Layer<S> for ExecuteWrapperLayer
 where
-    S: Service<RouterRequest, Response = HttpResponse, Error = RequestError>,
+    S: Service<RequestCx, Response = HttpResponse, Error = RequestError>,
 {
     type Service = ExecuteWrapper<S>;
 
@@ -25,12 +25,9 @@ where
     }
 }
 
-impl<S> Service<RouterRequest> for ExecuteWrapper<S>
+impl<S> Service<RequestCx> for ExecuteWrapper<S>
 where
-    S: Service<RouterRequest, Response = HttpResponse, Error = RequestError>
-        + Clone
-        + Send
-        + 'static,
+    S: Service<RequestCx, Response = HttpResponse, Error = RequestError> + Clone + Send + 'static,
     S::Future: Send + 'static,
     S::Response: Send + 'static,
     S::Error: Send + 'static,
@@ -47,20 +44,21 @@ where
 
     /// Handles endpoints requests.
     #[instrument(skip_all)]
-    fn call(&mut self, cx: RouterRequest) -> Self::Future {
-        let (req, params) = cx;
+    fn call(&mut self, cx: RequestCx) -> Self::Future {
+        let RequestCx { request, .. } = &cx;
 
         info!(
             "{} request at {} {}",
-            req.method(),
-            req.uri().path(),
-            req.headers()
+            request.method(),
+            request.uri().path(),
+            request
+                .headers()
                 .get("host")
                 .map(|val| format!("from {}", val.to_str().unwrap()))
                 .unwrap_or_default()
         );
 
-        let fut = self.inner.call((req, params));
+        let fut = self.inner.call(cx);
 
         Box::pin(async move {
             let mut response = Response::builder()
@@ -92,18 +90,18 @@ where
                     match execute_response.body() {
                         Some(BodyValue::Json(value)) => {
                             Ok(response
-                                .status(200)
+                                .status(execute_response.status())
                                 .body(serde_json::to_string_pretty(&value).unwrap()).unwrap()
                             )
                         }
                         Some(BodyValue::Any(encode)) => {
                                 Ok(response
-                                    .status(200)
+                                    .status(execute_response.status())
                                     .body(serde_json::to_string_pretty(&json!({
                                         "data": encode.encode().unwrap()
                                     })).unwrap()).unwrap())
                             },
-                        _ => Ok(response.status(200).body(String::new()).unwrap())
+                        _ => Ok(response.status(execute_response.status()).body(String::new()).unwrap())
                     }
                 },
                 Err(err) => Ok(response

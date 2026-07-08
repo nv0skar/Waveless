@@ -3,23 +3,18 @@
 
 use crate::*;
 
-pub type RouterRequest = (
-    Request<Incoming>,
-    Option<(HashMap<CompactString, ParamValue>, Endpoint)>,
-);
-
-pub type RouterServiceInner = BoxCloneService<RouterRequest, Response<String>, Infallible>;
+pub type RouterServiceInner = BoxCloneService<Request<Incoming>, Response<String>, Infallible>;
 
 /// TODO: add documentation.
 #[derive(Clone, Constructor)]
-pub struct RouterService<S> {
+pub struct RouterService<S: Clone> {
     endpoints: S,
     frontend: Option<RouterServiceInner>,
 }
 
 impl<S> Service<Request<Incoming>> for RouterService<S>
 where
-    S: Service<RouterRequest, Response = Response<String>, Error = Infallible> + Send + 'static,
+    S: Service<RequestCx, Response = Response<String>, Error = Infallible> + Clone + Send + 'static,
     S::Future: Send + 'static,
     S::Response: Send + 'static,
     S::Error: Send + 'static,
@@ -46,108 +41,167 @@ where
     fn call(&mut self, request: Request<Incoming>) -> Self::Future {
         let method = HttpMethod::from(request.method().as_str());
 
-        // Tries to match the route.
-        let route = request.uri().path().trim_matches('/').to_owned();
+        let mut force_endpoint_id = Option::<CompactString>::None;
 
-        // Extracts the route from the method-aware router.
-        let Some(router) = RuntimeCx::acquire().router().get(&method) else {
-            if let Some(mut frontend_inner) = self.frontend.to_owned() {
-                return Box::pin(async move {
-                    frontend_inner
-                        .call((request, None))
-                        .await
-                        .map_err(|_| unreachable!())
-                });
-            } else {
-                return Box::pin(async move {
-                    let response = Response::builder()
-                        .header("Content-Type", "application/json; charset=utf-8")
-                        .header(
-                            "Cache-Control",
-                            format!(
-                                "max-age={}",
-                                (*RuntimeCx::acquire()
-                                    .build()
-                                    .read()
-                                    .await
-                                    .executor()
-                                    .http_cache_time()) as u32
-                            ),
-                        );
-
-                    Ok(response
-                        .status(404)
-                        .body(
-                            serde_json::to_string_pretty(&json!({
-                                    "error": format!(
-                                        "There is no route that accepts {}.",
-                                        method
-                                    )
-                                }
-                            ))
-                            .unwrap(),
-                        )
-                        .unwrap())
-                });
-            }
-        };
-
-        let Ok(matched) = router.at(&route) else {
-            if let Some(mut frontend_inner) = self.frontend.to_owned() {
-                debug!(
-                    "Route `{}` is not defined, using the frontend service as a fallback.",
-                    route
-                );
-
-                return Box::pin(async move {
-                    frontend_inner
-                        .call((request, None))
-                        .await
-                        .map_err(|_| unreachable!())
-                });
-            } else {
-                return Box::pin(async move {
-                    let response = Response::builder()
-                        .header("Content-Type", "application/json; charset=utf-8")
-                        .header(
-                            "Cache-Control",
-                            format!(
-                                "max-age={}",
-                                (*RuntimeCx::acquire()
-                                    .build()
-                                    .read()
-                                    .await
-                                    .executor()
-                                    .http_cache_time()) as u32
-                            ),
-                        );
-
-                    Ok(response
-                            .status(404)
-                            .body(serde_json::to_string_pretty(&json!({
-                                "error": format!(
-                                    "Route `{}` is not defined. HINT: Go to your project's endpoints folder and check the endpoint's routes.",
-                                    route
-                                )
-                            }
-                            )).unwrap()
-                        ).unwrap()
-                    )
-                });
-            }
-        };
-
-        // Extracts the path's params.
-        let mut path_params = HashMap::<CompactString, ParamValue>::new();
-
-        for (key, value) in matched.params.iter() {
-            path_params.insert(key.into(), ParamValue::Client(Some(value.into())));
+        // Check whether a connection upgrade to WebSockets is requested to steer the request to the connection handler.
+        if hyper_tungstenite::is_upgrade_request(&request) {
+            force_endpoint_id = Some(CONN_UPGRADE_WEBSOCKETS_ENDPOINT_ID.into());
         }
 
-        let endpoint_fut = self.endpoints.call((
+        let (endpoint, request_params) = {
+            match force_endpoint_id {
+                Some(target_endpoint_id) => {
+                    let mut inner_endpoint_handler = self.to_owned().endpoints;
+
+                    return Box::pin(async move {
+                        let _build_lock = RuntimeCx::acquire().build().read().await;
+
+                        let mut endpoints = _build_lock.endpoints().to_owned();
+
+                        // Also add filtered internal endpoints.
+                        endpoints.inner_mut().append(
+                            &mut INTERNAL_ENDPOINTS
+                                .iter()
+                                .filter(|(kind, _)| {
+                                    *kind == InternalEndpointKind::ConnectionUpgrade
+                                })
+                                .map(|(_, endpoint)| endpoint)
+                                .cloned()
+                                .collect::<CheapVec<_>>(),
+                        );
+
+                        // Search for endpoints that matches the given id.
+                        let Some(endpoint) = endpoints
+                            .inner()
+                            .iter()
+                            .find(|endpoint| endpoint.id() == target_endpoint_id)
+                        else {
+                            unreachable!()
+                        };
+
+                        inner_endpoint_handler
+                            .call(RequestCx {
+                                request,
+                                method,
+                                request_params: HashMap::new(),
+                                endpoint: endpoint.to_owned(),
+                            })
+                            .await
+                            .map_err(|_| unreachable!())
+                    });
+                }
+                None => {
+                    // Tries to match the route.
+                    let route = request.uri().path().trim_matches('/').to_owned();
+
+                    // Extracts the route from the method-aware router.
+                    let Some(router) = RuntimeCx::acquire().router().get(&method) else {
+                        if let Some(mut frontend_inner) = self.frontend.to_owned() {
+                            return Box::pin(async move {
+                                frontend_inner
+                                    .call(request)
+                                    .await
+                                    .map_err(|_| unreachable!())
+                            });
+                        } else {
+                            return Box::pin(async move {
+                                let response = Response::builder()
+                                    .header("Content-Type", "application/json; charset=utf-8")
+                                    .header(
+                                        "Cache-Control",
+                                        format!(
+                                            "max-age={}",
+                                            (*RuntimeCx::acquire()
+                                                .build()
+                                                .read()
+                                                .await
+                                                .executor()
+                                                .http_cache_time())
+                                                as u32
+                                        ),
+                                    );
+
+                                Ok(response
+                                    .status(404)
+                                    .body(
+                                        serde_json::to_string_pretty(&json!({
+                                                "error": format!(
+                                                    "There is no route that accepts {}.",
+                                                    method
+                                                )
+                                            }
+                                        ))
+                                        .unwrap(),
+                                    )
+                                    .unwrap())
+                            });
+                        }
+                    };
+
+                    let Ok(matched) = router.at(&route) else {
+                        if let Some(mut frontend_inner) = self.frontend.to_owned() {
+                            debug!(
+                                "Route `{}` is not defined, using the frontend service as a fallback.",
+                                route
+                            );
+
+                            return Box::pin(async move {
+                                frontend_inner
+                                    .call(request)
+                                    .await
+                                    .map_err(|_| unreachable!())
+                            });
+                        } else {
+                            return Box::pin(async move {
+                                let response = Response::builder()
+                                    .header("Content-Type", "application/json; charset=utf-8")
+                                    .header(
+                                        "Cache-Control",
+                                        format!(
+                                            "max-age={}",
+                                            (*RuntimeCx::acquire()
+                                                .build()
+                                                .read()
+                                                .await
+                                                .executor()
+                                                .http_cache_time())
+                                                as u32
+                                        ),
+                                    );
+
+                                Ok(response
+                                        .status(404)
+                                        .body(serde_json::to_string_pretty(&json!({
+                                            "error": format!(
+                                                "Route `{}` is not defined. HINT: Go to your project's endpoints folder and check the endpoint's routes.",
+                                                route
+                                            )
+                                        }
+                                        )).unwrap()
+                                    ).unwrap()
+                                )
+                            });
+                        }
+                    };
+
+                    // Extracts the path's params.
+                    let mut path_params = HashMap::<CompactString, ParamValue>::new();
+
+                    for (key, value) in matched.params.iter() {
+                        path_params.insert(key.into(), ParamValue::Client(Some(value.into())));
+                    }
+
+                    (matched.value.to_owned(), path_params)
+                }
+            }
+        };
+
+        let endpoint_fut = self.endpoints.call(RequestCx {
             request,
-            Some((path_params.to_owned(), matched.value.to_owned())),
-        ));
+            method,
+            request_params,
+            endpoint,
+        });
 
         return Box::pin(async move { endpoint_fut.await.map_err(|_| unreachable!()) });
     }

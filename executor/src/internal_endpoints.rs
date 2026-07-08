@@ -3,15 +3,34 @@
 
 use crate::*;
 
+pub const CONN_UPGRADE_WEBSOCKETS_ENDPOINT_ID: &str = "ConnUpgradeWebSockets";
+
 pub const LOGIN_ENDPOINT_ID: &str = "Login";
 pub const SIGNUP_ENDPOINT_ID: &str = "SignUp";
 pub const LOGOUT_ENDPOINT_ID: &str = "Logout";
 pub const LOGOUT_ALL_ENDPOINT_ID: &str = "LogoutAll";
 
 /// Internal endpoints provided by the executor.
-pub const INTERNAL_ENDPOINTS: LazyCell<[(InternalEndpointKind, Endpoint); 4]> = LazyCell::new(
+pub const INTERNAL_ENDPOINTS: LazyCell<[(InternalEndpointKind, Endpoint); 5]> = LazyCell::new(
     || {
         [
+            (InternalEndpointKind::ConnectionUpgrade,
+                EndpointBuilder::default()
+                    .id(CONN_UPGRADE_WEBSOCKETS_ENDPOINT_ID.into())
+                    .target(Targets::HttpTarget(
+                        HttpTargetBuilder::default()
+                            .route("websockets".into())
+                            .method(HttpMethod::Get)
+                            .version("upgrade".into())
+                            .auto_generated(true)
+                            .build()
+                            .unwrap()
+                    ))
+                    .description("Handles connection upgrading to WebSockets.".into())
+                    .inject_auth_metadata(true)
+                    .build()
+                    .unwrap()
+            ),
             (
                 InternalEndpointKind::Authentication,
                 EndpointBuilder::default()
@@ -63,7 +82,7 @@ pub const INTERNAL_ENDPOINTS: LazyCell<[(InternalEndpointKind, Endpoint); 4]> = 
                     ))
                     .description("Invalidate the current authorization token.".into())
                     .require_auth(true)
-                    .inject_user_id(true)
+                    .inject_auth_metadata(true)
                     .build()
                     .unwrap()
             ),
@@ -82,7 +101,7 @@ pub const INTERNAL_ENDPOINTS: LazyCell<[(InternalEndpointKind, Endpoint); 4]> = 
                     ))
                     .description("Invalidate all the authorization tokens of the current user.".into())
                     .require_auth(true)
-                    .inject_user_id(true)
+                    .inject_auth_metadata(true)
                     .build()
                     .unwrap()
             )
@@ -91,8 +110,9 @@ pub const INTERNAL_ENDPOINTS: LazyCell<[(InternalEndpointKind, Endpoint); 4]> = 
 );
 
 /// Specifies the kind of an internal endpoint.
-#[derive(Debug)]
+#[derive(PartialEq, Debug)]
 pub enum InternalEndpointKind {
     Authentication,
+    ConnectionUpgrade,
     Other,
 }

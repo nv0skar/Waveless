@@ -5,27 +5,27 @@ use crate::*;
 
 /// TODO: add documentation.
 #[derive(Clone, Constructor, Debug)]
-pub struct AuthCapture<S>
+pub struct UpgradeCapture<S>
 where
     S: Service<RequestCx, Response = HttpResponse, Error = RequestError>,
 {
     inner: S,
 }
 
-pub struct AuthCaptureLayer;
+pub struct UpgradeCaptureLayer;
 
-impl<S> Layer<S> for AuthCaptureLayer
+impl<S> Layer<S> for UpgradeCaptureLayer
 where
     S: Service<RequestCx, Response = HttpResponse, Error = RequestError>,
 {
-    type Service = AuthCapture<S>;
+    type Service = UpgradeCapture<S>;
 
     fn layer(&self, inner: S) -> Self::Service {
-        AuthCapture { inner }
+        UpgradeCapture { inner }
     }
 }
 
-impl<S> Service<RequestCx> for AuthCapture<S>
+impl<S> Service<RequestCx> for UpgradeCapture<S>
 where
     S: Service<RequestCx, Response = HttpResponse, Error = RequestError> + Clone + Send + 'static,
     S::Future: Send + 'static,
@@ -49,10 +49,7 @@ where
             let RequestCx { endpoint, .. } = &cx;
 
             match endpoint.id().as_str() {
-                LOGIN_ENDPOINT_ID => LoginSvc.call(cx).await,
-                SIGNUP_ENDPOINT_ID => SignUpSvc.call(cx).await,
-                LOGOUT_ENDPOINT_ID => LogoutSvc.call(cx).await,
-                LOGOUT_ALL_ENDPOINT_ID => LogoutSvc.call(cx).await,
+                CONN_UPGRADE_WEBSOCKETS_ENDPOINT_ID => WebSocketsSvc.call(cx).await,
                 _ => inner.call(cx).await,
             }
         })

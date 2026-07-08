@@ -3,13 +3,11 @@
 
 use crate::*;
 
-use super::*;
-
 /// TODO: add documentation.
 #[derive(Clone, Debug)]
 pub struct ExecuteHandler;
 
-impl Service<RequestParamsExtractorRequest> for ExecuteHandler {
+impl Service<RequestCx> for ExecuteHandler {
     type Response = HttpResponse;
 
     type Error = RequestError;
@@ -21,9 +19,9 @@ impl Service<RequestParamsExtractorRequest> for ExecuteHandler {
     }
 
     /// Handles endpoints requests.
-    fn call(&mut self, cx: RequestParamsExtractorRequest) -> Self::Future {
+    fn call(&mut self, cx: RequestCx) -> Self::Future {
         let future: Pin<_> = Box::pin(async move {
-            let (_, endpoint, request_params, request_body) = cx;
+            let RequestCx { endpoint, .. } = &cx;
 
             // Retrieves the endpoint's target database.
             let database_id = endpoint.database();
@@ -34,7 +32,7 @@ impl Service<RequestParamsExtractorRequest> for ExecuteHandler {
                 .search(database_id.to_owned())?;
 
             // Force the endpoint to have the HTTP target.
-            let Targets::HttpTarget(http_target) = endpoint.target() else {
+            let Targets::HttpTarget(http_target) = endpoint.target().to_owned() else {
                 unreachable!()
             };
 
@@ -48,9 +46,8 @@ impl Service<RequestParamsExtractorRequest> for ExecuteHandler {
 
             execute_strategy
                 .execute(
-                    *http_target.method(),
+                    cx,
                     db_conn,
-                    HttpRequest::new(request_params, request_body),
                 )
                 .await
         }).into();

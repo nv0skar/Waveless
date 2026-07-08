@@ -7,7 +7,7 @@ use crate::*;
 #[derive(Clone, Constructor, Debug)]
 pub struct SessionWatchdog<S>
 where
-    S: Service<RequestParamsExtractorRequest, Response = HttpResponse, Error = RequestError>,
+    S: Service<RequestCx, Response = HttpResponse, Error = RequestError>,
 {
     inner: S,
 }
@@ -16,7 +16,7 @@ pub struct SessionWatchdogLayer;
 
 impl<S> Layer<S> for SessionWatchdogLayer
 where
-    S: Service<RequestParamsExtractorRequest, Response = HttpResponse, Error = RequestError>,
+    S: Service<RequestCx, Response = HttpResponse, Error = RequestError>,
 {
     type Service = SessionWatchdog<S>;
 
@@ -25,12 +25,9 @@ where
     }
 }
 
-impl<S> Service<RequestParamsExtractorRequest> for SessionWatchdog<S>
+impl<S> Service<RequestCx> for SessionWatchdog<S>
 where
-    S: Service<RequestParamsExtractorRequest, Response = HttpResponse, Error = RequestError>
-        + Clone
-        + Send
-        + 'static,
+    S: Service<RequestCx, Response = HttpResponse, Error = RequestError> + Clone + Send + 'static,
     S::Future: Send + 'static,
     S::Response: Send + 'static,
     S::Error: Send + 'static,
@@ -46,32 +43,34 @@ where
     }
 
     #[instrument(skip_all)]
-    fn call(&mut self, cx: RequestParamsExtractorRequest) -> Self::Future {
+    fn call(&mut self, mut cx: RequestCx) -> Self::Future {
         let mut inner = self.inner.to_owned();
 
         let future: Pin<_> = Box::pin(async move {
-            let (headers, endpoint, mut request_params, request_body) = cx;
+            let RequestCx {
+                request,
+                request_params,
+                endpoint,
+                ..
+            } = &mut cx;
 
-            // Checks whether the current endpoint requires auth.
-            if *endpoint.require_auth() {
-                let _build_lock = RuntimeCx::acquire().build();
+            let require_auth = *endpoint.require_auth();
 
-                let auth_config = _build_lock
-                    .read()
-                    .await
-                    .config()
-                    .authentication()
-                    .to_owned();
+            let headers = request.headers();
 
-                let Some(auth_config) = auth_config else {
-                    // TODO: the compiler should fail when including endpoints
-                    // that require authentication while not having
-                    // authentication set for the project.
-                    return Err(RequestError::Other(anyhow!(
-                        "Endpoint '{}' requires auth but authentication is not set for this build.",
-                        endpoint.id()
-                    )));
-                };
+            let _build_lock = RuntimeCx::acquire().build();
+
+            let auth_config = _build_lock
+                .read()
+                .await
+                .config()
+                .authentication()
+                .to_owned();
+
+            if let Some(auth_config) = auth_config { 'auth_flow: {
+                // TODO: the compiler should fail when including endpoints
+                // that require authentication while not having
+                // authentication set for the project.
 
                 // Loads the session's method's and role's method's databases.
                 let session_method = auth_config.session();
@@ -89,24 +88,26 @@ where
 
                 // Check the session.
                 let token = match (headers.get("Authorization"), headers.get("Cookie")) {
-                    (Some(auth_header), _) => {
+                    (Some(auth_header), _) if !auth_header.is_empty() => {
                         if let Ok(token) = auth_header.to_str() {
                             Some(token)
                         } else {
                             // TODO: future connections from the same origin
                             // may be throttled.
+
                             return Err(RequestError::Expected(
                                 StatusCode::BAD_REQUEST,
                                 "Malformed auth header.".into(),
                             ));
                         }
                     }
-                    (_, Some(cookie_header)) => {
+                    (_, Some(cookie_header)) if !cookie_header.is_empty()=> {
                         if let Ok(cookies) = cookie_header.to_str() {
                             let cookies = cookies
                                 .trim()
                                 .split(';')
                                 .map(|cookie| cookie.split_once('='));
+
                             let authorization_cookie = cookies
                                 .filter(|opt| {
                                     opt.map(|(name, _)| name.to_lowercase() == "authorization")
@@ -132,10 +133,15 @@ where
                 };
 
                 let Some(token) = token else {
-                    return Err(RequestError::Expected(
-                        StatusCode::UNAUTHORIZED,
-                        format!("'{}' requires authentication.", endpoint.id()).into(),
-                    ));
+                    if require_auth {
+                        return Err(RequestError::Expected(
+                            StatusCode::UNAUTHORIZED,
+                            format!("'{}' requires authentication.", endpoint.id()).into(),
+                        ));
+                    }
+                    else {
+                        break 'auth_flow;
+                    }
                 };
 
                 let session_check = session_method
@@ -143,12 +149,12 @@ where
                     .await
                     .map_err(|err| {
                         RequestError::Other(anyhow!("Cannot check the session token. {}", err))
-                    })?;
+                })?;
 
                 match session_check {
                     Some(user_id) => {
                         // Inject user id if required.
-                        if *endpoint.inject_user_id() {
+                        if require_auth || *endpoint.inject_auth_metadata() {
                             request_params.insert(
                                 "user_id".into(),
                                 ParamValue::Internal(user_id.to_compact_string()),
@@ -158,14 +164,11 @@ where
                                 .insert("token".into(), ParamValue::Internal(token.into()));
                         }
                         if endpoint.allowed_roles().is_empty() {
-                            inner
-                                .call((headers, endpoint, request_params, request_body))
-                                .await
+                            break 'auth_flow;
                         } else {
                             let Some(role_method) = role_method else {
                                 // TODO: the compiler should fail when including endpoints
-                                // that require roles while not having
-                                // roles set for the project.
+                                // that requires roles while not having roles set for the project.
                                 return Err(RequestError::Other(anyhow!(
                                     "Endpoint '{}' requires roles authentication but they are not set for this build.",
                                     endpoint.id()
@@ -193,9 +196,7 @@ where
                             };
 
                             if endpoint.allowed_roles().contains(&role.to_lowercase()) {
-                                inner
-                                    .call((headers, endpoint, request_params, request_body))
-                                    .await
+                                break 'auth_flow;
                             } else {
                                 return Err(RequestError::Expected(
                                     StatusCode::UNAUTHORIZED,
@@ -204,17 +205,26 @@ where
                             }
                         }
                     }
-                    None => Err(RequestError::Expected(
-                        StatusCode::UNAUTHORIZED,
-                        "Invalid session.".into(),
-                    )),
-                }
+                    None if require_auth => {
+                        return Err(RequestError::Expected(
+                            StatusCode::UNAUTHORIZED,
+                            "Invalid session.".into(),
+                        ))
+                    },
+                    _ => (),
+                }}
             } else {
-                inner
-                    .call((headers, endpoint, request_params, request_body))
-                    .await
+                if require_auth {
+                    Err(RequestError::Other(anyhow!(
+                        "Endpoint '{}' requires auth but authentication is not set for this build.",
+                        endpoint.id()))
+                    )?
+                }
             }
-        }).into();
+
+            inner.call(cx).await
+        })
+        .into();
 
         future as Self::Future // `rust-analyzer` complains here.
     }

@@ -11,6 +11,7 @@ pub mod logging;
 pub mod project;
 pub mod runtime;
 pub mod schema;
+pub mod socket_execute;
 
 mod serialize_utils;
 
@@ -19,6 +20,7 @@ pub use serialize_utils::*;
 use std::any::{Any, TypeId};
 use std::cell::Cell;
 use std::collections::HashMap;
+use std::convert::Infallible;
 use std::env::{current_dir, var};
 use std::fmt::Debug;
 use std::mem::MaybeUninit;
@@ -39,6 +41,8 @@ use derive_more::{Constructor, Display};
 use dyn_clone::*;
 use getset::*;
 use http::StatusCode;
+use hyper::{Request, body::Incoming};
+use hyper_tungstenite::HyperWebsocket;
 use iocraft::prelude::*;
 use rand::distr::{Alphanumeric, SampleString};
 use serde::{Deserialize, Serialize};

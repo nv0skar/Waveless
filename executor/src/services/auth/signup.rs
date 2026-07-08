@@ -5,9 +5,9 @@ use crate::*;
 
 /// TODO: add documentation.
 #[derive(Clone, Constructor, Debug)]
-pub struct SignUpCaptured;
+pub struct SignUpSvc;
 
-impl Service<RequestParamsExtractorRequest> for SignUpCaptured {
+impl Service<RequestCx> for SignUpSvc {
     type Response = HttpResponse;
 
     type Error = RequestError;
@@ -19,9 +19,11 @@ impl Service<RequestParamsExtractorRequest> for SignUpCaptured {
     }
 
     #[instrument(skip_all)]
-    fn call(&mut self, cx: RequestParamsExtractorRequest) -> Self::Future {
+    fn call(&mut self, cx: RequestCx) -> Self::Future {
         let future: Pin<_> = Box::pin(async move {
-            let (headers, _, request_params, _) = cx;
+            let RequestCx { request, request_params, .. } = cx;
+
+            let headers = request.headers();
 
             let request_params = request_params
                 .iter()

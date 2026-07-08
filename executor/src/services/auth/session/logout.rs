@@ -5,9 +5,9 @@ use crate::*;
 
 /// TODO: add documentation.
 #[derive(Clone, Constructor, Debug)]
-pub struct LogoutCaptured;
+pub struct LogoutSvc;
 
-impl Service<RequestParamsExtractorRequest> for LogoutCaptured {
+impl Service<RequestCx> for LogoutSvc {
     type Response = HttpResponse;
 
     type Error = RequestError;
@@ -19,9 +19,9 @@ impl Service<RequestParamsExtractorRequest> for LogoutCaptured {
     }
 
     #[instrument(skip_all)]
-    fn call(&mut self, cx: RequestParamsExtractorRequest) -> Self::Future {
+    fn call(&mut self, cx: RequestCx) -> Self::Future {
         let future: Pin<_> = Box::pin(async move {
-            let (_, endpoint, request_params, _) = cx;
+            let RequestCx { request_params, endpoint, .. } = cx;
 
             let Targets::HttpTarget(http_target) = endpoint.target() else {
                 unreachable!()

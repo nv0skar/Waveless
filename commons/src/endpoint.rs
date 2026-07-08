@@ -4,6 +4,7 @@
 use crate::*;
 
 use http_execute::*;
+use socket_execute::*;
 
 /// Holds all the endpoints, is a wrapper of the `CheapVec<Endpoint>` type.
 #[derive(Clone, PartialEq, Serialize, Deserialize, Getters, MutGetters, Debug)]
@@ -110,9 +111,9 @@ pub struct Endpoint {
     /// Whether to require auth.
     require_auth: bool,
 
-    /// Whether to inject {user_id} as a request param
+    /// Whether to inject authentication metadata as an internal request param
     #[serde(default, skip_serializing_if = "should_skip")]
-    inject_user_id: bool,
+    inject_auth_metadata: bool,
 
     /// All allowed roles to query the endpoint.
     #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
@@ -138,7 +139,7 @@ impl Default for Endpoint {
             description: None,
             tags: CheapVec::new_const(),
             require_auth: false,
-            inject_user_id: false,
+            inject_auth_metadata: false,
             allowed_roles: Default::default(),
             deprecated: false,
         }
@@ -249,7 +250,7 @@ impl Default for HttpTarget {
 pub struct SocketTarget {
     /// Establishes the endpoint handler.
     #[serde(default, skip_serializing_if = "should_skip_option")]
-    execute: Option<Arc<dyn AnyHttpExecute>>, // TODO: this shouldn't be `AnyHttpExecute`.
+    execute: Option<Arc<dyn AnySocketExecute>>, // TODO: this shouldn't be `AnyHttpExecute`.
 }
 
 impl PartialEq for SocketTarget {
