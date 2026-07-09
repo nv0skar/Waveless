@@ -221,7 +221,7 @@ fn auto_generated_skip(value: &bool) -> bool {
 
 impl PartialEq for HttpTarget {
     fn eq(&self, other: &Self) -> bool {
-        self.route == other.route && self.method() == other.method()
+        self.route == other.route && self.version == other.version && self.method == other.method
     }
 }
 
