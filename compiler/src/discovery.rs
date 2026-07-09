@@ -127,7 +127,7 @@ pub async fn discover() -> Result<(
                                                 .method(*method)
                                                 .version("v1".into())
                                                 .route(route_one.to_owned())
-                                                .execute(ExecutePatch(Arc::new(MySQLExecute::from(
+                                                .execute(Arc::new(MySQLExecute::from(
                                                     MySQLQueryVariants::SingleQuery {
                                                         query: MySQLQuery::new(
                                                             format!(
@@ -139,7 +139,7 @@ pub async fn discover() -> Result<(
                                                             MySQLBehaviour::Unique,
                                                         ),
                                                     },
-                                                ))))
+                                                )))
                                                 .query_params(CheapVec::new_const())
                                                 .body_params(CheapVec::new_const())
                                                 .capture_all_params(false)
@@ -169,12 +169,12 @@ pub async fn discover() -> Result<(
                                             .method(*method)
                                             .version("v1".into())
                                             .route(route_many.to_owned())
-                                            .execute(ExecutePatch(Arc::new(MySQLExecute::from(
+                                            .execute(Arc::new(MySQLExecute::from(
                                                 MySQLQueryVariants::new_raw(
                                                     format!("SELECT * FROM {}", table.info.name,)
                                                         .into(),
                                                 ),
-                                            ))))
+                                            )))
                                             .query_params(CheapVec::new_const())
                                             .body_params(CheapVec::new_const())
                                             .capture_all_params(false)
@@ -206,7 +206,7 @@ pub async fn discover() -> Result<(
                                             .method(*method)
                                             .version("v1".into())
                                             .route(route_many.to_owned())
-                                            .execute(ExecutePatch(Arc::new(MySQLExecute::from(
+                                            .execute(Arc::new(MySQLExecute::from(
                                                 MySQLQueryVariants::new_raw_with_not_include(
                                                     format!(
                                                         "INSERT INTO {} ({}) VALUES ({})",
@@ -238,7 +238,7 @@ pub async fn discover() -> Result<(
                                                     )
                                                     .into(),
                                                 ),
-                                            ))))
+                                            )))
                                             .query_params(CheapVec::new_const())
                                             .body_params(columns_names.to_owned())
                                             .capture_all_params(false)
@@ -270,7 +270,7 @@ pub async fn discover() -> Result<(
                                             .method(*method)
                                             .version("v1".into())
                                             .route(route_one.to_owned())
-                                            .execute(ExecutePatch(Arc::new(MySQLExecute::from(
+                                            .execute(Arc::new(MySQLExecute::from(
                                                 MySQLQueryVariants::new_raw_with_not_include(
                                                     format!(
                                                         "UPDATE {} SET {} WHERE {} = {} ",
@@ -296,7 +296,7 @@ pub async fn discover() -> Result<(
                                                     )
                                                     .into(),
                                                 ),
-                                            ))))
+                                            )))
                                             .query_params(CheapVec::new_const())
                                             .body_params(columns_names.to_owned())
                                             .capture_all_params(false)
@@ -332,7 +332,7 @@ pub async fn discover() -> Result<(
                                             .method(*method)
                                             .version("v1".into())
                                             .route(route_one.to_owned())
-                                            .execute(ExecutePatch(Arc::new(MySQLExecute::from(
+                                            .execute(Arc::new(MySQLExecute::from(
                                                 MySQLQueryVariants::new_raw_with_not_include(
                                                     format!(
                                                         "DELETE FROM {} WHERE {} = {} ",
@@ -340,7 +340,7 @@ pub async fn discover() -> Result<(
                                                     )
                                                     .into(),
                                                 ),
-                                            ))))
+                                            )))
                                             .query_params(CheapVec::new_const())
                                             .body_params(CheapVec::new_const())
                                             .capture_all_params(false)

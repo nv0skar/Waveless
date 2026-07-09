@@ -84,8 +84,7 @@ impl Default for Endpoints {
 
 /// The main endpoint definition.
 /// This will be then included in the Waveless project's binary.
-#[derive(Clone, Serialize, Deserialize, Constructor, Builder, Patch, Getters, Display, Debug)]
-#[patch(attribute(derive(Clone, PartialEq, Constructor, Builder, Serialize, Deserialize, Debug)))]
+#[derive(Clone, Serialize, Deserialize, Constructor, Builder, Getters, Display, Debug)]
 #[display("{} ({:?}))", id, description)]
 #[builder(default, pattern = "mutable", setter(strip_option))]
 #[getset(get = "pub")]
@@ -156,8 +155,7 @@ pub enum Targets {
 }
 
 /// The HTTP endpoint definition that will be either created by the user or discovered by the compiler.
-#[derive(Clone, Serialize, Deserialize, Constructor, Builder, Patch, Getters, Display, Debug)]
-#[patch(attribute(derive(Clone, Constructor, Builder, Serialize, Deserialize, Debug)))]
+#[derive(Clone, Serialize, Deserialize, Constructor, Builder, Getters, Display, Debug)]
 #[display("{} -> ({}, {:?})", route, method, version)]
 #[builder(default, pattern = "mutable", setter(strip_option))]
 #[getset(get = "pub")]
@@ -174,7 +172,7 @@ pub struct HttpTarget {
 
     /// Establishes the endpoint handler. Note that if no executor is set, the server will try to handle the request internally.
     #[serde(default, skip_serializing_if = "should_skip_option")]
-    execute: Option<ExecutePatch<Arc<dyn AnyHttpExecute>>>,
+    execute: Option<Arc<dyn AnyHttpExecute>>,
 
     /// Sets the accepted query parameters.
     #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
@@ -192,58 +190,6 @@ pub struct HttpTarget {
     /// Whether this endpoint has been automatically generated.
     #[serde(default, skip_serializing_if = "auto_generated_skip")]
     auto_generated: bool,
-}
-
-#[derive(Clone, Serialize, Deserialize, Display, Debug)]
-#[repr(transparent)]
-#[serde(transparent)]
-pub struct ExecutePatch<T>(pub T);
-
-impl PartialEq for HttpTarget {
-    fn eq(&self, other: &Self) -> bool {
-        self.method == other.method
-            && self.route.trim_matches('/') == other.route.trim_matches('/')
-            && self.version == other.version
-    }
-}
-
-impl<T> ExecutePatch<T> {
-    #[inline]
-    pub fn into_inner(&self) -> &T {
-        let Self(value) = self;
-
-        value
-    }
-}
-
-impl<T> PartialEq for ExecutePatch<T> {
-    fn eq(&self, _: &Self) -> bool {
-        false
-    }
-}
-
-impl<T> From<T> for ExecutePatch<T> {
-    fn from(value: T) -> Self {
-        Self(value)
-    }
-}
-
-impl<T> DerefMut for ExecutePatch<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        let Self(value) = self;
-
-        value
-    }
-}
-
-impl<T> Deref for ExecutePatch<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        let Self(value) = self;
-
-        value
-    }
 }
 
 /// Available HTTP methods
@@ -271,6 +217,12 @@ impl From<&str> for HttpMethod {
 
 fn auto_generated_skip(value: &bool) -> bool {
     should_skip(&(!*value))
+}
+
+impl PartialEq for HttpTarget {
+    fn eq(&self, other: &Self) -> bool {
+        self.route == other.route && self.method() == other.method()
+    }
 }
 
 impl Default for HttpTarget {
