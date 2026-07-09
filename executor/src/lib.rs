@@ -34,6 +34,7 @@ use std::task::Poll;
 use std::time::Duration;
 
 use anyhow::{Result, anyhow};
+use bytes::Bytes as ConnBytes;
 use clap::Subcommand;
 use compact_str::*;
 use dashmap::DashMap;
@@ -41,7 +42,7 @@ use derive_more::Constructor;
 use futures::future::BoxFuture;
 use getset::*;
 use http::{HeaderName, HeaderValue, StatusCode};
-use http_body_util::BodyExt;
+use http_body_util::{BodyExt, Full, combinators::BoxBody};
 use hyper::{body::Incoming, *};
 use hyper_util::{
     rt::TokioIo, server::conn::auto::Builder as AutoHttpBuilder, service::TowerToHyperService,

@@ -7,7 +7,9 @@ use crate::*;
 pub async fn serve(
     addr: Option<SocketAddr>,
     tls_paths: Option<(PathBuf, PathBuf)>,
-    frontend: Option<BoxCloneService<Request<Incoming>, Response<String>, Infallible>>,
+    frontend: Option<
+        BoxCloneService<Request<BoxBody<ConnBytes, anyhow::Error>>, Response<String>, Infallible>,
+    >,
 ) -> Result<ResultContext> {
     let _build_lock = RuntimeCx::acquire().build();
 
@@ -85,8 +87,7 @@ pub async fn serve(
                 serde_json::to_string_pretty(&json!({
                     "error": err.to_compact_string()
                 }))
-                .unwrap(), // .map_err(|_| unreachable!())
-                           // .boxed(),
+                .unwrap(),
             )
             .unwrap()
     });

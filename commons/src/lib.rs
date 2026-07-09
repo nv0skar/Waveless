@@ -33,6 +33,7 @@ use rustyrosetta::{codec::*, *};
 
 use anyhow::{Context, Result, anyhow, bail};
 use async_trait::*;
+use bytes::Bytes as ConnBytes;
 use chrono::{NaiveDateTime, Utc};
 use compact_str::*;
 use dashmap::*;
@@ -41,7 +42,8 @@ use derive_more::{Constructor, Display};
 use dyn_clone::*;
 use getset::*;
 use http::StatusCode;
-use hyper::{Request, body::Incoming};
+use http_body_util::combinators::BoxBody;
+use hyper::Request;
 use hyper_tungstenite::HyperWebsocket;
 use iocraft::prelude::*;
 use rand::distr::{Alphanumeric, SampleString};

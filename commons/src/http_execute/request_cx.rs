@@ -10,7 +10,7 @@ use http_execute::*;
 #[derive(Getters, MutGetters, Debug)]
 #[getset(get = "pub", get_mut = "pub")]
 pub struct RequestCx {
-    pub request: Request<Incoming>,
+    pub request: Request<BoxBody<ConnBytes, anyhow::Error>>,
     pub method: HttpMethod,
     pub request_params: HashMap<CompactString, ParamValue>,
     pub endpoint: Endpoint,

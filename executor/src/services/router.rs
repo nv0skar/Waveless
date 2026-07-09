@@ -3,7 +3,8 @@
 
 use crate::*;
 
-pub type RouterServiceInner = BoxCloneService<Request<Incoming>, Response<String>, Infallible>;
+pub type RouterServiceInner =
+    BoxCloneService<Request<BoxBody<ConnBytes, anyhow::Error>>, Response<String>, Infallible>;
 
 /// TODO: add documentation.
 #[derive(Clone, Constructor)]
@@ -39,6 +40,8 @@ where
     }
 
     fn call(&mut self, request: Request<Incoming>) -> Self::Future {
+        let request = request.map(|body| body.map_err(|err| anyhow!(err)).boxed());
+
         let method = HttpMethod::from(request.method().as_str());
 
         let mut force_endpoint_id = Option::<CompactString>::None;

@@ -83,7 +83,9 @@ where
 
             // Searches for body params.
             if !http_target.body_params().is_empty() || *http_target.capture_all_params() {
-                let request_body = Bytes::from_vec(
+                debug!("Request's body stream consumed. HINT: if you want to keep the TCP socket alive unset `capture_all_params` and empty `body_params`.");
+
+                let body_bytes = Bytes::from_iter(
                     request
                         .collect()
                         .await
@@ -93,15 +95,14 @@ where
                                 format!("Cannot get request's body. {}", err).into(),
                             )
                         })?
-                        .to_bytes()
-                        .to_vec(),
+                        .to_bytes(),
                 );
 
-                if !request_body.is_empty() {
-                    let Ok(json_body) = (match request_body.is_empty() {
+                if !body_bytes.is_empty() {
+                    let Ok(json_body) = (match body_bytes.is_empty() {
                         true => Ok(serde_json::Value::Array(vec![])),
                         false => serde_json::from_slice::<serde_json::Value>(
-                            request_body.iter().as_slice(),
+                            body_bytes.iter().as_slice(),
                         ),
                     }) else {
                         return Err(RequestError::Expected(
@@ -152,6 +153,11 @@ where
                             request_params.insert(key.to_owned(), ParamValue::Client(value));
                         }
                     }
+
+                    // Reconstruct the request's body.
+                    *request.body_mut() = BoxBody::new(
+                        Full::new(ConnBytes::from_iter(body_bytes)).map_err(|_| unreachable!()),
+                    );
                 } else if !http_target.body_params().is_empty() {
                     return Err(RequestError::Expected(
                         StatusCode::BAD_REQUEST,
