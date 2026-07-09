@@ -8,10 +8,12 @@ use super::*;
 use sea_orm::{FromQueryResult, QueryResult};
 
 /// TODO: add documentation.
-#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Display, Debug)]
+#[derive(
+    Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, MutGetters, Display, Debug,
+)]
 #[display("SQL queries: {:?}", queries)]
-#[getset(get = "pub")]
-#[serde(from = "MySQLQueryVariants")]
+#[getset(get = "pub", get_mut = "pub")]
+#[serde(from = "MySQLQueryWrapper")]
 pub struct MySQLExecute {
     /// If no query is marked to be included in the response the response's body will be empty.
     /// NOTE: queries are executed sequentially.
@@ -20,9 +22,11 @@ pub struct MySQLExecute {
 
 boxed_any!(MySQLExecute);
 
-#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Display, Debug)]
+#[derive(
+    Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, MutGetters, Display, Debug,
+)]
 #[display("{} (include: {})", query, include)]
-#[getset(get = "pub")]
+#[getset(get = "pub", get_mut = "pub")]
 pub struct MySQLQuery {
     query: CompactString,
 
@@ -43,7 +47,7 @@ fn default_true() -> bool {
     true
 }
 
-#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Copy, Clone, PartialEq, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum MySQLBehaviour {
     Permissive,
@@ -63,13 +67,13 @@ impl Default for MySQLBehaviour {
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
 #[serde(untagged)]
-pub enum MySQLQueryVariants {
-    Structured {
-        queries: CheapVec<MySQLQuery>,
-    },
-    SingleQuery {
+pub enum MySQLQueryWrapper {
+    Single {
         #[serde(flatten)]
         query: MySQLQuery,
+    },
+    Many {
+        queries: CheapVec<MySQLQuery>,
     },
 }
 
@@ -265,11 +269,11 @@ impl AnyHttpExecute for MySQLExecute {
     }
 }
 
-impl From<MySQLQueryVariants> for MySQLExecute {
-    fn from(value: MySQLQueryVariants) -> Self {
+impl From<MySQLQueryWrapper> for MySQLExecute {
+    fn from(value: MySQLQueryWrapper) -> Self {
         match value {
-            MySQLQueryVariants::Structured { queries } => Self { queries },
-            MySQLQueryVariants::SingleQuery { query: mysql_query } => {
+            MySQLQueryWrapper::Many { queries } => Self { queries },
+            MySQLQueryWrapper::Single { query: mysql_query } => {
                 let queries = mysql_query
                     .query()
                     .split(';')
@@ -288,9 +292,9 @@ impl From<MySQLQueryVariants> for MySQLExecute {
     }
 }
 
-impl MySQLQueryVariants {
-    pub fn new_raw(query: CompactString) -> Self {
-        Self::SingleQuery {
+impl MySQLQueryWrapper {
+    pub fn new(query: CompactString) -> Self {
+        Self::Single {
             query: MySQLQuery {
                 query,
                 include: true,
@@ -299,13 +303,37 @@ impl MySQLQueryVariants {
         }
     }
 
-    pub fn new_raw_with_not_include(query: CompactString) -> Self {
-        Self::SingleQuery {
-            query: MySQLQuery {
-                query,
-                include: false,
-                behaviour: MySQLBehaviour::Permissive,
-            },
+    pub fn with_include(self, include: bool) -> Self {
+        match self {
+            MySQLQueryWrapper::Single { mut query } => {
+                query.include = include;
+
+                Self::Single { query }
+            }
+            MySQLQueryWrapper::Many { mut queries } => {
+                queries.iter_mut().for_each(|query| {
+                    query.include = include;
+                });
+
+                Self::Many { queries }
+            }
+        }
+    }
+
+    pub fn with_behaviour(self, behaviour: MySQLBehaviour) -> Self {
+        match self {
+            MySQLQueryWrapper::Single { mut query } => {
+                query.behaviour = behaviour;
+
+                Self::Single { query }
+            }
+            MySQLQueryWrapper::Many { mut queries } => {
+                queries.iter_mut().for_each(|query| {
+                    query.behaviour = behaviour;
+                });
+
+                Self::Many { queries }
+            }
         }
     }
 }
