@@ -100,7 +100,7 @@ async fn try_main() -> Result<ResultContext> {
     let cli = Frontend::parse();
 
     // Setup logging
-    subscribe_logging(cli.debug)?;
+    subscribe_logging(cli.debug, CheapVec::new())?;
 
     // Handle frontend subcommands
     match cli.subcommand {

@@ -109,7 +109,7 @@ clap = { version = "4.6", features = ["derive"] }
 iocraft = "0.8"
 owo-colors = "4.3"
 
-regex = "1.12.4"
+regex = "1.13"
 
 # wasm-bindgen = "0.2.100"
 

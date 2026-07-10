@@ -4,11 +4,16 @@
 use crate::*;
 
 use tracing_subscriber::{
-    Layer, filter::LevelFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt,
+    Layer, Registry, filter::LevelFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt,
 };
 
 /// Setups logging
-pub fn subscribe_logging(debug: bool) -> Result<()> {
+pub fn subscribe_logging(
+    debug: bool,
+    ext_layers: CheapVec<Box<dyn Layer<Registry> + Send + Sync + 'static>>,
+) -> Result<()> {
+    let mut layers = Vec::from_iter(ext_layers);
+
     let stdout_layer = fmt::layer()
         .with_writer(std::io::stdout)
         .without_time()
@@ -17,12 +22,15 @@ pub fn subscribe_logging(debug: bool) -> Result<()> {
             LevelFilter::DEBUG
         } else {
             LevelFilter::INFO
-        });
+        })
+        .boxed();
 
-    let registry = tracing_subscriber::registry().with(stdout_layer);
+    layers.push(stdout_layer);
 
     #[cfg(debug_assertions)]
-    let registry = registry.with(console_subscriber::spawn());
+    layers.push(console_subscriber::spawn().boxed());
+
+    let registry = tracing_subscriber::registry().with(layers);
 
     registry.try_init().context("Tracing subscriber failed.")?;
 

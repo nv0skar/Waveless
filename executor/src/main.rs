@@ -8,6 +8,8 @@
 use waveless_commons::{databases::*, logging::*, runtime::handle_main, *};
 use waveless_executor::{frontend_options::*, server::*, *};
 
+use rustyrosetta::*;
+
 use anyhow::{Result, anyhow};
 use clap::Parser;
 use mimalloc::MiMalloc;
@@ -43,7 +45,7 @@ async fn try_main() -> Result<ResultContext> {
     let cli = ExecutorFrontend::parse();
 
     // Setup logging
-    subscribe_logging(cli.debug)?;
+    subscribe_logging(cli.debug, CheapVec::new())?;
 
     // Handle frontend subcommands
     match cli.subcommand {
