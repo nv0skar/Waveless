@@ -63,11 +63,11 @@ impl Endpoints {
     pub fn merge(&mut self, new_endpoints: Endpoints) -> Result<()> {
         for endpoint in new_endpoints.inner {
             if let Err(err) = self.add(endpoint.to_owned()) {
-                warn!(
+                bail!(
                     "Cannot add endpoint '{}' to the endpoints buffer. {}",
                     endpoint.id,
                     err.to_string()
-                )
+                );
             }
         }
         Ok(())
