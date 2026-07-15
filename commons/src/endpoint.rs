@@ -221,7 +221,16 @@ fn auto_generated_skip(value: &bool) -> bool {
 
 impl PartialEq for HttpTarget {
     fn eq(&self, other: &Self) -> bool {
-        self.route == other.route && self.version == other.version && self.method == other.method
+        self.route.trim().trim_matches('/') == other.route.trim().trim_matches('/')
+            && self
+                .version
+                .to_owned()
+                .map(|version| version.trim().trim_matches('/').to_owned())
+                == other
+                    .version
+                    .to_owned()
+                    .map(|version| version.trim().trim_matches('/').to_owned())
+            && self.method == other.method
     }
 }
 
