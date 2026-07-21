@@ -32,7 +32,7 @@ where
     S::Response: Send + 'static,
     S::Error: Send + 'static,
 {
-    type Response = Response<String>;
+    type Response = Response<ConnBody>;
 
     type Error = Infallible;
 
@@ -54,7 +54,7 @@ where
             request
                 .headers()
                 .get("host")
-                .map(|val| format!("from {}", val.to_str().unwrap()))
+                .map(|val| format!("from {}", val.to_str().unwrap_or_default()))
                 .unwrap_or_default()
         );
 
@@ -91,17 +91,19 @@ where
                         Some(BodyValue::Json(value)) => {
                             Ok(response
                                 .status(execute_response.status())
-                                .body(serde_json::to_string_pretty(&value).unwrap()).unwrap()
+                                .body(json_conn_body(value))
+                                .unwrap()
                             )
                         }
                         Some(BodyValue::Any(encode)) => {
                                 Ok(response
                                     .status(execute_response.status())
-                                    .body(serde_json::to_string_pretty(&json!({
+                                    .body(json_conn_body(&json!({
                                         "data": encode.encode().unwrap()
-                                    })).unwrap()).unwrap())
+                                    })))
+                                    .unwrap())
                             },
-                        _ => Ok(response.status(execute_response.status()).body(String::new()).unwrap())
+                        _ => Ok(response.status(execute_response.status()).body(Empty::<ConnBytes>::new().map_err(|err| anyhow!(err)).boxed()).unwrap())
                     }
                 },
                 Err(err) => Ok(response
@@ -111,12 +113,14 @@ where
                             RequestError::Other(_) => StatusCode::INTERNAL_SERVER_ERROR,
                         }
                     })
-                    .body(serde_json::to_string_pretty(&json!({
+                    .body(json_conn_body(&json!({
                         "error": match err {
                             RequestError::Expected(_, err) => err,
                             RequestError::Other(err) => format!("Unexpected error: {}", err).into(),
                         }
-                    })).unwrap()).unwrap()
+                    }))
+                    .map_err(|err| anyhow!(err)).boxed())
+                    .unwrap()
                 ),
             }
         })

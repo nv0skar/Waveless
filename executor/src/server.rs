@@ -8,7 +8,11 @@ pub async fn serve(
     addr: Option<SocketAddr>,
     tls_paths: Option<(PathBuf, PathBuf)>,
     frontend: Option<
-        BoxCloneService<Request<BoxBody<ConnBytes, anyhow::Error>>, Response<String>, Infallible>,
+        BoxCloneService<
+            Request<BoxBody<ConnBytes, anyhow::Error>>,
+            Response<BoxBody<ConnBytes, anyhow::Error>>,
+            Infallible,
+        >,
     >,
 ) -> Result<ResultContext> {
     let _build_lock = RuntimeCx::acquire().build();
@@ -78,17 +82,13 @@ pub async fn serve(
         governor_limiter.retain_recent();
     });
 
-    // This would have worked ad-hoc without modifying the original crate if it has implemented `From<String>` for `GovernorError`...
     let governor = tower_governor::GovernorLayer::new(governor_conf).error_handler(|err| {
         Response::builder()
             .status(http::StatusCode::TOO_MANY_REQUESTS)
             .header("Content-Type", "application/json")
-            .body(
-                serde_json::to_string_pretty(&json!({
-                    "error": err.to_compact_string()
-                }))
-                .unwrap(),
-            )
+            .body(json_conn_body(&json!({
+                "error": err.to_compact_string()
+            })))
             .unwrap()
     });
 

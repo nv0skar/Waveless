@@ -3,8 +3,7 @@
 
 use crate::*;
 
-pub type RouterServiceInner =
-    BoxCloneService<Request<BoxBody<ConnBytes, anyhow::Error>>, Response<String>, Infallible>;
+pub type RouterServiceInner = BoxCloneService<Request<ConnBody>, Response<ConnBody>, Infallible>;
 
 /// TODO: add documentation.
 #[derive(Clone, Constructor)]
@@ -15,12 +14,15 @@ pub struct RouterService<S: Clone> {
 
 impl<S> Service<Request<Incoming>> for RouterService<S>
 where
-    S: Service<RequestCx, Response = Response<String>, Error = Infallible> + Clone + Send + 'static,
+    S: Service<RequestCx, Response = Response<ConnBody>, Error = Infallible>
+        + Clone
+        + Send
+        + 'static,
     S::Future: Send + 'static,
     S::Response: Send + 'static,
     S::Error: Send + 'static,
 {
-    type Response = Response<String>;
+    type Response = Response<ConnBody>;
 
     type Error = Infallible;
 
@@ -126,16 +128,13 @@ where
 
                                 Ok(response
                                     .status(404)
-                                    .body(
-                                        serde_json::to_string_pretty(&json!({
-                                                "error": format!(
-                                                    "There is no route that accepts {}.",
-                                                    method
-                                                )
-                                            }
-                                        ))
-                                        .unwrap(),
-                                    )
+                                    .body(json_conn_body(&json!({
+                                            "error": format!(
+                                                "There is no route that accepts {}.",
+                                                method
+                                            )
+                                        }
+                                    )))
                                     .unwrap())
                             });
                         }
@@ -174,13 +173,12 @@ where
 
                                 Ok(response
                                         .status(404)
-                                        .body(serde_json::to_string_pretty(&json!({
-                                            "error": format!(
-                                                "Route `{}` is not defined. HINT: Go to your project's endpoints folder and check the endpoint's routes.",
-                                                route
-                                            )
-                                        }
-                                        )).unwrap()
+                                        .body(
+                                            json_conn_body(&json!({
+                                                "error": format!(
+                                                    "Route `{}` is not defined. HINT: Go to your project's endpoints folder and check the endpoint's routes.",
+                                                    route)
+                                            }))
                                     ).unwrap()
                                 )
                             });

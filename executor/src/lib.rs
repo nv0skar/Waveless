@@ -42,7 +42,7 @@ use derive_more::Constructor;
 use futures::future::BoxFuture;
 use getset::*;
 use http::{HeaderName, HeaderValue, StatusCode};
-use http_body_util::{BodyExt, Full, combinators::BoxBody};
+use http_body_util::{BodyExt, Empty, Full, combinators::BoxBody};
 use hyper::{body::Incoming, *};
 use hyper_util::{
     rt::TokioIo, server::conn::auto::Builder as AutoHttpBuilder, service::TowerToHyperService,
@@ -63,4 +63,20 @@ use tracing::*;
 
 pub type EndpointRouter = DashMap<HttpMethod, Router<Endpoint>>;
 
+pub type ConnBody = BoxBody<ConnBytes, anyhow::Error>;
+
 pub static RUNTIME_CX: OnceCell<RuntimeCx> = OnceCell::const_new();
+
+pub fn json_conn_body(value: &serde_json::Value) -> ConnBody {
+    Full::new(ConnBytes::from(
+        serde_json::to_vec_pretty(value).expect("Payload cannot be serialized into JSON."),
+    ))
+    .map_err(|_| unreachable!())
+    .boxed()
+}
+
+pub fn empty_body() -> ConnBody {
+    Empty::<ConnBytes>::new()
+        .map_err(|_| unreachable!())
+        .boxed()
+}

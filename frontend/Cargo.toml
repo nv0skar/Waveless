@@ -11,11 +11,11 @@ toml.workspace = true
 arrayvec.workspace = true
 compact_str.workspace = true
 mimalloc.workspace = true
-leptos.workspace = true
-leptos_meta.workspace = true
-leptos_router.workspace = true
-leptos_dom.workspace = true
-leptos_axum = { workspace = true, optional = true }
+# leptos.workspace = true
+# leptos_meta.workspace = true
+# leptos_router.workspace = true
+# leptos_dom.workspace = true
+# leptos_axum = { workspace = true, optional = true }
 clap.workspace = true
 iocraft.workspace = true
 owo-colors.workspace = true
@@ -27,6 +27,6 @@ either.workspace = true
 derive_more.workspace = true
 anyhow.workspace = true
 
-[features]
-hydrate = ["leptos/hydrate"]
-ssr = ["leptos/ssr", "dep:leptos_axum", "leptos_meta/ssr"]
+# [features]
+# hydrate = ["leptos/hydrate"]
+# ssr = ["leptos/ssr", "dep:leptos_axum", "leptos_meta/ssr"]
