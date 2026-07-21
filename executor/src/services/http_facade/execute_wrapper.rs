@@ -103,7 +103,7 @@ where
                                     })))
                                     .unwrap())
                             },
-                        _ => Ok(response.status(execute_response.status()).body(Empty::<ConnBytes>::new().map_err(|err| anyhow!(err)).boxed()).unwrap())
+                        _ => Ok(response.status(execute_response.status()).body(empty_body()).unwrap())
                     }
                 },
                 Err(err) => Ok(response
