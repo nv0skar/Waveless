@@ -9,7 +9,7 @@ waveless_compiler = { path = "./compiler" }
 waveless_executor = { path = "./executor" }
 waveless_frontend = { path = "./frontend" }
 
-rustyrosetta = { git = "https://github.com/nv0skar/RustyRosetta.git", tag = "rustyrosetta_0.0.3", features = [
+rustyrosetta = { git = "https://github.com/nv0skar/RustyRosetta.git", tag = "rustyrosetta_0.0.4", features = [
     "all",
 ] }
 
