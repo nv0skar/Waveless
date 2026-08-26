@@ -5,7 +5,6 @@ test-all = "test --all-features -- --nocapture"
 doc-all = "doc --workspace --no-deps"
 
 [build]
-rustc-wrapper = "/Users/nv0skar/.cargo/bin/sccache"
 rustdocflags = ["-Zunstable-options", "--enable-index-page"]
 
 [target.aarch64-apple-darwin]
