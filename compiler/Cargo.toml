@@ -1,8 +1,7 @@
 [package]
 name = "waveless_compiler"
-version = "0.0.0"
-description = "Generate APIs and UIs from the application data model."
-edition = "2024"
+version.workspace = true
+edition.workspace = true
 
 [dependencies]
 waveless_commons.workspace = true

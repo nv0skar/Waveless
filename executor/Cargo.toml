@@ -1,6 +1,7 @@
 [package]
 name = "waveless_executor"
-edition = "2024"
+version.workspace = true
+edition.workspace = true
 
 [dependencies]
 waveless_commons.workspace = true
