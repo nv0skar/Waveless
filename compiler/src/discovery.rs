@@ -12,7 +12,10 @@
 //!
 use crate::*;
 
-use schema::mysql::MySQLSchemaDiscoveryMethod;
+use waveless_sql::{
+    http_execute::{mysql::*, *},
+    schema::mysql::*,
+};
 
 use sea_schema::mysql::def::Schema;
 
@@ -129,14 +132,14 @@ pub async fn discover() -> Result<(
                                                     .version("v1".into())
                                                     .route(route_one.to_owned())
                                                     .execute(Arc::<MySQLExecute>::new(
-                                                        MySQLQueryWrapper::new(
+                                                        SQLQueryWrapper::new(
                                                             format!(
                                                                 "SELECT * FROM {} WHERE {} = {}",
                                                                 table.info.name, pk_id, "{id}"
                                                             )
                                                             .into(),
                                                         )
-                                                        .with_behaviour(MySQLBehaviour::Unique)
+                                                        .with_behaviour(SQLBehaviour::Unique)
                                                         .into(),
                                                     ))
                                                     .query_params(CheapVec::new_const())
@@ -170,7 +173,7 @@ pub async fn discover() -> Result<(
                                             .version("v1".into())
                                             .route(route_many.to_owned())
                                             .execute(Arc::<MySQLExecute>::new(
-                                                MySQLQueryWrapper::new(
+                                                SQLQueryWrapper::new(
                                                     format!("SELECT * FROM {}", table.info.name,)
                                                         .into(),
                                                 )
@@ -208,7 +211,7 @@ pub async fn discover() -> Result<(
                                             .version("v1".into())
                                             .route(route_many.to_owned())
                                             .execute(Arc::<MySQLExecute>::new(
-                                                MySQLQueryWrapper::new(
+                                                SQLQueryWrapper::new(
                                                     format!(
                                                         "INSERT INTO {} ({}) VALUES ({})",
                                                         table.info.name,
@@ -274,7 +277,7 @@ pub async fn discover() -> Result<(
                                             .version("v1".into())
                                             .route(route_one.to_owned())
                                             .execute(Arc::<MySQLExecute>::new(
-                                                MySQLQueryWrapper::new(
+                                                SQLQueryWrapper::new(
                                                     format!(
                                                         "UPDATE {} SET {} WHERE {} = {} ",
                                                         table.info.name,
@@ -338,7 +341,7 @@ pub async fn discover() -> Result<(
                                             .version("v1".into())
                                             .route(route_one.to_owned())
                                             .execute(Arc::<MySQLExecute>::new(
-                                                MySQLQueryWrapper::new(
+                                                SQLQueryWrapper::new(
                                                     format!(
                                                         "DELETE FROM {} WHERE {} = {} ",
                                                         table.info.name, pk_id, "{id}"

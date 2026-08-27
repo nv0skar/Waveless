@@ -6,7 +6,10 @@ edition.workspace = true
 [dependencies]
 waveless_commons.workspace = true
 waveless_executor.workspace = true
+waveless_sql = { workspace = true, features = ["mysql"]}
+
 rustyrosetta = { workspace = true, features = ["all"] }
+
 tokio = { workspace = true, features = ["full"] }
 tower.workspace = true
 sqlx.workspace = true
@@ -32,3 +35,9 @@ getset.workspace = true
 either.workspace = true
 derive_more.workspace = true
 anyhow.workspace = true
+
+[features]
+all = ["mysql", "postgres"]
+
+mysql = []
+postgres = []

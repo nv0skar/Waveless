@@ -6,6 +6,8 @@
 //!
 use crate::*;
 
+use waveless_sql::http_execute::{mysql::*, *};
+
 /// Create a new project in the current dir with the specified name
 #[instrument(skip_all)]
 pub fn new_project(name: CompactString) -> Result<ResultContext> {
@@ -79,7 +81,7 @@ pub fn new_project(name: CompactString) -> Result<ResultContext> {
                         .version("v1".into())
                         .method(HttpMethod::Get)
                         .execute(Arc::<MySQLExecute>::new(
-                            MySQLQueryWrapper::new(
+                            SQLQueryWrapper::new(
                                 "SELECT * FROM products WHERE size = {size}".into(),
                             )
                             .into(),
@@ -98,7 +100,7 @@ pub fn new_project(name: CompactString) -> Result<ResultContext> {
                         .version("v1".into())
                         .method(HttpMethod::Get)
                         .execute(Arc::<MySQLExecute>::new(
-                            MySQLQueryWrapper::new("SELECT * FROM posts".into()).into(),
+                            SQLQueryWrapper::new("SELECT * FROM posts".into()).into(),
                         ))
                         .build()
                         .unwrap(),

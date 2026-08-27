@@ -1,14 +1,11 @@
 // Waveless
 // Copyright (C) 2026 Oscar Alvarez Gonzalez
 
-pub mod mysql;
-
 use crate::*;
 
 use build::*;
 
 use sea_orm::Value; // Switched from sqlx, as sqlx doesn't support conversion into JSON for arbitrary schemas.
-use sqlx::{mysql::*, pool::*};
 
 /// The database's connections' pools manager.
 /// The primary database won't be in the `ArrayVec` for efficiency.

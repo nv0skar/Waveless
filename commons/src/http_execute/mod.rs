@@ -1,7 +1,6 @@
 // Waveless
 // Copyright (C) 2026 Oscar Alvarez Gonzalez
 
-pub mod mysql;
 pub mod request_cx;
 
 use request_cx::*;
@@ -9,7 +8,6 @@ use request_cx::*;
 use crate::*;
 
 use databases::*;
-use endpoint::*;
 
 /// Generic methods trait to handle requests to the endpoints.
 #[typetag::serde]

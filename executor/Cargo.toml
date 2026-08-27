@@ -5,7 +5,10 @@ edition.workspace = true
 
 [dependencies]
 waveless_commons.workspace = true
+waveless_sql.workspace = true
+
 rustyrosetta = { workspace = true, features = ["all"] }
+
 tokio = { workspace = true, features = ["full"] }
 tokio-util = { workspace = true, features = ["full"] }
 tokio-rustls = { workspace = true, features = ["ring"] }
@@ -44,3 +47,9 @@ either.workspace = true
 derive_more.workspace = true
 anyhow.workspace = true
 thiserror.workspace = true
+
+[features]
+all = ["mysql", "postgres"]
+
+mysql = []
+postgres = []

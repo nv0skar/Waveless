@@ -97,6 +97,8 @@ fn main() -> Result<()> {
 }
 
 async fn try_main() -> Result<ResultContext> {
+    waveless_sql::register(); // Do not strip `waveless_sql` at build.
+
     let cli = Frontend::parse();
 
     // Setup logging

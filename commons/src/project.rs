@@ -8,9 +8,11 @@
 //! TODO: maybe implement default variants
 //!
 
+use core::convert::Into;
+
 use crate::*;
 
-use auth::{mysql::*, *};
+use auth::*;
 use build::*;
 use databases::*;
 
@@ -144,6 +146,7 @@ pub struct DatabaseConfig {
     id: DatabaseId,
 
     /// Indicates whether this database is primary (no need to set database id on auth, session and role storage).
+    #[serde(default, skip_serializing_if = "should_skip")]
     is_primary: bool,
 
     /// Defines credentials for all database backends.
@@ -179,13 +182,11 @@ impl Default for DatabaseConfig {
         Self {
             id: "main".into(),
             is_primary: true,
-            connection: Arc::new(databases::mysql::MySQLDBConnectionConfig::new(
-                SocketAddr::new("127.0.0.1".parse().unwrap(), 3306),
-                "example_user".into(),
-                "example_password".into(),
-                "example_db".into(),
-            )),
-            schema_discovery: Some(Default::default()),
+            connection: Arc::new(ExternalDBConnectionConfig {
+                id: "mysql".into(),
+                connection: "...".into(),
+            }),
+            schema_discovery: None,
             pool_min_size: Some(std::thread::available_parallelism().unwrap().get() * 2),
             pool_max_size: Some(std::thread::available_parallelism().unwrap().get() * 2),
         }
@@ -245,18 +246,6 @@ pub struct DataSchemaDiscoveryConfig {
 
     // Whether to checksum the database's schema.
     checksum: bool,
-}
-
-impl Default for DataSchemaDiscoveryConfig {
-    fn default() -> Self {
-        Self {
-            method: Arc::new(schema::mysql::MySQLSchemaDiscoveryMethod::new(
-                CheapVec::from_vec(vec!["_private_table".into()]),
-            )),
-            generate_endpoints: true,
-            checksum: true,
-        }
-    }
 }
 
 /// TODO: add documentation.
@@ -329,21 +318,6 @@ pub struct Authentication {
 impl PartialEq for Authentication {
     fn eq(&self, other: &Self) -> bool {
         self.default_role == other.default_role && self.allow_signup == other.allow_signup
-    }
-}
-
-impl Default for Authentication {
-    fn default() -> Self {
-        Self {
-            backends: CheapVec::from_vec(vec![
-                Arc::new(MySQLSimpleAuthenticationMethod::default()),
-            ]),
-            session: Arc::new(MySQLToken::default()),
-            role: Some(Arc::new(MySQLRole::default())),
-            default_role: None,
-            session_cookie: true,
-            allow_signup: true,
-        }
     }
 }
 

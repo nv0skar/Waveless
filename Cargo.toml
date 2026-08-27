@@ -16,6 +16,8 @@ waveless_compiler = { path = "./compiler" }
 waveless_executor = { path = "./executor" }
 waveless_frontend = { path = "./frontend" }
 
+waveless_sql = { git = "https://github.com/nv0skar/waveless_sql.git" }
+
 rustyrosetta = { git = "https://github.com/nv0skar/RustyRosetta.git", tag = "rustyrosetta_0.0.4", features = [
     "all",
 ] }
@@ -39,7 +41,7 @@ hyper-util = { version = "0.1", features = ["full"] }
 http-body-util = "0.1"
 tower = { version = "0.5.3", features = ["full"] }
 tower-http = "0.7"
-tower-http-cache = "0.5.1"
+tower-http-cache = "0.5.2"
 tower_governor = { git = "https://github.com/nv0skar/tower-governor-generic-result.git", default-features = false }
 http = "1.5"
 matchit = "0.9"
@@ -88,7 +90,7 @@ dyn-clone = "1.0.20"
 
 # lettre = { version = "0.11.19", features = ["tokio1", "tokio1-native-tls"] }
 
-struct-patch = "0.13"
+struct-patch = "0.14"
 garde = { version = "0.23", features = ["full"] }
 half = { version = "2.7", features = ["serde"] }
 rust_decimal = "1.42"
@@ -161,6 +163,12 @@ features = ["wasm_js"]
 # assets-dir = "target/bundled"
 # style-file = "style/main.scss"
 # tailwind-input-file = "style/tailwind.css"
+
+[patch."https://github.com/nv0skar/Waveless"]
+waveless_commons = { path = "./commons" }
+waveless_compiler = { path = "./compiler" }
+waveless_executor = { path = "./executor" }
+waveless_frontend = { path = "./frontend" }
 
 [profile.dev.package."*"]
 debug = false
