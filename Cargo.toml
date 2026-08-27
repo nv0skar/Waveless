@@ -41,7 +41,7 @@ hyper-util = { version = "0.1", features = ["full"] }
 http-body-util = "0.1"
 tower = { version = "0.5.3", features = ["full"] }
 tower-http = "0.7"
-tower-http-cache = "0.5.2"
+tower-http-cache = "0.6"
 tower_governor = { git = "https://github.com/nv0skar/tower-governor-generic-result.git", default-features = false }
 http = "1.5"
 matchit = "0.9"
