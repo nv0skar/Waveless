@@ -21,7 +21,7 @@ use std::any::{Any, TypeId};
 use std::cell::Cell;
 use std::collections::HashMap;
 use std::convert::Infallible;
-use std::env::{current_dir, var};
+use std::env::current_dir;
 use std::fmt::Debug;
 use std::mem::MaybeUninit;
 use std::net::SocketAddr;
@@ -30,7 +30,6 @@ use std::sync::Arc;
 
 use rustyrosetta::{codec::*, *};
 
-use anyhow::{Context, Result, anyhow, bail};
 use async_trait::*;
 use bytes::Bytes as ConnBytes;
 use compact_str::*;
@@ -38,6 +37,7 @@ use dashmap::*;
 use derive_builder::*;
 use derive_more::{Constructor, Display};
 use dyn_clone::*;
+use eyre::{Context, Result, bail, eyre};
 use getset::*;
 use http::StatusCode;
 use http_body_util::combinators::BoxBody;
@@ -110,7 +110,7 @@ pub enum RequestError {
     #[error("Request error.")]
     Expected(StatusCode, CompactString),
     #[error(transparent)]
-    Other(#[from] anyhow::Error),
+    Other(#[from] eyre::Error),
 }
 
 /// Tries to find the project's workspace root path.
@@ -125,7 +125,7 @@ pub fn get_workspace_root(project_file: &str) -> Result<PathBuf> {
             }
         }
     };
-    Err(anyhow!(
+    Err(eyre!(
         "The project's worspace root path cannot be determined."
     ))
 }

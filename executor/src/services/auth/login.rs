@@ -43,7 +43,7 @@ impl Service<RequestCx> for LoginSvc {
                 .config()
                 .authentication()
                 .to_owned()
-                .ok_or(RequestError::Other(anyhow!(
+                .ok_or(RequestError::Other(eyre!(
                     "Authentication is not set for the current build."
                 )))?;
 
@@ -81,7 +81,7 @@ impl Service<RequestCx> for LoginSvc {
             };
 
             let Ok(auth_db) = databases.search(auth_method.db_id()) else {
-                return Err(RequestError::Other(anyhow!(
+                return Err(RequestError::Other(eyre!(
                     "Cannot get the database connection for '{}'.",
                     auth_method.db_id().unwrap_or("main".into())
                 )));
@@ -93,7 +93,7 @@ impl Service<RequestCx> for LoginSvc {
                     let session_method = auth_config.session();
 
                     let Ok(session_db) = databases.search(session_method.db_id()) else {
-                        return Err(RequestError::Other(anyhow!(
+                        return Err(RequestError::Other(eyre!(
                             "Cannot get the database connection for '{}'.",
                             session_method.db_id().unwrap_or("main".into())
                         )));
@@ -104,7 +104,7 @@ impl Service<RequestCx> for LoginSvc {
                             .new(session_db, user_id)
                             .await
                             .map_err(|err| {
-                                RequestError::Other(anyhow!(
+                                RequestError::Other(eyre!(
                                     "Cannot check the session token. {}",
                                     err
                                 ))

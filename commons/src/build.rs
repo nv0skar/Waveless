@@ -44,7 +44,7 @@ impl ExecutorBuild {
         debug!(
             "Binary mode is set, as the serializer requires `#[serde(skip_serializing_if = '...')]` to be disabled."
         );
-        let mut buffer = self.encode()?;
+        let mut buffer = self.encode().map_err(|error| eyre!(error))?;
         buffer.insert_from_slice(0, BINARY_MAGIC);
         BINARY_MODE.set(false);
         Ok(buffer)
@@ -52,7 +52,7 @@ impl ExecutorBuild {
 
     /// Removes the magic bytes from the beginning of the file and deserializes the binary.
     pub fn decode_binary(buffer: &Bytes) -> Result<Self> {
-        ExecutorBuild::decode(&buffer[BINARY_MAGIC.len()..])
+        ExecutorBuild::decode(&buffer[BINARY_MAGIC.len()..]).map_err(|error| eyre!(error))
     }
 }
 
@@ -92,13 +92,15 @@ impl Default for DatabaseChecksum {
 mod tests {
     use super::*;
 
+    use eyre::Context;
+
     #[test]
     fn default_into_bin_and_back() -> Result<()> {
         let build = ExecutorBuild::default();
 
         let serialized = build
             .encode_binary()
-            .context("Cannot serialize project build.")?;
+            .wrap_err("Cannot serialize project build.")?;
 
         let deserialized =
             ExecutorBuild::decode_binary(&serialized).context("Cannot deserialize project build. Did you disable the `toml_codec` flag on `waveless_config` and `waveless_schema`?")?;

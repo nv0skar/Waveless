@@ -382,7 +382,7 @@ pub async fn discover() -> Result<(
 
                 db_endpoints.push((db_config.id().to_owned(), discovered_endpoints));
             } else {
-                return Err(anyhow!(
+                return Err(eyre!(
                     "Unimplemented discovery method or invalid discovery solver for the given database id."
                 ));
             }

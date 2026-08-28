@@ -19,7 +19,7 @@ pub fn new_project(name: CompactString) -> Result<ResultContext> {
 
     {
         if let Err(err) = create_dir(&project_path) {
-            Err(anyhow!(
+            Err(eyre!(
                 "Cannot create project's folder {}. Are you sure that there is no project with the same name and that you have write permissions?%{}",
                 name,
                 err.to_string().blue()

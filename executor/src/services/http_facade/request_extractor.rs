@@ -61,7 +61,7 @@ where
             if let Some(queries) = request.uri().query() {
                 let queries = queries.split('&').map(|elem| {
                     elem.split_once('=')
-                        .ok_or(anyhow!("Cannot parse request's query."))
+                        .ok_or(eyre!("Cannot parse request's query."))
                         .unwrap()
                 });
                 if *http_target.capture_all_params() {

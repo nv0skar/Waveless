@@ -10,8 +10,8 @@ use waveless_executor::{frontend_options::*, server::*, *};
 
 use rustyrosetta::*;
 
-use anyhow::{Result, anyhow};
 use clap::Parser;
+use eyre::{Result, eyre};
 use mimalloc::MiMalloc;
 
 #[global_allocator]
@@ -82,6 +82,6 @@ async fn try_main() -> Result<ResultContext> {
 
             Ok("".into())
         }
-        None => Err(anyhow!("No subcommand provided!")),
+        None => Err(eyre!("No subcommand provided!")),
     }
 }

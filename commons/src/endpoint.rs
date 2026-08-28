@@ -47,7 +47,7 @@ impl Endpoints {
         let search = self.inner.iter().find(|endpoint| new_endpoint.eq(endpoint));
 
         match search {
-            Some(endpoint) => Err(anyhow!(
+            Some(endpoint) => Err(eyre!(
                 "An equivalent endpoint already exists: you were trying to add '{}', but '{}' is equivalent.",
                 new_endpoint,
                 endpoint

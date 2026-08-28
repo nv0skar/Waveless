@@ -9,6 +9,8 @@ pub fn handle_main<T>(main_fn: T) -> Result<()>
 where
     T: AsyncFn() -> Result<CompactString>,
 {
+    color_eyre::install()?;
+
     let runtime = Builder::new_multi_thread()
         .enable_all()
         .thread_stack_size(128 * 1024 * 1024)
@@ -36,34 +38,7 @@ where
                 .print();
                 }
             }
-            Err(err) => {
-                if var("CATCH_ERROR").map(|val| val.to_lowercase() != "false").unwrap_or(true)  {
-                    let err = err.to_string();
-                    let (res, cx) = err.split_once("%").unwrap_or((err.as_str(), "")); // TODO: This should be a custom error type.
-                    element! {
-                        View(
-                            padding_left: 1,
-                            padding_right: 1,
-                            border_style: BorderStyle::Round,
-                            border_color: iocraft::Color::Red,
-                        ) {
-                            MixedText(align: TextAlign::Left, contents: vec![
-                                MixedTextContent::new("🔴 "),
-                                MixedTextContent::new("ERROR: ").color(iocraft::Color::Red).weight(Weight::Bold),
-                                MixedTextContent::new(res).color(iocraft::Color::White),
-                                MixedTextContent::new(format!("\n{}", cx)).color(iocraft::Color::Blue),
-                            ])
-                        }
-                    }
-                    .print();
-                } else {
-                    if !var("RUST_BACKTRACE").map(|val| val == "1").unwrap_or(false) {
-                        warn!("Backtrace hasn't been captured, you can capture the backtrace  by setting `RUST_BACKTRACE=1` environment flag.")
-                    }
-
-                    return Err(err);
-                }
-            }
+            Err(err) => return Err(err)
         }
         Ok(())
     })

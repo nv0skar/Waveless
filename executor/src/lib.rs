@@ -33,12 +33,12 @@ use std::sync::Arc;
 use std::task::Poll;
 use std::time::Duration;
 
-use anyhow::{Result, anyhow};
 use bytes::Bytes as ConnBytes;
 use clap::Subcommand;
 use compact_str::*;
 use dashmap::DashMap;
 use derive_more::Constructor;
+use eyre::{Result, eyre};
 use futures::future::BoxFuture;
 use getset::*;
 use http::{HeaderName, HeaderValue, StatusCode};
@@ -63,7 +63,7 @@ use tracing::*;
 
 pub type EndpointRouter = DashMap<HttpMethod, Router<Endpoint>>;
 
-pub type ConnBody = BoxBody<ConnBytes, anyhow::Error>;
+pub type ConnBody = BoxBody<ConnBytes, eyre::Error>;
 
 pub static RUNTIME_CX: OnceCell<RuntimeCx> = OnceCell::const_new();
 

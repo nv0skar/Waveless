@@ -9,8 +9,8 @@ pub async fn serve(
     tls_paths: Option<(PathBuf, PathBuf)>,
     frontend: Option<
         BoxCloneService<
-            Request<BoxBody<ConnBytes, anyhow::Error>>,
-            Response<BoxBody<ConnBytes, anyhow::Error>>,
+            Request<BoxBody<ConnBytes, eyre::Error>>,
+            Response<BoxBody<ConnBytes, eyre::Error>>,
             Infallible,
         >,
     >,
@@ -24,7 +24,7 @@ pub async fn serve(
                 .await
                 .executor()
                 .listening_addr()
-                .ok_or(anyhow!("No server address was provided."))?,
+                .ok_or(eyre!("No server address was provided."))?,
         ),
     )
     .await

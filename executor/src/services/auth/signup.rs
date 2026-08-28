@@ -43,13 +43,13 @@ impl Service<RequestCx> for SignUpSvc {
                 .config()
                 .authentication()
                 .to_owned()
-                .ok_or(RequestError::Other(anyhow!(
+                .ok_or(RequestError::Other(eyre!(
                     "Authentication is not set for the current build."
                 )))?;
 
             // Check whether signup is enabled for the current build.
             if !auth_config.allow_signup() {
-                Err(RequestError::Other(anyhow!("Signup is disabled for the current build.")))?;
+                Err(RequestError::Other(eyre!("Signup is disabled for the current build.")))?;
             }
 
             let databases = DATABASES_CONNS.get().unwrap();
@@ -86,7 +86,7 @@ impl Service<RequestCx> for SignUpSvc {
             };
 
             let Ok(auth_db) = databases.search(auth_method.db_id()) else {
-                return Err(RequestError::Other(anyhow!(
+                return Err(RequestError::Other(eyre!(
                     "Cannot get the database connection for '{}'.",
                     auth_method.db_id().unwrap_or("main".into())
                 )));
@@ -99,7 +99,7 @@ impl Service<RequestCx> for SignUpSvc {
                     let session_method = auth_config.session();
 
                     let Ok(session_db) = databases.search(session_method.db_id()) else {
-                        return Err(RequestError::Other(anyhow!(
+                        return Err(RequestError::Other(eyre!(
                             "Cannot get the database connection for '{}'.",
                             session_method.db_id().unwrap_or("main".into())
                         )));
@@ -110,7 +110,7 @@ impl Service<RequestCx> for SignUpSvc {
                             .new(session_db, user_id)
                             .await
                             .map_err(|err| {
-                                RequestError::Other(anyhow!(
+                                RequestError::Other(eyre!(
                                     "Cannot check the session token. {}",
                                     err
                                 ))

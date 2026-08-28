@@ -21,10 +21,10 @@ use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::sync::Arc;
 
-use anyhow::{Context, Result, anyhow, bail};
 use compact_str::*;
 use derive_more::Constructor;
 use either::*;
+use eyre::{Context, Result, bail, eyre};
 use getset::*;
 use owo_colors::*;
 use tokio::sync::OnceCell;

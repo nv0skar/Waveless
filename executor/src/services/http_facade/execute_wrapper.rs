@@ -119,7 +119,7 @@ where
                             RequestError::Other(err) => format!("Unexpected error: {}", err).into(),
                         }
                     }))
-                    .map_err(|err| anyhow!(err)).boxed())
+                    .map_err(|err| eyre!(err)).boxed())
                     .unwrap()
                 ),
             }

@@ -17,9 +17,9 @@ use rustyrosetta::*;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 
-use anyhow::{Result, anyhow};
 use clap::{Parser, Subcommand};
 use compact_str::*;
+use eyre::{Result, eyre};
 use mimalloc::MiMalloc;
 use nestify::nest;
 use tracing::*;
@@ -182,6 +182,6 @@ async fn try_main() -> Result<ResultContext> {
                 Ok("".into())
             }
         },
-        None => Err(anyhow!("No subcommdand provided!")),
+        None => Err(eyre!("No subcommdand provided!")),
     }
 }

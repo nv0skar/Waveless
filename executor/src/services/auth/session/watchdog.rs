@@ -80,7 +80,7 @@ where
                 let databases = DATABASES_CONNS.get().unwrap();
 
                 let Ok(session_db) = databases.search(session_method.db_id()) else {
-                    return Err(RequestError::Other(anyhow!(
+                    return Err(RequestError::Other(eyre!(
                         "Cannot get the database connection for '{}'.",
                         session_method.db_id().unwrap_or("main".into())
                     )));
@@ -148,7 +148,7 @@ where
                     .check(session_db, token.into())
                     .await
                     .map_err(|err| {
-                        RequestError::Other(anyhow!("Cannot check the session token. {}", err))
+                        RequestError::Other(eyre!("Cannot check the session token. {}", err))
                 })?;
 
                 match session_check {
@@ -169,21 +169,21 @@ where
                             let Some(role_method) = role_method else {
                                 // TODO: the compiler should fail when including endpoints
                                 // that requires roles while not having roles set for the project.
-                                return Err(RequestError::Other(anyhow!(
+                                return Err(RequestError::Other(eyre!(
                                     "Endpoint '{}' requires roles authentication but they are not set for this build.",
                                     endpoint.id()
                                 )));
                             };
 
                             let Ok(role_db) = databases.search(role_method.db_id()) else {
-                                return Err(RequestError::Other(anyhow!(
+                                return Err(RequestError::Other(eyre!(
                                     "Cannot get the database connection for '{}'.",
                                     session_method.db_id().unwrap_or("main".into())
                                 )));
                             };
 
                             let Ok(role_check) = role_method.get(role_db, user_id).await else {
-                                return Err(RequestError::Other(anyhow!(
+                                return Err(RequestError::Other(eyre!(
                                     "Cannot check the user's role."
                                 )));
                             };
@@ -215,7 +215,7 @@ where
                 }}
             } else {
                 if require_auth {
-                    Err(RequestError::Other(anyhow!(
+                    Err(RequestError::Other(eyre!(
                         "Endpoint '{}' requires auth but authentication is not set for this build.",
                         endpoint.id()))
                     )?

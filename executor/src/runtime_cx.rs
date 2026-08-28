@@ -15,7 +15,7 @@ impl RuntimeCx {
     pub fn acquire() -> &'static Self {
         RUNTIME_CX
             .get()
-            .ok_or(anyhow!("Runtime's context should have been initialized."))
+            .ok_or(eyre!("Runtime's context should have been initialized."))
             .unwrap()
     }
 
@@ -48,13 +48,13 @@ impl RuntimeCx {
                     cx.build_router().await?;
                     Ok(cx)
                 }
-                Err(err) => Err(anyhow!(
+                Err(err) => Err(eyre!(
                     "Cannot deserialize the project's binary '{}'.%{}",
                     path.display(),
                     err.to_string()
                 )),
             },
-            Err(err) => Err(anyhow!(
+            Err(err) => Err(eyre!(
                 "Cannot open '{}'. Are you sure that you have the file's permissions?%{}",
                 path.display(),
                 err.to_string()

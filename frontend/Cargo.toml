@@ -3,29 +3,29 @@ name = "waveless_frontend"
 version.workspace = true
 edition.workspace = true
 
-[dependencies]
-rustyrosetta = { workspace = true, features = ["all"] }
-serde.workspace = true
-serde_with.workspace = true
-toml.workspace = true
-arrayvec.workspace = true
-compact_str.workspace = true
-mimalloc.workspace = true
+# [dependencies]
+# rustyrosetta = { workspace = true, features = ["all"] }
+# serde.workspace = true
+# serde_with.workspace = true
+# toml.workspace = true
+# arrayvec.workspace = true
+# compact_str.workspace = true
+# mimalloc.workspace = true
 # leptos.workspace = true
 # leptos_meta.workspace = true
 # leptos_router.workspace = true
 # leptos_dom.workspace = true
 # leptos_axum = { workspace = true, optional = true }
-clap.workspace = true
-iocraft.workspace = true
-owo-colors.workspace = true
-tracing.workspace = true
-tracing-subscriber.workspace = true
-chrono.workspace = true
-getset.workspace = true
-either.workspace = true
-derive_more.workspace = true
-anyhow.workspace = true
+# clap.workspace = true
+# iocraft.workspace = true
+# owo-colors.workspace = true
+# tracing.workspace = true
+# tracing-subscriber.workspace = true
+# chrono.workspace = true
+# getset.workspace = true
+# either.workspace = true
+# derive_more.workspace = true
+# eyre.workspace = true
 
 # [features]
 # hydrate = ["leptos/hydrate"]

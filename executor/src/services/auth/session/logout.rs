@@ -34,7 +34,7 @@ impl Service<RequestCx> for LogoutSvc {
                 .config()
                 .authentication()
                 .to_owned()
-                .ok_or(RequestError::Other(anyhow!(
+                .ok_or(RequestError::Other(eyre!(
                     "Authentication is not set for the current build."
                 )))?;
 
@@ -43,7 +43,7 @@ impl Service<RequestCx> for LogoutSvc {
             let user_id =
                 match request_params
                     .get("user_id")
-                    .ok_or(RequestError::Other(anyhow!(
+                    .ok_or(RequestError::Other(eyre!(
                         "Cannot logout as there is no session active.",
                     )))? {
                     ParamValue::Internal(user_id) => Ok(user_id.to_owned()),
@@ -51,7 +51,7 @@ impl Service<RequestCx> for LogoutSvc {
                         StatusCode::FORBIDDEN,
                         "User id injection from the client is forbidden. HINT: if you are debugging your app you can try creating a new session manually.".into(),
                     )),
-                }?.parse::<UserId>().map_err(|_| RequestError::Other(anyhow!("Cannot convert user id to it's internal representation.")))?;
+                }?.parse::<UserId>().map_err(|_| RequestError::Other(eyre!("Cannot convert user id to it's internal representation.")))?;
 
 
             let token =
@@ -71,7 +71,7 @@ impl Service<RequestCx> for LogoutSvc {
             let databases = DATABASES_CONNS.get().unwrap();
 
             let Ok(session_db) = databases.search(session_method.db_id()) else {
-                return Err(RequestError::Other(anyhow!(
+                return Err(RequestError::Other(eyre!(
                     "Cannot get the database connection for '{}'.",
                     session_method.db_id().unwrap_or("main".into())
                 )));

@@ -41,7 +41,7 @@ pub async fn build<T: 'static>() -> Result<Either<ExecutorBuild, Bytes>> {
                     match toml::from_slice::<Endpoints>(&file_buffer) {
                         Ok(new_endpoints) => endpoints.merge(new_endpoints)?,
                         Err(err) => {
-                            Err(anyhow!(
+                            Err(eyre!(
                                 "Cannot deserialize the endpoints definition file '{}'.%{}",
                                 endpoint_path.file_name().display(),
                                 err.to_string()
@@ -50,7 +50,7 @@ pub async fn build<T: 'static>() -> Result<Either<ExecutorBuild, Bytes>> {
                     };
                 }
                 Err(err) => {
-                    Err(anyhow!(
+                    Err(eyre!(
                         "Cannot open the endpoints definition file '{}'.%{}",
                         endpoint_path.file_name().display(),
                         err.to_string()
@@ -141,7 +141,7 @@ pub fn binary_file_from_buff(buff: Bytes) -> Result<ResultContext> {
         project.config().name(),
         target_file
             .file_name()
-            .ok_or(anyhow!("No build file name."))?
+            .ok_or(eyre!("No build file name."))?
             .display()
     )
     .into())

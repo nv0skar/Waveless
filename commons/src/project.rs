@@ -350,16 +350,16 @@ impl Default for Admin {
 mod tests {
     use super::*;
 
-    use anyhow::*;
+    use eyre::Context;
 
     #[test]
     fn default_into_toml_and_back() -> Result<()> {
         let project_config = Project::default();
 
         let serialized = toml::to_string_pretty(&project_config)
-            .context("Cannot serialize default project config into TOML.")?;
+            .wrap_err("Cannot serialize default project config into TOML.")?;
         let deserialized = toml::from_str::<Project>(&serialized)
-            .context("Cannot deserialize default TOML config.")?;
+            .wrap_err("Cannot deserialize default TOML config.")?;
 
         assert_eq!(project_config, deserialized);
 

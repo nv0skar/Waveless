@@ -80,7 +80,7 @@ impl DatabasesConnections {
         if let Some(id) = id {
             self.inner
                 .get(&id)
-                .ok_or(anyhow!("Cannot find a database with the given id."))
+                .ok_or(eyre!("Cannot find a database with the given id."))
                 .map(|entry| entry.value().to_owned())
         } else {
             Ok(self
@@ -100,7 +100,7 @@ pub async fn check_checksums_in_build(build: &ExecutorBuild) -> Result<()> {
             .databases()
             .iter()
             .find(|db_config| db_config.id() == build_checksum.database_id())
-            .ok_or(anyhow!(
+            .ok_or(eyre!(
                 "There are checksums whose id doesn't match with any database."
             ))?;
 

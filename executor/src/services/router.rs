@@ -42,7 +42,7 @@ where
     }
 
     fn call(&mut self, request: Request<Incoming>) -> Self::Future {
-        let request = request.map(|body| body.map_err(|err| anyhow!(err)).boxed());
+        let request = request.map(|body| body.map_err(|err| eyre!(err)).boxed());
 
         let method = HttpMethod::from(request.method().as_str());
 
