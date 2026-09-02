@@ -1,0 +1,19 @@
+[workspace]
+members = ["cargo:."]
+
+[dist]
+packages = ["waveless_compiler", "waveless_executor"]
+
+cargo-dist-version = "0.32.0"
+installers = ["shell", "homebrew", "powershell"]
+tap = "nv0skar/homebrew-tap"
+publish-jobs = ["homebrew"]
+targets = ["aarch64-unknown-linux-gnu", "x86_64-unknown-linux-gnu", "aarch64-apple-darwin", "aarch64-pc-windows-gnullvm", "x86_64-pc-windows-gnu"]
+dist-dir = "target/distribution"
+ci = "github"
+install-updater = false
+github-build-setup = "../setup_build.yml"
+install-path = "CARGO_HOME"
+
+[dist.github-custom-runners]
+aarch64-pc-windows-gnullvm = "windows-latest"
