@@ -167,3 +167,6 @@ strip = true
 codegen-units = 256
 lto = true
 opt-level = 's'
+
+[profile.dist]
+inherits = "release"
