@@ -1,6 +1,8 @@
 // Waveless
 // Copyright (C) 2026 Oscar Alvarez Gonzalez
 
+use waveless_commons::databases::DatabaseConsumer;
+
 use crate::*;
 
 /// TODO: add documentation.
@@ -59,12 +61,12 @@ impl Service<RequestCx> for WebSocketsSvc {
                 .endpoints()
                 .inner()
                 .iter()
-                .find(
-                    |endpoint| match (endpoint.id() == endpoint_id, endpoint.target()) {
-                        (true, Targets::SocketTarget(_)) => true,
+                .find(|endpoint| {
+                    match (endpoint.id() == endpoint_id, endpoint.execution_target()) {
+                        (true, ExecutionTarget::Socket(_)) => true,
                         _ => false,
-                    },
-                )
+                    }
+                })
                 .to_owned()
             else {
                 return Err(RequestError::Expected(
@@ -73,9 +75,13 @@ impl Service<RequestCx> for WebSocketsSvc {
                 ));
             };
 
+            let auth = endpoint.auth();
+
             // Enforce socket endpoint's authentication.
             // TODO: maybe do this in the `SessionWatchdog` and enforce roles.
-            if *endpoint.require_auth() && request_params.get("user_id").is_none() {
+            if let AuthLevel::Required = auth.level()
+                && request_params.get("user_id").is_none()
+            {
                 return Err(RequestError::Expected(
                     StatusCode::UNAUTHORIZED,
                     format!(
@@ -87,12 +93,7 @@ impl Service<RequestCx> for WebSocketsSvc {
             }
 
             // Retrieves the endpoint's target database.
-            let database_id = endpoint.database();
-
-            let db_conn = DATABASES_CONNS
-                .get()
-                .unwrap()
-                .search(database_id.to_owned())?;
+            let db_conns = endpoint.get_db_handle()?;
 
             // Upgrade connection.
             debug!("Upgrading connection to WebSockets.");
@@ -100,7 +101,7 @@ impl Service<RequestCx> for WebSocketsSvc {
             let (response, websocket) = hyper_tungstenite::upgrade(request, None)
                 .expect("Cannot upgrade connection to WebSockets.");
 
-            if let Targets::SocketTarget(socket_target) = endpoint.target() {
+            if let ExecutionTarget::Socket(socket_target) = endpoint.execution_target() {
                 if let Some(execute_strategy) = socket_target.execute() {
                     let execute_strategy = execute_strategy.to_owned();
 
@@ -115,7 +116,7 @@ impl Service<RequestCx> for WebSocketsSvc {
                                     endpoint,
                                 },
                                 websocket,
-                                db_conn,
+                                db_conns,
                             )
                             .await
                     });

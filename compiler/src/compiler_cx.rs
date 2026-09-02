@@ -36,15 +36,11 @@ impl CompilerCx {
         match read(workspace_root.join("project.toml")) {
             Ok(file_buffer) => match toml::from_slice::<project::Project>(&file_buffer) {
                 Ok(project) => Ok(Self::new(project, workspace_root)),
-                Err(err) => Err(eyre!(
-                    "Cannot deserialize the `project.toml` file.%{}",
-                    err.to_string()
-                )),
+                Err(err) => Err(err).wrap_err("Cannot deserialize the `project.toml` file."),
             },
-            Err(err) => Err(eyre!(
-                "Cannot open the `project.toml` file. Are you sure that you are in the project's folder?%{}",
-                err.to_string()
-            )),
+            Err(err) => Err(err)
+                .wrap_err("Cannot open the `project.toml` file.")
+                .suggestion("Are you sure that you are in the project's folder?"),
         }
     }
 }

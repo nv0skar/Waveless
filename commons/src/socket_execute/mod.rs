@@ -12,12 +12,12 @@ use databases::*;
 /// Generic methods trait to handle requests to the endpoints.
 #[typetag::serde]
 #[async_trait]
-pub trait AnySocketExecute: Any + BoxedAny + DynClone + Send + Sync + Debug {
+pub trait AnySocketExecute: AnyExt {
     /// Executes a query using the given executor and database connection.
     async fn execute(
         &self,
         handshake_cx: HandshakeCx,
         websocket: HyperWebsocket,
-        db_conn: Arc<dyn AnyDatabaseConnection>,
+        db_conns: DbConns,
     ) -> Result<(), Infallible>;
 }

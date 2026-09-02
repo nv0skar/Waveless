@@ -2,22 +2,24 @@
 // Copyright (C) 2026 Oscar Alvarez Gonzalez
 
 pub mod auth;
-pub mod build;
 pub mod databases;
 pub mod endpoint;
 pub mod entry;
 pub mod http_execute;
 pub mod logging;
+pub mod object;
 pub mod project;
-pub mod runtime;
 pub mod schema;
 pub mod socket_execute;
+
+#[cfg(not(target_arch = "wasm32"))]
+pub mod runtime;
 
 mod serialize_utils;
 
 pub use serialize_utils::*;
 
-use std::any::{Any, TypeId};
+use std::any::Any;
 use std::cell::Cell;
 use std::collections::HashMap;
 use std::convert::Infallible;
@@ -28,6 +30,8 @@ use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use boxed_any::*;
+use boxed_any_derive::*;
 use rustyrosetta::{codec::*, *};
 
 use async_trait::*;
@@ -45,8 +49,9 @@ use hyper::Request;
 use hyper_tungstenite::HyperWebsocket;
 use iocraft::prelude::*;
 use serde::{Deserialize, Serialize};
+use serde_with::{IfIsHumanReadable, json::JsonString, serde_as};
 use thiserror::*;
-use tokio::{runtime::Builder, sync::OnceCell};
+use tokio::sync::OnceCell;
 use tracing::*;
 
 pub type ResultContext = CompactString; // TODO: Replace this with custom error types → `thiserror`
@@ -69,40 +74,8 @@ thread_local! {
     pub static BINARY_MODE: Cell<bool> = const { Cell::new(false) }; // This will likely be fixed in the future. https://github.com/serde-rs/serde/issues/1732
 }
 
-pub trait BoxedAny {
-    fn as_boxed_any(&'static self) -> Box<dyn Any>;
-    fn as_arc_any(&'static self) -> Arc<dyn Any + Send + Sync + 'static>;
-    fn into_boxed_any(self: Box<Self>) -> Box<dyn Any>;
-    fn into_arc_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync + 'static>;
-    fn inner_type_id(&self) -> TypeId;
-}
-
-/// TODO: this should be a derive macro.
-#[macro_export]
-macro_rules! boxed_any {
-    ($type:ty) => {
-        impl BoxedAny for $type {
-            fn as_boxed_any(&'static self) -> Box<dyn Any> {
-                Box::new(self)
-            }
-
-            fn as_arc_any(&'static self) -> Arc<dyn Any + Send + Sync + 'static> {
-                Arc::new(self)
-            }
-
-            fn into_boxed_any(self: Box<Self>) -> Box<dyn Any> {
-                self
-            }
-
-            fn into_arc_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync + 'static> {
-                self
-            }
-
-            fn inner_type_id(&self) -> TypeId {
-                TypeId::of::<$type>()
-            }
-        }
-    };
+pub trait AnyExt: Any + BoxedAny + DynClone + Send + Sync + Debug {
+    fn name(&self) -> &str;
 }
 
 #[derive(Error, Debug)]

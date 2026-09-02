@@ -22,6 +22,9 @@ rustyrosetta = { git = "https://github.com/nv0skar/RustyRosetta.git", tag = "rus
     "all",
 ] }
 
+boxed_any = { git = "https://github.com/nv0skar/BoxedAny.git" }
+boxed_any_derive = { git = "https://github.com/nv0skar/BoxedAny.git" }
+
 tokio = "1.53"
 
 tokio-util = "0.7"
@@ -32,12 +35,12 @@ rustls = { version = "0.23", default-features = false }
 futures = "0.3"
 
 serde = { version = "1.0.229", features = ["derive", "rc"] }
-toml = "1.1.4"
+toml = "1.1.5"
 serde_json = "1.0"
 serde_with = { version = "3.22", features = ["chrono"] }
 
-hyper = { version = "1", features = ["full"] }
-hyper-util = { version = "0.1", features = ["full"] }
+hyper = "1"
+hyper-util = "0.1"
 http-body-util = "0.1"
 tower = { version = "0.5.3", features = ["full"] }
 tower-http = "0.7"
@@ -56,12 +59,8 @@ sqlx = { version = "0.9.0", features = [
     "json",
     "mysql"
 ] }
-sea-orm = { version = "2.0.2", features = [ "runtime-tokio-rustls", "sqlx-mysql" ] }
-sea-schema = { git = "https://github.com/nv0skar/sea-schema-mysql.git", features = [
-    "runtime-tokio",
-    "runtime-tokio-rustls",
-    "sqlx-all",
-] }
+sea-orm = { version = "2.0.2", default-features = false }
+sea-schema = { git = "https://github.com/nv0skar/sea-schema-mysql.git" }
 
 chrono = { version = "0.4.45", default-features = false, features = [
     "clock",
@@ -89,7 +88,7 @@ dyn-clone = "1.0.20"
 
 # lettre = { version = "0.11.19", features = ["tokio1", "tokio1-native-tls"] }
 
-smallvec = { version = "1.15", features = ["serde", "write", "const_new"] }
+smallvec = { version = "1.16", features = ["serde", "write", "const_new"] }
 arrayvec = { version = "0.7", features = ["serde"] }
 stackalloc = "1"
 smallbox = "0.8"
@@ -129,8 +128,6 @@ derive_more = { version = "2.1", features = ["constructor", "display"] }
 
 [workspace.lints.rust]
 unexpected_cfgs = "deny"
-
-### Leptos' setup
 
 [workspace.dependencies.getrandom]
 version = "*"

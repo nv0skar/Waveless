@@ -3,6 +3,8 @@
 
 use crate::*;
 
+use databases::*;
+
 use http_execute::*;
 use socket_execute::*;
 
@@ -92,13 +94,12 @@ pub struct Endpoint {
     /// Endpoint's unique identifier
     id: CompactString,
 
-    /// Sets the database that this endpoint will operate on. If `None` the primary database will be used.
-    /// TODO: make this a `CheapVec<DatabaseId>`.
-    database: Option<DatabaseId>,
+    /// Sets the databases that this endpoint will operate on.
+    #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
+    databases: CheapVec<DatabaseId>,
 
     /// Target variant.
-    #[serde(flatten)]
-    target: Targets,
+    execution_target: ExecutionTarget,
 
     /// Sets the endpoint description.
     #[serde(default, skip_serializing_if = "should_skip_option")]
@@ -109,24 +110,22 @@ pub struct Endpoint {
     tags: CheapVec<CompactString, 0>,
 
     /// Whether to require auth.
-    require_auth: bool,
-
-    /// Whether to inject authentication metadata as an internal request param
-    #[serde(default, skip_serializing_if = "should_skip")]
-    inject_auth_metadata: bool,
-
-    /// All allowed roles to query the endpoint.
-    #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
-    allowed_roles: CheapVec<CompactString, 0>,
+    auth: Auth,
 
     /// Whether this endpoint is deprecated.
     #[serde(default, skip_serializing_if = "should_skip")]
     deprecated: bool,
 }
 
+impl DatabaseConsumer for Endpoint {
+    fn databases(&self) -> CheapVec<DatabaseId> {
+        self.databases.to_owned()
+    }
+}
+
 impl PartialEq for Endpoint {
     fn eq(&self, other: &Self) -> bool {
-        self.id == other.id || self.target == other.target
+        self.id == other.id || self.execution_target == other.execution_target
     }
 }
 
@@ -134,27 +133,57 @@ impl Default for Endpoint {
     fn default() -> Self {
         Self {
             id: "".into(),
-            database: Default::default(),
-            target: Targets::HttpTarget(Default::default()),
+            databases: Default::default(),
+            execution_target: ExecutionTarget::Http(Default::default()),
             description: None,
             tags: CheapVec::new_const(),
-            require_auth: false,
-            inject_auth_metadata: false,
-            allowed_roles: Default::default(),
+            auth: Default::default(),
             deprecated: false,
         }
     }
 }
 
-/// TODO: add docs here.
+#[derive(
+    Clone, PartialEq, Serialize, Deserialize, Constructor, Builder, Getters, Display, Debug,
+)]
+#[display("{} (allowed roles: {:?}))", level, allowed_roles)]
+#[builder(default, pattern = "mutable", setter(strip_option))]
+#[getset(get = "pub")]
+pub struct Auth {
+    /// Whether to require auth.
+    level: AuthLevel,
+
+    /// All allowed roles to query the endpoint.
+    #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
+    allowed_roles: CheapVec<CompactString, 0>,
+}
+
+impl Default for Auth {
+    fn default() -> Self {
+        Self {
+            level: AuthLevel::None,
+            allowed_roles: Default::default(),
+        }
+    }
+}
+
+/// Defines all levels of authentication an endpoint might require.
 #[derive(Clone, PartialEq, Serialize, Deserialize, Display, Debug)]
-#[serde(untagged)]
-pub enum Targets {
-    HttpTarget(HttpTarget),
-    SocketTarget(SocketTarget),
+pub enum AuthLevel {
+    Required,
+    InjectWhenAvailable,
+    None,
+}
+
+/// Defines every kind of connection that a given endpoint may accept.
+#[derive(Clone, PartialEq, Serialize, Deserialize, Display, Debug)]
+pub enum ExecutionTarget {
+    Http(HttpTarget),
+    Socket(SocketTarget),
 }
 
 /// The HTTP endpoint definition that will be either created by the user or discovered by the compiler.
+#[serde_as]
 #[derive(Clone, Serialize, Deserialize, Constructor, Builder, Getters, Display, Debug)]
 #[display("{} -> ({}, {:?})", route, method, version)]
 #[builder(default, pattern = "mutable", setter(strip_option))]
@@ -172,6 +201,7 @@ pub struct HttpTarget {
 
     /// Establishes the endpoint handler. Note that if no executor is set, the server will try to handle the request internally.
     #[serde(default, skip_serializing_if = "should_skip_option")]
+    #[serde_as(as = "IfIsHumanReadable<_, JsonString>")] // Explore müsli to avoid this.
     execute: Option<Arc<dyn AnyHttpExecute>>,
 
     /// Sets the accepted query parameters.
@@ -219,6 +249,12 @@ fn auto_generated_skip(value: &bool) -> bool {
     should_skip(&(!*value))
 }
 
+impl Into<ExecutionTarget> for HttpTarget {
+    fn into(self) -> ExecutionTarget {
+        ExecutionTarget::Http(self)
+    }
+}
+
 impl PartialEq for HttpTarget {
     fn eq(&self, other: &Self) -> bool {
         self.route.trim().trim_matches('/') == other.route.trim().trim_matches('/')
@@ -250,6 +286,7 @@ impl Default for HttpTarget {
 }
 
 /// The socket endpoint definition.
+#[serde_as]
 #[derive(Clone, Serialize, Deserialize, Constructor, Builder, Getters, Display, Debug)]
 #[display("(Socket) {:?}", execute)]
 #[builder(default, pattern = "mutable", setter(strip_option))]
@@ -257,7 +294,14 @@ impl Default for HttpTarget {
 pub struct SocketTarget {
     /// Establishes the endpoint handler.
     #[serde(default, skip_serializing_if = "should_skip_option")]
-    execute: Option<Arc<dyn AnySocketExecute>>, // TODO: this shouldn't be `AnyHttpExecute`.
+    #[serde_as(as = "IfIsHumanReadable<_, JsonString>")] // Explore müsli to avoid this.
+    execute: Option<Arc<dyn AnySocketExecute>>,
+}
+
+impl Into<ExecutionTarget> for SocketTarget {
+    fn into(self) -> ExecutionTarget {
+        ExecutionTarget::Socket(self)
+    }
 }
 
 impl PartialEq for SocketTarget {

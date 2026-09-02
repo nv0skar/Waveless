@@ -17,7 +17,7 @@ pub const INTERNAL_ENDPOINTS: LazyCell<[(InternalEndpointKind, Endpoint); 5]> = 
             (InternalEndpointKind::ConnectionUpgrade,
                 EndpointBuilder::default()
                     .id(CONN_UPGRADE_WEBSOCKETS_ENDPOINT_ID.into())
-                    .target(Targets::HttpTarget(
+                    .execution_target(ExecutionTarget::Http(
                         HttpTargetBuilder::default()
                             .route("websockets".into())
                             .method(HttpMethod::Get)
@@ -27,7 +27,7 @@ pub const INTERNAL_ENDPOINTS: LazyCell<[(InternalEndpointKind, Endpoint); 5]> = 
                             .unwrap()
                     ))
                     .description("Handles connection upgrading to WebSockets.".into())
-                    .inject_auth_metadata(true)
+                    .auth(AuthBuilder::default().level(AuthLevel::InjectWhenAvailable).build().unwrap())
                     .build()
                     .unwrap()
             ),
@@ -35,7 +35,7 @@ pub const INTERNAL_ENDPOINTS: LazyCell<[(InternalEndpointKind, Endpoint); 5]> = 
                 InternalEndpointKind::Authentication,
                 EndpointBuilder::default()
                     .id(LOGIN_ENDPOINT_ID.into())
-                    .target(Targets::HttpTarget(
+                    .execution_target(ExecutionTarget::Http(
                         HttpTargetBuilder::default()
                             .route("login".into())
                             .method(HttpMethod::Post)
@@ -53,7 +53,7 @@ pub const INTERNAL_ENDPOINTS: LazyCell<[(InternalEndpointKind, Endpoint); 5]> = 
                 InternalEndpointKind::Authentication,
                 EndpointBuilder::default()
                     .id(SIGNUP_ENDPOINT_ID.into())
-                    .target(Targets::HttpTarget(
+                    .execution_target(ExecutionTarget::Http(
                         HttpTargetBuilder::default()
                             .route("signup".into())
                             .method(HttpMethod::Post)
@@ -71,7 +71,7 @@ pub const INTERNAL_ENDPOINTS: LazyCell<[(InternalEndpointKind, Endpoint); 5]> = 
                 InternalEndpointKind::Authentication,
                 EndpointBuilder::default()
                     .id(LOGOUT_ENDPOINT_ID.into())
-                    .target(Targets::HttpTarget(
+                    .execution_target(ExecutionTarget::Http(
                         HttpTargetBuilder::default()
                             .route("logout".into())
                             .method(HttpMethod::Get)
@@ -81,8 +81,7 @@ pub const INTERNAL_ENDPOINTS: LazyCell<[(InternalEndpointKind, Endpoint); 5]> = 
                             .unwrap()
                     ))
                     .description("Invalidate the current authorization token.".into())
-                    .require_auth(true)
-                    .inject_auth_metadata(true)
+                    .auth(AuthBuilder::default().level(AuthLevel::Required).build().unwrap())
                     .build()
                     .unwrap()
             ),
@@ -90,7 +89,7 @@ pub const INTERNAL_ENDPOINTS: LazyCell<[(InternalEndpointKind, Endpoint); 5]> = 
                 InternalEndpointKind::Authentication,
                 EndpointBuilder::default()
                     .id(LOGOUT_ALL_ENDPOINT_ID.into())
-                    .target(Targets::HttpTarget(
+                    .execution_target(ExecutionTarget::Http(
                         HttpTargetBuilder::default()
                             .route("logout/all".into())
                             .method(HttpMethod::Get)
@@ -100,8 +99,7 @@ pub const INTERNAL_ENDPOINTS: LazyCell<[(InternalEndpointKind, Endpoint); 5]> = 
                             .unwrap()
                     ))
                     .description("Invalidate all the authorization tokens of the current user.".into())
-                    .require_auth(true)
-                    .inject_auth_metadata(true)
+                    .auth(AuthBuilder::default().level(AuthLevel::Required).build().unwrap())
                     .build()
                     .unwrap()
             )

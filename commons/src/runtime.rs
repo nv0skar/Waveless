@@ -3,6 +3,8 @@
 
 use crate::*;
 
+use tokio::runtime::Builder;
+
 /// A Tokio runtime creator and an exit handler to prettify success and error contexts
 /// TODO: Replace this with custom error types.
 pub fn handle_main<T>(main_fn: T) -> Result<()>

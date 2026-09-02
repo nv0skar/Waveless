@@ -9,8 +9,8 @@ use waveless_commons::{logging::*, runtime::handle_main, *};
 use waveless_compiler::{build::*, compiler_cx::*, new::*};
 use waveless_executor::{frontend_options::*, server::serve, *};
 
-use build::*;
 use databases::*;
+use object::*;
 
 use rustyrosetta::*;
 
@@ -114,7 +114,7 @@ async fn try_main() -> Result<ResultContext> {
         }) => {
             CompilerCx::set_cx(CompilerCx::from_workspace().await?);
 
-            let build = build::<ExecutorBuild>().await?.left().unwrap();
+            let build = build::<ObjectArtifact>().await?.left().unwrap();
 
             RuntimeCx::set_cx(RuntimeCx::from_build(build).await?);
 

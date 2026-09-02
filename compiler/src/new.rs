@@ -19,11 +19,9 @@ pub fn new_project(name: CompactString) -> Result<ResultContext> {
 
     {
         if let Err(err) = create_dir(&project_path) {
-            Err(eyre!(
-                "Cannot create project's folder {}. Are you sure that there is no project with the same name and that you have write permissions?%{}",
-                name,
-                err.to_string().blue()
-            ))?;
+            Err(err)
+                .wrap_err(format!("Cannot create project's folder {}.", name))
+                .suggestion("Are you sure that there is no project with the same name and that you have write permissions?")?;
         }
 
         debug!("Created project's folder at {}.", project_path.display());
@@ -75,7 +73,7 @@ pub fn new_project(name: CompactString) -> Result<ResultContext> {
         let endpoints = Endpoints::new_unchecked(CheapVec::from_vec(vec![
             EndpointBuilder::default()
                 .id("ListProducts".into())
-                .target(Targets::HttpTarget(
+                .execution_target(ExecutionTarget::Http(
                     HttpTargetBuilder::default()
                         .route("/products/{size}".into())
                         .version("v1".into())
@@ -94,7 +92,7 @@ pub fn new_project(name: CompactString) -> Result<ResultContext> {
                 .unwrap(),
             EndpointBuilder::default()
                 .id("ListPosts".into())
-                .target(Targets::HttpTarget(
+                .execution_target(ExecutionTarget::Http(
                     HttpTargetBuilder::default()
                         .route("posts".into())
                         .version("v1".into())

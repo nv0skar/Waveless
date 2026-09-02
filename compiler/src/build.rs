@@ -14,7 +14,7 @@ use crate::*;
 
 /// Builds the project in the current path (if no `project.toml` file is present in the current directory it will be searched in parent directories)
 #[instrument(skip_all)]
-pub async fn build<T: 'static>() -> Result<Either<ExecutorBuild, Bytes>> {
+pub async fn build<T: 'static>() -> Result<Either<ObjectArtifact, Bytes>> {
     let cx = CompilerCx::acquire();
 
     let project = cx.project();
@@ -40,22 +40,16 @@ pub async fn build<T: 'static>() -> Result<Either<ExecutorBuild, Bytes>> {
                 Ok(file_buffer) => {
                     match toml::from_slice::<Endpoints>(&file_buffer) {
                         Ok(new_endpoints) => endpoints.merge(new_endpoints)?,
-                        Err(err) => {
-                            Err(eyre!(
-                                "Cannot deserialize the endpoints definition file '{}'.%{}",
-                                endpoint_path.file_name().display(),
-                                err.to_string()
-                            ))?;
-                        }
+                        Err(err) => Err(err).wrap_err(format!(
+                            "Cannot deserialize the endpoints definition file '{}'.",
+                            endpoint_path.file_name().display(),
+                        ))?,
                     };
                 }
-                Err(err) => {
-                    Err(eyre!(
-                        "Cannot open the endpoints definition file '{}'.%{}",
-                        endpoint_path.file_name().display(),
-                        err.to_string()
-                    ))?;
-                }
+                Err(err) => Err(err).wrap_err(format!(
+                    "Cannot open the endpoints definition file '{}'.",
+                    endpoint_path.file_name().display(),
+                ))?,
             }
         }
 
@@ -89,7 +83,7 @@ pub async fn build<T: 'static>() -> Result<Either<ExecutorBuild, Bytes>> {
     }
 
     // Serializes the project's build.
-    let build = ExecutorBuild::new(
+    let build = ObjectArtifact::new(
         project.config().to_owned(),
         project.server().to_owned(),
         endpoints,
@@ -105,7 +99,7 @@ pub async fn build<T: 'static>() -> Result<Either<ExecutorBuild, Bytes>> {
         );
 
         Ok(Right(buff))
-    } else if TypeId::of::<T>() == TypeId::of::<ExecutorBuild>() {
+    } else if TypeId::of::<T>() == TypeId::of::<ObjectArtifact>() {
         Ok(Left(build))
     } else {
         panic!("Unexpected type.")

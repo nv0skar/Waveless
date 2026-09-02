@@ -9,7 +9,7 @@ pub mod new;
 
 pub use compiler_cx::*;
 
-use waveless_commons::{build::*, endpoint::*, *};
+use waveless_commons::{endpoint::*, object::*, *};
 
 use rustyrosetta::*;
 
@@ -21,6 +21,7 @@ use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::sync::Arc;
 
+use color_eyre::Section;
 use compact_str::*;
 use derive_more::Constructor;
 use either::*;

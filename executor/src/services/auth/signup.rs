@@ -52,8 +52,6 @@ impl Service<RequestCx> for SignUpSvc {
                 Err(RequestError::Other(eyre!("Signup is disabled for the current build.")))?;
             }
 
-            let databases = DATABASES_CONNS.get().unwrap();
-
             let auth_method = {
                 if auth_config.backends().len() == 1 {
                     auth_config.backends().first().unwrap()
@@ -85,10 +83,9 @@ impl Service<RequestCx> for SignUpSvc {
                 }
             };
 
-            let Ok(auth_db) = databases.search(auth_method.db_id()) else {
+            let Ok(auth_db) = auth_method.get_db_handle() else {
                 return Err(RequestError::Other(eyre!(
-                    "Cannot get the database connection for '{}'.",
-                    auth_method.db_id().unwrap_or("main".into())
+                    "Cannot get the database connection for the authentication databases.",
                 )));
             };
 
@@ -98,10 +95,9 @@ impl Service<RequestCx> for SignUpSvc {
                     // Create a new session.
                     let session_method = auth_config.session();
 
-                    let Ok(session_db) = databases.search(session_method.db_id()) else {
+                    let Ok(session_db) = session_method.get_db_handle() else {
                         return Err(RequestError::Other(eyre!(
-                            "Cannot get the database connection for '{}'.",
-                            session_method.db_id().unwrap_or("main".into())
+                            "Cannot get the database connection for the session databases.",
                         )));
                     };
 

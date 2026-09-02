@@ -12,13 +12,10 @@ use databases::*;
 /// Generic methods trait to handle requests to the endpoints.
 #[typetag::serde]
 #[async_trait]
-pub trait AnyHttpExecute: Any + BoxedAny + DynClone + Send + Sync + Debug {
+pub trait AnyHttpExecute: AnyExt {
     /// Executes a query using the given executor and database connection.
-    async fn execute(
-        &self,
-        cx: RequestCx,
-        db_conn: Arc<dyn AnyDatabaseConnection>,
-    ) -> Result<HttpResponse, RequestError>;
+    async fn execute(&self, cx: RequestCx, db_conns: DbConns)
+    -> Result<HttpResponse, RequestError>;
 }
 
 /// TODO: add documentation.

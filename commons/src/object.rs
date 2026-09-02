@@ -14,12 +14,11 @@ use crate::*;
 use endpoint::*;
 use project::*;
 
-/// The project's build file
+/// The project's build artifact.
 #[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, MutGetters, Debug)]
 #[getset(get = "pub", get_mut = "pub")]
-pub struct ExecutorBuild {
+pub struct ObjectArtifact {
     /// Contains general settings shared with the frontend/compiler.
-    // #[serde(flatten)]
     config: Config,
 
     /// Specific executor (server) settings.
@@ -34,7 +33,7 @@ pub struct ExecutorBuild {
     databases_checksums: CheapVec<DatabaseChecksum, 0>,
 }
 
-impl ExecutorBuild {
+impl ObjectArtifact {
     /// Serializes the binary and appends the magic bytes to the beginning of the buffer.
     /// NOTE: the `BINARY_MODE` flag is set as a workaround of the issue <https://github.com/serde-rs/serde/issues/1732>,
     /// so now we can safely serialize all repository's structures and enums regardless whether the serializer being
@@ -52,12 +51,12 @@ impl ExecutorBuild {
 
     /// Removes the magic bytes from the beginning of the file and deserializes the binary.
     pub fn decode_binary(buffer: &Bytes) -> Result<Self> {
-        ExecutorBuild::decode(&buffer[BINARY_MAGIC.len()..]).map_err(|error| eyre!(error))
+        ObjectArtifact::decode(&buffer[BINARY_MAGIC.len()..]).map_err(|error| eyre!(error))
     }
 }
 
 /// Default implementation for testing and validation.
-impl Default for ExecutorBuild {
+impl Default for ObjectArtifact {
     fn default() -> Self {
         Self {
             config: Default::default(),
@@ -96,14 +95,14 @@ mod tests {
 
     #[test]
     fn default_into_bin_and_back() -> Result<()> {
-        let build = ExecutorBuild::default();
+        let build = ObjectArtifact::default();
 
         let serialized = build
             .encode_binary()
             .wrap_err("Cannot serialize project build.")?;
 
-        let deserialized =
-            ExecutorBuild::decode_binary(&serialized).context("Cannot deserialize project build. Did you disable the `toml_codec` flag on `waveless_config` and `waveless_schema`?")?;
+        let deserialized = ObjectArtifact::decode_binary(&serialized)
+            .context("Cannot deserialize project build.")?;
 
         assert_eq!(build, deserialized);
 

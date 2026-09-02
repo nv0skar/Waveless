@@ -125,8 +125,10 @@ pub async fn discover() -> Result<(
                                                 )
                                                 .into(),
                                             )
-                                            .database(db_config.id().to_owned())
-                                            .target(Targets::HttpTarget(
+                                            .databases(CheapVec::from_iter([db_config
+                                                .id()
+                                                .to_owned()]))
+                                            .execution_target(ExecutionTarget::Http(
                                                 HttpTargetBuilder::default()
                                                     .method(*method)
                                                     .version("v1".into())
@@ -152,9 +154,6 @@ pub async fn discover() -> Result<(
                                                 table.info.name.to_compact_string(),
                                                 "get_one".into(),
                                             ]))
-                                            .require_auth(false)
-                                            .inject_auth_metadata(false)
-                                            .allowed_roles(CheapVec::new_const())
                                             .deprecated(false);
 
                                         discovered_endpoints.add(endpoint_one.build()?)?;
@@ -166,8 +165,8 @@ pub async fn discover() -> Result<(
 
                                 endpoint_many
                                     .id(format!("{}_GetMany", table.info.name.to_owned()).into())
-                                    .database(db_config.id().to_owned())
-                                    .target(Targets::HttpTarget(
+                                    .databases(CheapVec::from_iter([db_config.id().to_owned()]))
+                                    .execution_target(ExecutionTarget::Http(
                                         HttpTargetBuilder::default()
                                             .method(*method)
                                             .version("v1".into())
@@ -192,9 +191,6 @@ pub async fn discover() -> Result<(
                                         table.info.name.to_compact_string(),
                                         "get_all".into(),
                                     ]))
-                                    .require_auth(false)
-                                    .inject_auth_metadata(false)
-                                    .allowed_roles(CheapVec::new_const())
                                     .deprecated(false);
 
                                 discovered_endpoints.add(endpoint_many.build()?)?;
@@ -204,8 +200,8 @@ pub async fn discover() -> Result<(
 
                                 endpoint
                                     .id(format!("{}_Post", table.info.name).into())
-                                    .database(db_config.id().to_owned())
-                                    .target(Targets::HttpTarget(
+                                    .databases(CheapVec::from_iter([db_config.id().to_owned()]))
+                                    .execution_target(ExecutionTarget::Http(
                                         HttpTargetBuilder::default()
                                             .method(*method)
                                             .version("v1".into())
@@ -258,9 +254,6 @@ pub async fn discover() -> Result<(
                                         table.info.name.to_compact_string(),
                                         "post".into(),
                                     ]))
-                                    .require_auth(false)
-                                    .inject_auth_metadata(false)
-                                    .allowed_roles(CheapVec::new_const())
                                     .deprecated(false);
 
                                 discovered_endpoints.add(endpoint.build()?)?;
@@ -270,8 +263,8 @@ pub async fn discover() -> Result<(
 
                                 endpoint
                                     .id(format!("{}_Put", table.info.name).into())
-                                    .database(db_config.id().to_owned())
-                                    .target(Targets::HttpTarget(
+                                    .databases(CheapVec::from_iter([db_config.id().to_owned()]))
+                                    .execution_target(ExecutionTarget::Http(
                                         HttpTargetBuilder::default()
                                             .method(*method)
                                             .version("v1".into())
@@ -322,9 +315,6 @@ pub async fn discover() -> Result<(
                                         table.info.name.to_compact_string(),
                                         "put".into(),
                                     ]))
-                                    .require_auth(false)
-                                    .inject_auth_metadata(false)
-                                    .allowed_roles(CheapVec::new_const())
                                     .deprecated(false);
 
                                 discovered_endpoints.add(endpoint.build()?)?;
@@ -334,8 +324,8 @@ pub async fn discover() -> Result<(
 
                                 endpoint
                                     .id(format!("{}_Delete", table.info.name).into())
-                                    .database(db_config.id().to_owned())
-                                    .target(Targets::HttpTarget(
+                                    .databases(CheapVec::from_iter([db_config.id().to_owned()]))
+                                    .execution_target(ExecutionTarget::Http(
                                         HttpTargetBuilder::default()
                                             .method(*method)
                                             .version("v1".into())
@@ -368,9 +358,6 @@ pub async fn discover() -> Result<(
                                         table.info.name.to_compact_string(),
                                         "delete".into(),
                                     ]))
-                                    .require_auth(false)
-                                    .inject_auth_metadata(false)
-                                    .allowed_roles(CheapVec::new_const())
                                     .deprecated(false);
 
                                 discovered_endpoints.add(endpoint.build()?)?;

@@ -3,23 +3,39 @@
 
 use crate::*;
 
-use build::*;
+use object::*;
 
+use eyre::ContextCompat;
 use sea_orm::Value; // Switched from sqlx, as sqlx doesn't support conversion into JSON for arbitrary schemas.
+
+pub type DbConns = HashMap<CompactString, Arc<dyn AnyDatabaseConnection>>;
 
 /// The database's connections' pools manager.
 /// The primary database won't be in the `ArrayVec` for efficiency.
 #[derive(Constructor, Debug)]
 pub struct DatabasesConnections {
     inner: DashMap<DatabaseId, Arc<dyn AnyDatabaseConnection>>,
-    primary_name: CompactString,
+    primary_id: DatabaseId,
 }
 
 #[async_trait]
-pub trait AnyDatabaseConnection: Any + BoxedAny + DynClone + Send + Sync + Debug {
-    fn name(&self) -> &str;
-
+pub trait AnyDatabaseConnection: AnyExt {
     async fn execute(&self, input: DatabaseInput) -> Result<DatabaseOutput>;
+}
+
+pub trait DatabaseConsumer {
+    fn databases(&self) -> CheapVec<DatabaseId>;
+
+    fn get_db_handle(&self) -> Result<DbConns> {
+        let db_ids = self.databases();
+
+        let _db_pool = DATABASES_CONNS.get().unwrap();
+
+        Ok(match db_ids.len() {
+            0 => HashMap::from([_db_pool.primary_db()?]),
+            _ => DATABASES_CONNS.get().unwrap().search_many(&db_ids)?,
+        })
+    }
 }
 
 #[derive(Debug)]
@@ -75,25 +91,39 @@ impl DatabasesConnections {
         Ok(())
     }
 
-    /// Search for the database given it's id.
-    pub fn search(&self, id: Option<DatabaseId>) -> Result<Arc<dyn AnyDatabaseConnection>> {
-        if let Some(id) = id {
+    /// Returns the primary database set for this project if any exists.
+    pub fn primary_db(&self) -> Result<(DatabaseId, Arc<dyn AnyDatabaseConnection>)> {
+        Ok((
+            self.primary_id.to_owned(),
             self.inner
-                .get(&id)
-                .ok_or(eyre!("Cannot find a database with the given id."))
-                .map(|entry| entry.value().to_owned())
-        } else {
-            Ok(self
-                .inner
-                .get(&self.primary_name)
-                .unwrap()
+                .get(&self.primary_id)
+                .wrap_err("No primary database has been defined for this project.")?
                 .value()
-                .to_owned())
-        }
+                .to_owned(),
+        ))
+    }
+
+    /// Searches for the database given it's id.
+    pub fn search(&self, id: &DatabaseId) -> Result<Arc<dyn AnyDatabaseConnection>> {
+        self.inner
+            .get(id)
+            .ok_or(eyre!("Cannot find a database with the given id."))
+            .map(|entry| entry.value().to_owned())
+    }
+
+    /// Searches for the databases given their ids.
+    pub fn search_many(
+        &self,
+        ids: &CheapVec<DatabaseId>,
+    ) -> Result<HashMap<CompactString, Arc<dyn AnyDatabaseConnection>>> {
+        ids.as_ref()
+            .iter()
+            .map(|id| self.search(id).map(|db_conn| (id.to_owned(), db_conn)))
+            .collect::<Result<HashMap<_, _>>>()
     }
 }
 
-pub async fn check_checksums_in_build(build: &ExecutorBuild) -> Result<()> {
+pub async fn check_checksums_in_build(build: &ObjectArtifact) -> Result<()> {
     for build_checksum in build.databases_checksums() {
         let db_config = build
             .config()

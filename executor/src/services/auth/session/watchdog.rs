@@ -54,7 +54,7 @@ where
                 ..
             } = &mut cx;
 
-            let require_auth = *endpoint.require_auth();
+            let auth = endpoint.auth();
 
             let headers = request.headers();
 
@@ -75,14 +75,9 @@ where
                 // Loads the session's method's and role's method's databases.
                 let session_method = auth_config.session();
 
-                let role_method = auth_config.role();
-
-                let databases = DATABASES_CONNS.get().unwrap();
-
-                let Ok(session_db) = databases.search(session_method.db_id()) else {
+                let Ok(db_conns) = session_method.get_db_handle() else {
                     return Err(RequestError::Other(eyre!(
-                        "Cannot get the database connection for '{}'.",
-                        session_method.db_id().unwrap_or("main".into())
+                        "Cannot get the database connection for the session databases.",
                     )));
                 };
 
@@ -133,7 +128,7 @@ where
                 };
 
                 let Some(token) = token else {
-                    if require_auth {
+                    if let AuthLevel::Required = auth.level() {
                         return Err(RequestError::Expected(
                             StatusCode::UNAUTHORIZED,
                             format!("'{}' requires authentication.", endpoint.id()).into(),
@@ -145,7 +140,7 @@ where
                 };
 
                 let session_check = session_method
-                    .check(session_db, token.into())
+                    .check(db_conns, token.into())
                     .await
                     .map_err(|err| {
                         RequestError::Other(eyre!("Cannot check the session token. {}", err))
@@ -154,19 +149,23 @@ where
                 match session_check {
                     Some(user_id) => {
                         // Inject user id if required.
-                        if require_auth || *endpoint.inject_auth_metadata() {
-                            request_params.insert(
-                                "user_id".into(),
-                                ParamValue::Internal(user_id.to_compact_string()),
-                            );
+                        match auth.level() {
+                            AuthLevel::Required | AuthLevel::InjectWhenAvailable => {
+                                request_params.insert(
+                                    "user_id".into(),
+                                    ParamValue::Internal(user_id.to_compact_string()),
+                                );
 
-                            request_params
-                                .insert("token".into(), ParamValue::Internal(token.into()));
+                                request_params
+                                    .insert("token".into(), ParamValue::Internal(token.into()));
+                            },
+                            _ => ()
                         }
-                        if endpoint.allowed_roles().is_empty() {
+
+                        if auth.allowed_roles().is_empty() {
                             break 'auth_flow;
                         } else {
-                            let Some(role_method) = role_method else {
+                            let Some(role_method) = auth_config.role() else {
                                 // TODO: the compiler should fail when including endpoints
                                 // that requires roles while not having roles set for the project.
                                 return Err(RequestError::Other(eyre!(
@@ -175,10 +174,9 @@ where
                                 )));
                             };
 
-                            let Ok(role_db) = databases.search(role_method.db_id()) else {
+                            let Ok(role_db) = role_method.get_db_handle() else {
                                 return Err(RequestError::Other(eyre!(
-                                    "Cannot get the database connection for '{}'.",
-                                    session_method.db_id().unwrap_or("main".into())
+                                    "Cannot get the database connection for the roles databases."
                                 )));
                             };
 
@@ -195,7 +193,7 @@ where
                                 ));
                             };
 
-                            if endpoint.allowed_roles().contains(&role.to_lowercase()) {
+                            if auth.allowed_roles().contains(&role.to_lowercase()) {
                                 break 'auth_flow;
                             } else {
                                 return Err(RequestError::Expected(
@@ -205,7 +203,7 @@ where
                             }
                         }
                     }
-                    None if require_auth => {
+                    None if let AuthLevel::Required = auth.level() => {
                         return Err(RequestError::Expected(
                             StatusCode::UNAUTHORIZED,
                             "Invalid session.".into(),
@@ -214,7 +212,7 @@ where
                     _ => (),
                 }}
             } else {
-                if require_auth {
+                if let AuthLevel::Required = auth.level() {
                     Err(RequestError::Other(eyre!(
                         "Endpoint '{}' requires auth but authentication is not set for this build.",
                         endpoint.id()))

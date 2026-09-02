@@ -27,7 +27,7 @@ pub fn subscribe_logging(
 
     layers.push(stdout_layer);
 
-    #[cfg(debug_assertions)]
+    #[cfg(all(feature = "debug", not(target_arch = "wasm32")))]
     layers.push(console_subscriber::spawn().boxed());
 
     let registry = tracing_subscriber::registry().with(layers);

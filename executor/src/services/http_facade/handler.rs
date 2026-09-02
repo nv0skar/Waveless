@@ -1,6 +1,8 @@
 // Waveless
 // Copyright (C) 2026 Oscar Alvarez Gonzalez
 
+use waveless_commons::databases::DatabaseConsumer;
+
 use crate::*;
 
 /// TODO: add documentation.
@@ -24,15 +26,10 @@ impl Service<RequestCx> for ExecuteHandler {
             let RequestCx { endpoint, .. } = &cx;
 
             // Retrieves the endpoint's target database.
-            let database_id = endpoint.database();
-
-            let db_conn = DATABASES_CONNS
-                .get()
-                .unwrap()
-                .search(database_id.to_owned())?;
+            let db_conns = endpoint.get_db_handle()?;
 
             // Force the endpoint to have the HTTP target.
-            let Targets::HttpTarget(http_target) = endpoint.target().to_owned() else {
+            let ExecutionTarget::Http(http_target) = endpoint.execution_target().to_owned() else {
                 unreachable!()
             };
 
@@ -47,7 +44,7 @@ impl Service<RequestCx> for ExecuteHandler {
             execute_strategy
                 .execute(
                     cx,
-                    db_conn,
+                    db_conns,
                 )
                 .await
         }).into();

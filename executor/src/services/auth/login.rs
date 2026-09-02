@@ -47,8 +47,6 @@ impl Service<RequestCx> for LoginSvc {
                     "Authentication is not set for the current build."
                 )))?;
 
-            let databases = DATABASES_CONNS.get().unwrap();
-
             let auth_method = {
                 if auth_config.backends().len() == 1 {
                     auth_config.backends().first().unwrap()
@@ -80,28 +78,26 @@ impl Service<RequestCx> for LoginSvc {
                 }
             };
 
-            let Ok(auth_db) = databases.search(auth_method.db_id()) else {
+            let Ok(auth_db_conns) = auth_method.get_db_handle() else {
                 return Err(RequestError::Other(eyre!(
-                    "Cannot get the database connection for '{}'.",
-                    auth_method.db_id().unwrap_or("main".into())
+                    "Cannot get the database connection for the authentication databases."
                 )));
             };
 
-            match auth_method.check(auth_db, request_params).await {
+            match auth_method.check(auth_db_conns, request_params).await {
                 Ok(Some(user_id)) => {
                     // Create a new session.
                     let session_method = auth_config.session();
 
-                    let Ok(session_db) = databases.search(session_method.db_id()) else {
+                    let Ok(session_db_conns) = session_method.get_db_handle() else {
                         return Err(RequestError::Other(eyre!(
-                            "Cannot get the database connection for '{}'.",
-                            session_method.db_id().unwrap_or("main".into())
+                            "Cannot get the database connection for the session databases."
                         )));
                     };
 
                     let session_token =
                         session_method
-                            .new(session_db, user_id)
+                            .new(session_db_conns, user_id)
                             .await
                             .map_err(|err| {
                                 RequestError::Other(eyre!(

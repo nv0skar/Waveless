@@ -14,8 +14,8 @@ tokio-util = { workspace = true, features = ["full"] }
 tokio-rustls = { workspace = true, features = ["ring"] }
 rustls = { workspace = true }
 futures.workspace = true
-hyper.workspace = true
-hyper-util = { workspace = true, features = ["server-auto"] }
+hyper = { workspace = true, features = ["full"]}
+hyper-util = { workspace = true, features = ["full", "server-auto"] }
 http-body-util.workspace = true
 tower.workspace = true
 tower-http = { workspace = true, features = ["full"] }
@@ -35,9 +35,10 @@ tracing.workspace = true
 getset.workspace = true
 derive_more.workspace = true
 eyre.workspace = true
+color-eyre.workspace = true
 
 [features]
 all = ["mysql", "postgres"]
 
-mysql = []
-postgres = []
+mysql = ["waveless_sql/mysql"]
+postgres = ["waveless_sql/postgres"]

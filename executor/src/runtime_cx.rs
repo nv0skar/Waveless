@@ -6,7 +6,7 @@ use crate::*;
 #[derive(Constructor, Getters, Debug)]
 #[getset(get = "pub")]
 pub struct RuntimeCx {
-    build: RwLock<ExecutorBuild>,
+    build: RwLock<ObjectArtifact>,
     router: EndpointRouter,
     _loaded_from: Option<PathBuf>,
 }
@@ -31,7 +31,7 @@ impl RuntimeCx {
 
     /// Builds the runtime's context by loading the project's build
     /// from the given **build** and building the router.
-    pub async fn from_build(build: ExecutorBuild) -> Result<Self> {
+    pub async fn from_build(build: ObjectArtifact) -> Result<Self> {
         let cx = Self::new(RwLock::new(build), EndpointRouter::new(), None);
         cx.build_router().await?;
         Ok(cx)
@@ -41,24 +41,22 @@ impl RuntimeCx {
     /// from the given **path** and building the router.
     pub async fn from_path(path: PathBuf) -> Result<Self> {
         match read(path.to_owned()) {
-            Ok(file_buffer) => match ExecutorBuild::decode_binary(&CheapVec::from_vec(file_buffer))
-            {
-                Ok(build) => {
-                    let cx = Self::new(RwLock::new(build), EndpointRouter::new(), Some(path));
-                    cx.build_router().await?;
-                    Ok(cx)
+            Ok(file_buffer) => {
+                match ObjectArtifact::decode_binary(&CheapVec::from_vec(file_buffer)) {
+                    Ok(build) => {
+                        let cx = Self::new(RwLock::new(build), EndpointRouter::new(), Some(path));
+                        cx.build_router().await?;
+                        Ok(cx)
+                    }
+                    Err(err) => Err(err).wrap_err(format!(
+                        "Cannot deserialize the project's binary '{}'.",
+                        path.display(),
+                    )),
                 }
-                Err(err) => Err(eyre!(
-                    "Cannot deserialize the project's binary '{}'.%{}",
-                    path.display(),
-                    err.to_string()
-                )),
-            },
-            Err(err) => Err(eyre!(
-                "Cannot open '{}'. Are you sure that you have the file's permissions?%{}",
-                path.display(),
-                err.to_string()
-            )),
+            }
+            Err(err) => Err(err)
+                .wrap_err(format!("Cannot open '{}'.", path.display(),))
+                .suggestion("Are you sure that you have the file's permissions?"),
         }
     }
 
@@ -100,7 +98,7 @@ impl RuntimeCx {
         let prefix = prefix.trim_matches('/');
 
         for endpoint in endpoints {
-            if let Targets::HttpTarget(http_target) = endpoint.target() {
+            if let ExecutionTarget::Http(http_target) = endpoint.execution_target() {
                 let route_parts: CheapVec<Option<CompactString>, 3> = CheapVec::from_buf([
                     Some(prefix.into()),
                     http_target

@@ -23,7 +23,7 @@ impl Service<RequestCx> for LogoutSvc {
         let future: Pin<_> = Box::pin(async move {
             let RequestCx { request_params, endpoint, .. } = cx;
 
-            let Targets::HttpTarget(http_target) = endpoint.target() else {
+            let ExecutionTarget::Http(http_target) = endpoint.execution_target() else {
                 unreachable!()
             };
 
@@ -68,16 +68,13 @@ impl Service<RequestCx> for LogoutSvc {
 
             let session_method = auth_config.session();
 
-            let databases = DATABASES_CONNS.get().unwrap();
-
-            let Ok(session_db) = databases.search(session_method.db_id()) else {
+            let Ok(db_conns) = session_method.get_db_handle() else {
                 return Err(RequestError::Other(eyre!(
-                    "Cannot get the database connection for '{}'.",
-                    session_method.db_id().unwrap_or("main".into())
+                    "Cannot get the database connection for the session databases.",
                 )));
             };
 
-            session_method.invalidate(session_db, user_id, token).await?;
+            session_method.invalidate(db_conns, user_id, token).await?;
 
             Ok(HttpResponse::new(None, Some(BodyValue::Json(json!({})))))
         })

@@ -53,7 +53,7 @@ where
                 ..
             } = &mut cx;
 
-            let Targets::HttpTarget(http_target) = endpoint.target().to_owned() else {
+            let ExecutionTarget::Http(http_target) = endpoint.execution_target().to_owned() else {
                 unreachable!()
             };
 

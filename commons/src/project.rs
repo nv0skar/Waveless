@@ -13,8 +13,8 @@ use core::convert::Into;
 use crate::*;
 
 use auth::*;
-use build::*;
 use databases::*;
+use object::*;
 
 /// Includes all the project's config
 #[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, MutGetters, Debug)]
@@ -139,6 +139,7 @@ impl Default for Executor {
 }
 
 /// Defines a database to be used by Waveless
+#[serde_as]
 #[derive(Clone, Constructor, Serialize, Deserialize, Getters, MutGetters, Debug)]
 #[getset(get = "pub", get_mut = "pub")]
 pub struct DatabaseConfig {
@@ -150,6 +151,7 @@ pub struct DatabaseConfig {
     is_primary: bool,
 
     /// Defines credentials for all database backends.
+    #[serde_as(as = "IfIsHumanReadable<_, JsonString>")] // Explore müsli to avoid this.
     connection: Arc<dyn AnyDatabaseConnectionConfig>,
 
     /// Defines the compiler's strategy to analyze the databases' data schema.
@@ -206,14 +208,12 @@ pub trait AnyDatabaseConnectionConfig: Any + BoxedAny + DynClone + Send + Sync +
 }
 
 /// TODO: load custom database drivers.
-#[derive(Clone, Serialize, Deserialize, Display, Debug)]
+#[derive(Clone, Serialize, Deserialize, BoxedAny, Display, Debug)]
 #[display("{:?}: {}", id, connection)]
 pub struct ExternalDBConnectionConfig {
     id: ExternalDriverId,
     connection: CompactString,
 }
-
-boxed_any!(ExternalDBConnectionConfig);
 
 impl PartialEq for ExternalDBConnectionConfig {
     fn eq(&self, other: &Self) -> bool {
@@ -235,10 +235,12 @@ impl AnyDatabaseConnectionConfig for ExternalDBConnectionConfig {
 }
 
 /// Defines parameters to be used by the data schema discovery
+#[serde_as]
 #[derive(Clone, Constructor, Serialize, Deserialize, Getters, Debug)]
 #[getset(get = "pub")]
 pub struct DataSchemaDiscoveryConfig {
     /// Strategy to discover endpoints.
+    #[serde_as(as = "IfIsHumanReadable<_, JsonString>")] // Explore müsli to avoid this.
     method: Arc<dyn AnyDataSchemaDiscoveryMethod>,
 
     /// Generate endpoints from the database's schema if marked.
@@ -261,14 +263,12 @@ pub trait AnyDataSchemaDiscoveryMethod: Any + BoxedAny + DynClone + Send + Sync 
 
 /// The external module will use the project's hooks tp establish a database connection.
 /// TODO: load custom schema discovery drivers.
-#[derive(Clone, Serialize, Deserialize, Display, Debug)]
+#[derive(Clone, Serialize, Deserialize, BoxedAny, Display, Debug)]
 #[display("{:?}: {:?}", id, config)]
 pub struct ExternalSchemaDiscoveryMethod {
     id: DataSchemaDiscoveryMethodId,
     config: HashMap<CompactString, Bytes>,
 }
-
-boxed_any!(ExternalSchemaDiscoveryMethod);
 
 impl PartialEq for ExternalSchemaDiscoveryMethod {
     fn eq(&self, other: &Self) -> bool {
@@ -289,17 +289,21 @@ impl AnyDataSchemaDiscoveryMethod for ExternalSchemaDiscoveryMethod {
 }
 
 /// Defines how the server executor can handle authentication
+#[serde_as]
 #[derive(Clone, Constructor, Serialize, Deserialize, Getters, MutGetters, Debug)]
 #[getset(get = "pub", get_mut = "pub")]
 pub struct Authentication {
     /// All the available methods to authenticate.
     #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
+    #[serde_as(as = "IfIsHumanReadable<_, JsonString>")] // Explore müsli to avoid this.
     backends: CheapVec<Arc<dyn AnyAuthenticationMethod>, 0>,
 
     /// The method for manage sessions.
+    #[serde_as(as = "IfIsHumanReadable<_, JsonString>")] // Explore müsli to avoid this.
     session: Arc<dyn AnySessionMethod>,
 
     /// The method for manage roles.
+    #[serde_as(as = "IfIsHumanReadable<_, JsonString>")] // Explore müsli to avoid this.
     role: Option<Arc<dyn AnyRoleMethod>>,
 
     /// Default role when users sign up.

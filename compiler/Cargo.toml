@@ -6,12 +6,16 @@ edition.workspace = true
 [dependencies]
 waveless_commons.workspace = true
 waveless_executor.workspace = true
-waveless_sql = { workspace = true, features = ["mysql"]}
+waveless_sql = { workspace = true}
 
 rustyrosetta = { workspace = true, features = ["all"] }
 
 tokio = { workspace = true, features = ["full"] }
-sea-schema.workspace = true
+sea-schema = { workspace = true, features = [
+    "runtime-tokio",
+    "runtime-tokio-rustls",
+    "sqlx-all",
+] }
 toml.workspace = true
 compact_str.workspace = true
 mimalloc.workspace = true
@@ -25,9 +29,10 @@ getset.workspace = true
 either.workspace = true
 derive_more.workspace = true
 eyre.workspace = true
+color-eyre.workspace = true
 
 [features]
 all = ["mysql", "postgres"]
 
-mysql = []
-postgres = []
+mysql = ["waveless_sql/mysql"]
+postgres = ["waveless_sql/postgres"]
