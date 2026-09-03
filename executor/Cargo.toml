@@ -8,17 +8,16 @@ edition.workspace = true
 
 [dependencies]
 waveless_commons.workspace = true
-waveless_sql.workspace = true
 
 rustyrosetta = { workspace = true, features = ["all"] }
 
-tokio = { workspace = true, features = ["full"] }
-tokio-util = { workspace = true, features = ["full"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "sync", "tracing"] }
+tokio-util.workspace = true
 tokio-rustls = { workspace = true, features = ["ring"] }
 rustls = { workspace = true }
 futures.workspace = true
 hyper = { workspace = true, features = ["full"]}
-hyper-util = { workspace = true, features = ["full", "server-auto"] }
+hyper-util = { workspace = true, features = ["full"] }
 http-body-util.workspace = true
 tower.workspace = true
 tower-http = { workspace = true, features = ["full"] }
@@ -31,7 +30,6 @@ bytes.workspace = true
 serde_json.workspace = true
 compact_str.workspace = true
 dashmap.workspace = true
-mimalloc.workspace = true
 clap.workspace = true
 chrono.workspace = true
 tracing.workspace = true
@@ -39,9 +37,3 @@ getset.workspace = true
 derive_more.workspace = true
 eyre.workspace = true
 color-eyre.workspace = true
-
-[features]
-all = ["mysql", "postgres"]
-
-mysql = ["waveless_sql/mysql"]
-postgres = ["waveless_sql/postgres"]

@@ -17,7 +17,7 @@ use rustyrosetta::*;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 
-use clap::{Parser, Subcommand};
+use clap::{ColorChoice, Parser, Subcommand, builder::styling::*};
 use compact_str::*;
 use eyre::{Result, eyre};
 use mimalloc::MiMalloc;
@@ -27,16 +27,26 @@ use tracing::*;
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
 
+fn command_styles() -> Styles {
+    Styles::styled()
+        .header(AnsiColor::Green.on_default() | Effects::BOLD)
+        .usage(AnsiColor::Green.on_default() | Effects::BOLD)
+        .literal(AnsiColor::Cyan.on_default() | Effects::BOLD)
+        .placeholder(AnsiColor::Yellow.on_default())
+}
+
 nest! {
     #[derive(Parser)]
     #[command(
         name = "waveless",
         version,
-        about = "The Waveless' frontend.",
+        about = "The Waveless' frontend: build & execute.",
         long_about = "Analyze and build the project in the current directory and generate a Waveless' binary.",
         propagate_version = true,
         subcommand_required = true,
         arg_required_else_help = true,
+        color = ColorChoice::Auto,
+        styles = command_styles()
     )]
     struct Frontend {
         /// Whether to enable debug mode in the compiler.
@@ -46,10 +56,6 @@ nest! {
         /// Whether to show all included endpoints in the build file.
         #[arg(short = 'd', long = "display_endpoints", default_value_t = true, help = "Whether to show all included endpoints in the build file.")]
         display_endpoints_on_build: bool,
-
-        /// Whether to skip endpoint discovery and only include user-defined endpoints (this overrides the `project.toml` file)
-        #[arg(short = 'S', long = "skip_endpoint_discovery", default_value_t = false, help = "Whether to skip endpoint discovery and only include user-defined endpoints (this overrides the `project.toml` file)")]
-        skip_endpoint_discovery: bool,
 
         /// All cli subcommands
         #[command(subcommand)]
@@ -79,10 +85,6 @@ nest! {
                 /// Builds the current project.
                 #[command(about = "Builds the current project.")]
                 Build,
-
-                /// Bootstraps the database, running all the scripts under the specified `bootstrap_scripts_dir` folder.
-                #[command(about = "Bootstraps the database, running all the scripts under the specified `bootstrap_scripts_dir` folder.")]
-                Bootstrap,
 
                 /// The Waveless' executor.
                 #[command(about = "The Waveless' executor.", subcommand)]
@@ -146,7 +148,6 @@ async fn try_main() -> Result<ResultContext> {
             let buff = build::<Bytes>().await?.right().unwrap();
             binary_file_from_buff(buff)
         }
-        Some(Subcommands::Bootstrap) => todo!(),
         Some(Subcommands::Executor(executor_options)) => match executor_options {
             ExecutorFrontendOptions::Run {
                 path,

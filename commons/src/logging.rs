@@ -16,7 +16,6 @@ pub fn subscribe_logging(
 
     let stdout_layer = fmt::layer()
         .with_writer(std::io::stdout)
-        .without_time()
         .with_target(true)
         .with_filter(if debug {
             LevelFilter::DEBUG

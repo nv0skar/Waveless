@@ -8,12 +8,12 @@ edition.workspace = true
 
 [dependencies]
 waveless_commons.workspace = true
-waveless_executor.workspace = true
+
 waveless_sql = { workspace = true}
 
 rustyrosetta = { workspace = true, features = ["all"] }
 
-tokio = { workspace = true, features = ["full"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "sync", "tracing"] }
 sea-schema = { workspace = true, features = [
     "runtime-tokio",
     "runtime-tokio-rustls",
@@ -21,12 +21,9 @@ sea-schema = { workspace = true, features = [
 ] }
 toml.workspace = true
 compact_str.workspace = true
-mimalloc.workspace = true
-clap.workspace = true
 crc32fast.workspace = true
 owo-colors.workspace = true
 tracing.workspace = true
-nestify.workspace = true
 chrono.workspace = true
 getset.workspace = true
 either.workspace = true

@@ -8,6 +8,7 @@ edition.workspace = true
 
 [dependencies]
 rustyrosetta = { workspace = true, features = ["all"] }
+
 boxed_any.workspace = true
 boxed_any_derive.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "sync", "tracing"] }
