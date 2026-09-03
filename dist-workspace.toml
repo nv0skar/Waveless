@@ -5,10 +5,10 @@ members = ["cargo:."]
 packages = ["waveless_compiler", "waveless_executor"]
 
 cargo-dist-version = "0.32.0"
-installers = ["shell", "homebrew", "powershell"]
+installers = ["shell", "homebrew"]
 tap = "nv0skar/homebrew-tap"
 publish-jobs = ["homebrew"]
-targets = ["aarch64-unknown-linux-gnu", "x86_64-unknown-linux-gnu", "aarch64-apple-darwin", "aarch64-pc-windows-gnullvm", "x86_64-pc-windows-gnu"]
+targets = ["aarch64-unknown-linux-gnu", "x86_64-unknown-linux-gnu", "aarch64-apple-darwin"]
 dist-dir = "target/distribution"
 ci = "github"
 install-updater = false
