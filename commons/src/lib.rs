@@ -36,12 +36,12 @@ use rustyrosetta::{codec::*, *};
 
 use async_trait::*;
 use bytes::Bytes as ConnBytes;
+use color_eyre::Section;
 use compact_str::*;
-use dashmap::*;
 use derive_builder::*;
 use derive_more::{Constructor, Display};
 use dyn_clone::*;
-use eyre::{Context, Result, bail, eyre};
+use eyre::{Context, ContextCompat, Result, bail, eyre};
 use getset::*;
 use http::StatusCode;
 use http_body_util::combinators::BoxBody;
@@ -68,7 +68,7 @@ pub const BINARY_MAGIC: &'static [u8] = b"waveless_binary";
 /// The maximum number of databases the user's application can connect to.
 pub const DATABASE_LIMIT: usize = 9;
 
-pub static DATABASES_CONNS: OnceCell<databases::DatabasesConnections> = OnceCell::const_new();
+pub static DATABASES_CONNS: OnceCell<databases::DatabasesManager> = OnceCell::const_new();
 
 thread_local! {
     pub static BINARY_MODE: Cell<bool> = const { Cell::new(false) }; // This will likely be fixed in the future. https://github.com/serde-rs/serde/issues/1732

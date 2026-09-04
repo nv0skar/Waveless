@@ -14,12 +14,14 @@ waveless_sql = { workspace = true}
 rustyrosetta = { workspace = true, features = ["all"] }
 
 tokio = { workspace = true, features = ["rt-multi-thread", "sync", "tracing"] }
+serde_json.workspace = true
 sea-schema = { workspace = true, features = [
     "runtime-tokio",
     "runtime-tokio-rustls",
     "sqlx-all",
 ] }
 toml.workspace = true
+hex.workspace = true
 compact_str.workspace = true
 crc32fast.workspace = true
 owo-colors.workspace = true

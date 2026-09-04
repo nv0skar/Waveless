@@ -39,29 +39,9 @@ pub fn new_project(name: CompactString) -> Result<ResultContext> {
 
     // Generate all subfolders.
     {
-        create_dir(
-            project_path.join(
-                default_project
-                    .compiler()
-                    .bootstrap_scripts_dir()
-                    .to_owned()
-                    .unwrap_or("bootstrap".into()),
-            ),
-        )?;
-
         create_dir(project_path.join(default_project.compiler().endpoints_dir()))?;
 
-        create_dir(
-            project_path.join(
-                default_project
-                    .compiler()
-                    .hooks_dir()
-                    .to_owned()
-                    .unwrap_or("hooks".into()),
-            ),
-        )?;
-
-        create_dir(project_path.join(".discovered_endpoints"))?;
+        create_dir(project_path.join(".generated_endpoints"))?;
 
         create_dir(project_path.join("target"))?;
 

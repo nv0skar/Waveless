@@ -8,13 +8,12 @@
 //! TODO: maybe implement default variants
 //!
 
-use core::convert::Into;
-
 use crate::*;
 
 use auth::*;
 use databases::*;
-use object::*;
+use endpoint::*;
+use schema::*;
 
 /// Includes all the project's config
 #[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, MutGetters, Debug)]
@@ -68,7 +67,6 @@ impl Default for Config {
                         id: "custom_database_driver".into(),
                         connection: "...".into(),
                     }),
-                    schema_discovery: None,
                     pool_min_size: None,
                     pool_max_size: None,
                 },
@@ -80,26 +78,35 @@ impl Default for Config {
 }
 
 /// Compiler settings: these parameters will be used by the API's compiler exclusively
-#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, MutGetters, Debug)]
+#[derive(Clone, Constructor, Serialize, Deserialize, Getters, MutGetters, Debug)]
 #[getset(get = "pub", get_mut = "pub")]
 pub struct Compiler {
     /// this is the directory where all the user defined endpoints will be located
     endpoints_dir: CompactString,
 
-    /// this is the directory where all the endpoint's hooks will be located
-    hooks_dir: Option<CompactString>,
+    /// Defines the compiler's strategy to analyze the databases' data schema
+    /// to generate endpoints.
+    /// NOTE: there might be many different types that implement the
+    /// `AnyEndpointGenerator` trait for a single database type.
+    /// For example, given a single database type (like MySQL), there might be an
+    /// ad-hoc schema discovery implementation and a simple endpoint geneator,
+    /// also, there might be a more complex `AnyEndpointGenerator` that
+    /// chains the internal MySQL schema analyzer and enhances the endpoint generation.
+    #[serde(default, skip_serializing_if = "should_skip_cheapvec")]
+    endpoint_generators: CheapVec<EndpointGeneratorConfig>,
+}
 
-    /// this is the directory where scripts that may be used to create the db, make migrations... are located
-    #[serde(default, skip_serializing_if = "should_skip_option")]
-    bootstrap_scripts_dir: Option<CompactString>,
+impl PartialEq for Compiler {
+    fn eq(&self, other: &Self) -> bool {
+        self.endpoints_dir == other.endpoints_dir
+    }
 }
 
 impl Default for Compiler {
     fn default() -> Self {
         Self {
             endpoints_dir: "./endpoints/".into(),
-            hooks_dir: Some("./hooks/".into()),
-            bootstrap_scripts_dir: Some("./bootstrap/".into()),
+            endpoint_generators: CheapVec::new_const(),
         }
     }
 }
@@ -154,16 +161,6 @@ pub struct DatabaseConfig {
     #[serde_as(as = "IfIsHumanReadable<_, JsonString>")] // Explore müsli to avoid this.
     connection: Arc<dyn AnyDatabaseConnectionConfig>,
 
-    /// Defines the compiler's strategy to analyze the databases' data schema.
-    /// NOTE: there might be many different types that implement the
-    /// `AnyDataSchemaDiscoveryMethod` trait for a single database type.
-    /// For example, given a single database type (like MySQL), there might be an
-    /// ad-hoc schema discovery implementation and a simple endpoint geneator,
-    /// also, there might be a more complex `AnyDataSchemaDiscoveryMethod` that
-    /// chains the internal MySQL schema analyzer and enhances the endpoint generation.
-    #[serde(default, skip_serializing_if = "should_skip_option")]
-    schema_discovery: Option<DataSchemaDiscoveryConfig>,
-
     /// Defines the minimum number of simultaneous connections, by default this will be half the `pool_max_size`.
     #[serde(default, skip_serializing_if = "should_skip_option")]
     pool_min_size: Option<usize>,
@@ -188,7 +185,6 @@ impl Default for DatabaseConfig {
                 id: "mysql".into(),
                 connection: "...".into(),
             }),
-            schema_discovery: None,
             pool_min_size: Some(std::thread::available_parallelism().unwrap().get() * 2),
             pool_max_size: Some(std::thread::available_parallelism().unwrap().get() * 2),
         }
@@ -234,56 +230,49 @@ impl AnyDatabaseConnectionConfig for ExternalDBConnectionConfig {
     }
 }
 
-/// Defines parameters to be used by the data schema discovery
+/// Defines parameters for the endpoint generator.
 #[serde_as]
 #[derive(Clone, Constructor, Serialize, Deserialize, Getters, Debug)]
 #[getset(get = "pub")]
-pub struct DataSchemaDiscoveryConfig {
+pub struct EndpointGeneratorConfig {
     /// Strategy to discover endpoints.
     #[serde_as(as = "IfIsHumanReadable<_, JsonString>")] // Explore müsli to avoid this.
-    method: Arc<dyn AnyDataSchemaDiscoveryMethod>,
+    backend: Arc<dyn AnyEndpointGenerator>,
 
-    /// Generate endpoints from the database's schema if marked.
-    generate_endpoints: bool,
-
-    // Whether to checksum the database's schema.
+    // Whether to generate a checksum of the schema if available.
+    #[serde(default, skip_serializing_if = "should_skip")]
     checksum: bool,
 }
 
-/// TODO: add documentation.
-#[typetag::serde]
-#[async_trait]
-pub trait AnyDataSchemaDiscoveryMethod: Any + BoxedAny + DynClone + Send + Sync + Debug {
-    async fn schema(
-        &self,
-        db_id: CompactString,
-        db_config: Arc<dyn AnyDatabaseConnectionConfig>,
-    ) -> Result<(Box<dyn Any>, DatabaseChecksum)>;
-}
-
-/// The external module will use the project's hooks tp establish a database connection.
+/// The external module will use the project's hooks ti establish a database connection.
 /// TODO: load custom schema discovery drivers.
-#[derive(Clone, Serialize, Deserialize, BoxedAny, Display, Debug)]
+#[derive(Clone, Constructor, Serialize, Deserialize, BoxedAny, Display, Debug)]
 #[display("{:?}: {:?}", id, config)]
-pub struct ExternalSchemaDiscoveryMethod {
+pub struct ExternalEndpointGenerator {
     id: DataSchemaDiscoveryMethodId,
     config: HashMap<CompactString, Bytes>,
 }
 
-impl PartialEq for ExternalSchemaDiscoveryMethod {
+impl PartialEq for ExternalEndpointGenerator {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
     }
 }
 
+impl AnyExt for ExternalEndpointGenerator {
+    fn name(&self) -> &str {
+        "external_endpoint_generator"
+    }
+}
+
 #[typetag::serde]
 #[async_trait]
-impl AnyDataSchemaDiscoveryMethod for ExternalSchemaDiscoveryMethod {
-    async fn schema(
-        &self,
-        _db_id: CompactString,
-        _db_conn_config: Arc<dyn AnyDatabaseConnectionConfig>,
-    ) -> Result<(Box<dyn Any>, DatabaseChecksum)> {
+impl AnyEndpointGenerator for ExternalEndpointGenerator {
+    async fn generate(&self, _db_conns: DbConns) -> Result<(Endpoints, Option<Bytes>)> {
+        todo!("Not implemented yet.")
+    }
+
+    fn id(&self) -> Result<Bytes> {
         todo!("Not implemented yet.")
     }
 }

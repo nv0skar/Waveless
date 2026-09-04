@@ -5,7 +5,7 @@ resolver = "3"
 
 [workspace.package]
 description = "Bring your data model → generate fast, portable and battle-ready APIs 🚀."
-version = "0.2.0"
+version = "0.2.1"
 homepage = "https://github.com/nv0skar/Waveless"
 repository = "https://github.com/nv0skar/Waveless"
 edition = "2024"
@@ -52,6 +52,8 @@ matchit = "0.9"
 hyper-tungstenite = "0.30"
 
 bytes = "1.12"
+
+hex = "0.4"
 
 sqlx = { version = "0.9.0", features = [
     "runtime-tokio",

@@ -13,6 +13,7 @@ use crate::*;
 
 use endpoint::*;
 use project::*;
+use schema::*;
 
 /// The project's build artifact.
 #[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, MutGetters, Debug)]
@@ -30,7 +31,7 @@ pub struct ObjectArtifact {
     /// Contains all the databases' checksum.
     /// TODO: in the future there will be a method to checksum all the database's
     /// schema regardless of whether they have been 'discovered'.
-    databases_checksums: CheapVec<DatabaseChecksum, 0>,
+    databases_checksums: CheapVec<EndpointGeneratorChecksum, 0>,
 }
 
 impl ObjectArtifact {
@@ -67,20 +68,32 @@ impl Default for ObjectArtifact {
     }
 }
 
-/// Matches a database with it's checksum
-#[derive(Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Debug)]
+/// Matches a schema with it's checksum.
+#[serde_as]
+#[derive(Clone, Constructor, Serialize, Deserialize, Getters, Debug)]
 #[getset(get = "pub")]
-pub struct DatabaseChecksum {
-    /// identifier of the database
-    database_id: DatabaseId,
-    checksum: Bytes,
+pub struct EndpointGeneratorChecksum {
+    /// Strategy used to discover the endpoints.
+    #[serde_as(as = "IfIsHumanReadable<_, JsonString>")] // Explore müsli to avoid this.
+    pub(crate) method: Arc<dyn AnyEndpointGenerator>,
+
+    pub(crate) checksum: Bytes,
+}
+
+impl PartialEq for EndpointGeneratorChecksum {
+    fn eq(&self, other: &Self) -> bool {
+        self.method().name() == other.method().name() && self.checksum == other.checksum
+    }
 }
 
 /// Default implementation for testing and validation
-impl Default for DatabaseChecksum {
+impl Default for EndpointGeneratorChecksum {
     fn default() -> Self {
         Self {
-            database_id: "None".into(),
+            method: Arc::new(ExternalEndpointGenerator::new(
+                CompactString::const_new(""),
+                HashMap::new(),
+            )),
             checksum: CheapVec::from_elem(0, 8),
         }
     }

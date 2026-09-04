@@ -5,12 +5,11 @@
 //! The Waveless' frontend.
 //!
 
-use waveless_commons::{logging::*, runtime::handle_main, *};
-use waveless_compiler::{build::*, compiler_cx::*, new::*};
+use waveless_commons::{logging::*, object::*, runtime::handle_main, *};
+use waveless_compiler::{compiler_cx::*, new::*, workspace::*};
 use waveless_executor::{frontend_options::*, server::serve, *};
 
 use databases::*;
-use object::*;
 
 use rustyrosetta::*;
 
@@ -52,10 +51,6 @@ nest! {
         /// Whether to enable debug mode in the compiler.
         #[arg(short = 'D', long = "debug", default_value_t = false)]
         debug: bool,
-
-        /// Whether to show all included endpoints in the build file.
-        #[arg(short = 'd', long = "display_endpoints", default_value_t = true, help = "Whether to show all included endpoints in the build file.")]
-        display_endpoints_on_build: bool,
 
         /// All cli subcommands
         #[command(subcommand)]
@@ -116,7 +111,11 @@ async fn try_main() -> Result<ResultContext> {
         }) => {
             CompilerCx::set_cx(CompilerCx::from_workspace().await?);
 
-            let build = build::<ObjectArtifact>().await?.left().unwrap();
+            let _config_lock = CompilerCx::acquire().project().config();
+
+            DatabasesManager::load(_config_lock.databases().to_owned()).await?;
+
+            let build = load::<ObjectArtifact>().await?.left().unwrap();
 
             RuntimeCx::set_cx(RuntimeCx::from_build(build).await?);
 
@@ -131,9 +130,6 @@ async fn try_main() -> Result<ResultContext> {
                 warn!("Skipping databases' schema checksum verification.");
             }
 
-            DatabasesConnections::load(_build_lock.read().await.config().databases().to_owned())
-                .await?;
-
             let tls_paths = match (tls_cert, tls_cert_key) {
                 (Some(tls_cert), Some(tls_cert_key)) => Some((tls_cert, tls_cert_key)),
                 _ => None,
@@ -145,7 +141,13 @@ async fn try_main() -> Result<ResultContext> {
         }
         Some(Subcommands::Build) => {
             CompilerCx::set_cx(CompilerCx::from_workspace().await?);
-            let buff = build::<Bytes>().await?.right().unwrap();
+
+            let _config_lock = CompilerCx::acquire().project().config();
+
+            DatabasesManager::load(_config_lock.databases().to_owned()).await?;
+
+            let buff = load::<Bytes>().await?.right().unwrap();
+
             binary_file_from_buff(buff)
         }
         Some(Subcommands::Executor(executor_options)) => match executor_options {
@@ -159,19 +161,21 @@ async fn try_main() -> Result<ResultContext> {
 
                 let _build_lock = RuntimeCx::acquire().build();
 
+                DatabasesManager::load(_build_lock.read().await.config().databases().to_owned())
+                    .await?;
+
                 if *_build_lock
                     .read()
                     .await
                     .executor()
                     .check_databases_cheksums()
                 {
-                    check_checksums_in_build(&(*_build_lock.read().await)).await?;
+                    _build_lock
+                        .read()
+                        .await
+                        .check_checksums_in_object(DatabasesManager::acquire().to_owned().into())
+                        .await?;
                 }
-
-                DatabasesConnections::load(
-                    _build_lock.read().await.config().databases().to_owned(),
-                )
-                .await?;
 
                 let tls_paths = match (tls_cert, tls_cert_key) {
                     (Some(tls_cert), Some(tls_cert_key)) => Some((tls_cert, tls_cert_key)),

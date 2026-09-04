@@ -12,9 +12,11 @@
 //!
 use crate::*;
 
+use generator::*;
+
 /// Builds the project in the current path (if no `project.toml` file is present in the current directory it will be searched in parent directories)
 #[instrument(skip_all)]
-pub async fn build<T: 'static>() -> Result<Either<ObjectArtifact, Bytes>> {
+pub async fn load<T: 'static>() -> Result<Either<ObjectArtifact, Bytes>> {
     let cx = CompilerCx::acquire();
 
     let project = cx.project();
@@ -57,29 +59,36 @@ pub async fn build<T: 'static>() -> Result<Either<ObjectArtifact, Bytes>> {
     }
 
     // Discovers the endpoints and checksums the database's schema.
-    let (db_endpoints, db_checksums) = discovery::discover().await?;
+    let generated_endpoints = GeneratedEndpoints::generate().await?;
 
-    if create_dir(workspace_root.join(".discovered_endpoints")).is_ok() {
-        debug!("'.discovered_endpoints' directory does't exist, a new one will be created.")
+    if create_dir(workspace_root.join(".generated_endpoints")).is_ok() {
+        debug!("'.generated_endpoints' directory does't exist, a new one will be created.")
     };
 
-    for (db_id, discovered_endpoints) in db_endpoints {
+    let mut endpoint_generator_checksums = CheapVec::new_const();
+
+    for (generator_id, (new_endpoints, checksum)) in generated_endpoints.get() {
         let target_file = workspace_root
-            .join(".discovered_endpoints")
-            .join(format!("{}.toml", db_id));
+            .join(".generated_endpoints")
+            .join(format!("{}.toml", hex::encode(generator_id)));
 
         write(
             &target_file,
-            toml::to_string_pretty(&discovered_endpoints)?.as_bytes(),
+            toml::to_string_pretty(&new_endpoints)?.as_bytes(),
         )?;
 
         info!(
-            "Discovered endpoints from '{}' were dumped into '{}'.",
+            "Generated endpoints from `{}` were dumped into `{}` ({}).",
+            hex::encode(generator_id),
             target_file.display(),
-            db_id
+            String::from_utf8(generator_id.to_vec()).unwrap_or("?".into())
         );
 
-        endpoints.merge(discovered_endpoints)?;
+        if let Some(checksum) = checksum {
+            endpoint_generator_checksums.push(checksum.to_owned());
+        }
+
+        endpoints.merge(new_endpoints.to_owned())?;
     }
 
     // Serializes the project's build.
@@ -87,7 +96,7 @@ pub async fn build<T: 'static>() -> Result<Either<ObjectArtifact, Bytes>> {
         project.config().to_owned(),
         project.server().to_owned(),
         endpoints,
-        db_checksums,
+        endpoint_generator_checksums,
     );
 
     if TypeId::of::<T>() == TypeId::of::<Bytes>() {
@@ -115,7 +124,8 @@ pub fn binary_file_from_buff(buff: Bytes) -> Result<ResultContext> {
 
     // Set the build file's name a combination of its CRC32 hash and the current timestamp
     let build_name = format!(
-        "{}_{}.wv",
+        "{}_{}_{}.wv",
+        project.config().name(),
         chrono::Local::now().format("%d_%m_%Y_%H_%M"),
         crc32fast::hash(buff.as_slice())
     );

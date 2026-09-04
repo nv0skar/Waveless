@@ -48,13 +48,13 @@ where
         let RequestCx { request, .. } = &cx;
 
         info!(
-            "{} request at {} {}",
+            "`{}` request at `{}` {}",
             request.method(),
             request.uri().path(),
             request
                 .headers()
                 .get("host")
-                .map(|val| format!("from {}", val.to_str().unwrap_or_default()))
+                .map(|val| format!("from `{}`", val.to_str().unwrap_or_default()))
                 .unwrap_or_default()
         );
 
