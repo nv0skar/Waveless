@@ -8,6 +8,7 @@ edition.workspace = true
 
 [[bin]]
 name = "waveless"
+path = "./src/main.rs"
 
 [dependencies]
 waveless_commons.workspace = true
