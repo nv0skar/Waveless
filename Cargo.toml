@@ -11,10 +11,11 @@ repository = "https://github.com/nv0skar/Waveless"
 edition = "2024"
 
 [workspace.dependencies]
+waveless = { path = "./frontend" }
+
 waveless_commons = { path = "./commons" }
 waveless_compiler = { path = "./compiler" }
 waveless_executor = { path = "./executor" }
-waveless_frontend = { path = "./frontend" }
 
 waveless_sql = { git = "https://github.com/nv0skar/waveless_sql.git" }
 
@@ -150,10 +151,11 @@ features = ["wasm_js"]
 # tailwind-input-file = "style/tailwind.css"
 
 [patch."https://github.com/nv0skar/Waveless"]
+waveless = { path = "./frontend" }
+
 waveless_commons = { path = "./commons" }
 waveless_compiler = { path = "./compiler" }
 waveless_executor = { path = "./executor" }
-waveless_frontend = { path = "./frontend" }
 
 [profile.dev.package."*"]
 debug = false

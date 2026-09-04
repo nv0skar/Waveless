@@ -1,14 +1,10 @@
 [package]
-name = "waveless_frontend"
+name = "waveless"
 description.workspace = true
 version.workspace = true
 homepage.workspace = true
 repository.workspace = true
 edition.workspace = true
-
-[[bin]]
-name = "waveless"
-path = "./src/main.rs"
 
 [dependencies]
 waveless_commons.workspace = true

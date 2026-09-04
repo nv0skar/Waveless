@@ -2,7 +2,7 @@
 members = ["cargo:."]
 
 [dist]
-packages = ["waveless_frontend"]
+packages = ["waveless"]
 
 cargo-dist-version = "0.32.0"
 installers = ["shell", "homebrew"]
