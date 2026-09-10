@@ -1,0 +1,25 @@
+# Connecting to databases
+
+Waveless accepts multiple database connection at runtime being defined the under `[[databases]]` array. A generic id and an optional `is_primary` might be set:
+
+```toml
+[[databases]]
+id = "main"
+is_primary = true
+```
+
+Then the backend should be specified using `[databases.connection.{backend_name}]` and setting the required fields by the given backend.
+
+> Note that there could be multiple databases with different backends: multiple MySQL databases and Redis as a cache engine could be combined.
+
+> An example of a MySQL configuration (using the `waveless_sql` backend) is given:
+>
+> ```toml
+> [databases.connection.MySQL]
+> host = "127.0.0.1:3306"
+> username = "alpine"
+> password = "alpine"
+> db = "groceries"
+> ```
+
+Get more details at [`waveless_commons::project::DatabaseConfig`](/waveless/auto_api/waveless_commons/project/struct.DatabaseConfig.html).

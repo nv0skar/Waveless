@@ -3,6 +3,11 @@
     "endpoint",
     {
         "type": "dir",
+        "name": "project",
+        "label": "`project.toml` file"
+    },
+    {
+        "type": "dir",
         "name": "extensions",
         "label": "Extensions"
     }
