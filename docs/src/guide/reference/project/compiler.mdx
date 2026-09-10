@@ -1,0 +1,39 @@
+# Compiler
+
+Waveless accepts compiler configuration under `[compiler]`. The fields used by the compiler are defined with `endpoints_dir`:
+
+```toml
+[compiler]
+endpoints_dir = "./endpoints/"
+```
+
+Endpoint generators are defined under the `[[compiler.endpoint_generators]]` array. A checksum flag can be set per generator:
+
+```toml
+[[compiler.endpoint_generators]]
+checksum = true
+```
+
+Then the backend should be specified using `[compiler.endpoint_generators.backend.{backend_name}]` and setting the required fields by the given backend.
+
+Note that there could be multiple endpoint generators with different backends (not necessarily a database).
+
+> An example of MySQL endpoint generator configurations (using the `waveless_sql` backend) is given:
+>
+> ```toml
+> [[compiler.endpoint_generators]]
+> checksum = true
+>
+> [compiler.endpoint_generators.backend.MySQL]
+> database = "main"
+> skip_tables = ["_private_table"]
+>
+> [[compiler.endpoint_generators]]
+> checksum = true
+>
+> [compiler.endpoint_generators.backend.MySQL]
+> database = "users"
+> skip_tables = ["_private_table"]
+> ```
+
+Get more details at [`waveless_commons::project::Compiler`](/waveless/auto_api/waveless_commons/project/struct.Compiler.html).

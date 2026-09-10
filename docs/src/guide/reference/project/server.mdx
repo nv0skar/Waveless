@@ -1,0 +1,14 @@
+# Server
+
+Waveless server configuration is under `[server]`. The listening address is set with `listening_addr`, the static files directory with `static_files`, the API route prefix with `api_prefix`, database checksum validation with `check_databases_cheksums`, and HTTP cache time with `http_cache_time`:
+
+```toml
+[server]
+listening_addr = "127.0.0.1:8080"
+static_files = "./static/"
+api_prefix = "/api"
+check_databases_cheksums = true
+http_cache_time = 0
+```
+
+Get more details at [`waveless_commons::project::Executor`](/waveless/auto_api/waveless_commons/project/struct.Executor.html).
