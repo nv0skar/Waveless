@@ -59,7 +59,7 @@ pub fn new_project(name: CompactString) -> Result<ResultContext> {
                         .version("v1".into())
                         .method(HttpMethod::Get)
                         .execution_pipeline(
-                            Arc::<MySQLExecute>::new(
+                            Arc::<MySQLExecutor>::new(
                                 SQLQueryWrapper::new(
                                     "SELECT * FROM products WHERE size = {size}".into(),
                                 )
@@ -81,7 +81,7 @@ pub fn new_project(name: CompactString) -> Result<ResultContext> {
                         .version("v1".into())
                         .method(HttpMethod::Get)
                         .execution_pipeline(
-                            Arc::<MySQLExecute>::new(
+                            Arc::<MySQLExecutor>::new(
                                 SQLQueryWrapper::new("SELECT * FROM posts".into()).into(),
                             )
                             .into(),

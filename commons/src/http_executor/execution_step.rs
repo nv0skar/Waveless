@@ -5,7 +5,7 @@ use crate::*;
 
 use super::*;
 
-/// TODO: add docs.
+/// Execution atom (node) for composing the tree-like structure.
 #[serde_as]
 #[derive(Clone, Constructor, Serialize, Deserialize, Getters, MutGetters, Debug)]
 #[getset(get = "pub", get_mut = "pub")]

@@ -5,7 +5,7 @@ use crate::*;
 
 use super::*;
 
-/// TODO: add docs.
+/// Contains both the current context of the pipeline, passing the request and the candidate response.
 #[derive(Constructor, Getters, MutGetters)]
 #[getset(get = "pub", get_mut = "pub")]
 pub struct PipelineCx {

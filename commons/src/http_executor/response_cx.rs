@@ -3,7 +3,7 @@
 
 use crate::*;
 
-/// TODO: add docs.
+/// Client's HTTP response.
 #[derive(Getters, MutGetters, Default)]
 #[getset(get = "pub", get_mut = "pub")]
 pub struct ResponseCx {
@@ -35,7 +35,8 @@ impl ResponseCx {
     }
 }
 
-/// TODO: add docs.
+/// Defines all possible values a body could accept.
+/// NOTE: `BodyValue::Any` is serialized and stored in a byte array in the JSON field `data`.
 pub enum BodyValue {
     Json(serde_json::Value),
     Any(Box<dyn Encode<Output = Bytes> + Send + Sync>),
